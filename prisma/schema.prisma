@@ -1,0 +1,341 @@
+// ─────────────────────────────────────────────────────────────
+// Prisma Schema — YoyoSMM Full Database
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+// ─────────────── USER ────────────────────────────────────────
+model User {
+  id              String   @id @default(cuid())
+  supabaseId      String   @unique @map("supabase_id")
+  email           String   @unique
+  name            String?
+  avatarUrl       String?  @map("avatar_url")
+  plan            Plan     @default(FREE)
+  trialEndsAt     DateTime? @map("trial_ends_at")
+  lifetimeUnlocked Boolean @default(false) @map("lifetime_unlocked")
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  panels          Panel[]
+  reels           Reel[]
+  orders          Order[]
+  subscription    Subscription?
+  auditLogs       AuditLog[]
+  cryptoPayments  CryptoPayment[]
+  serviceConfigs  ServiceConfig[]
+  curveTemplates  CurveTemplate[]
+
+  @@map("users")
+}
+
+enum Plan {
+  FREE
+  TRIAL
+  LIFETIME
+  SUSPENDED
+}
+
+// ─────────────── SMM PANEL ───────────────────────────────────
+model Panel {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  apiUrl          String   @map("api_url")
+  apiKeyEncrypted String   @map("api_key_encrypted") // AES-256 encrypted
+  priority        Int      @default(1)
+  loadPercentage  Int      @default(100) @map("load_percentage")
+  isActive        Boolean  @default(true) @map("is_active")
+
+  // Service IDs per platform per engagement type
+  // { "instagram": { "views": "1234", "likes": "5678", "saves": "9012", "shares": "3456", "comments": "7890" }, "tiktok": { ... } }
+  serviceIds      Json?    @map("service_ids")
+
+  // Health metrics
+  lastCheckedAt   DateTime? @map("last_checked_at")
+  lastResponseMs  Int?      @map("last_response_ms")
+  successRate     Float     @default(100.0) @map("success_rate")
+  status          PanelStatus @default(UNKNOWN)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  orders          Order[]
+  deliveryEvents  DeliveryEvent[]
+  serviceConfigs  ServiceConfig[]
+
+  @@map("panels")
+}
+
+enum PanelStatus {
+  ONLINE
+  OFFLINE
+  SLOW
+  UNKNOWN
+}
+
+// ─────────────── REEL ────────────────────────────────────────
+model Reel {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  url             String
+  platform        Platform
+  title           String?
+  thumbnailUrl    String?  @map("thumbnail_url")
+  status          ReelStatus @default(ACTIVE)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  orders          Order[]
+
+  @@map("reels")
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+}
+
+enum ReelStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+// ─────────────── ORDER ───────────────────────────────────────
+model Order {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reelId          String   @map("reel_id")
+  reel            Reel     @relation(fields: [reelId], references: [id])
+  panelId         String?  @map("panel_id")
+  panel           Panel?   @relation(fields: [panelId], references: [id])
+
+  // View targets
+  viewsTarget       Int      @map("views_target")
+  viewsDelivered    Int      @default(0) @map("views_delivered")
+  viewsRemaining    Int      @map("views_remaining")
+
+  // Engagement targets (auto-calculated from ratios)
+  engagementEnabled   Boolean  @default(true) @map("engagement_enabled")
+  likesTarget         Int      @default(0) @map("likes_target")
+  savesTarget         Int      @default(0) @map("saves_target")
+  sharesTarget        Int      @default(0) @map("shares_target")
+  commentsTarget      Int      @default(0) @map("comments_target")
+  likesDelivered      Int      @default(0) @map("likes_delivered")
+  savesDelivered      Int      @default(0) @map("saves_delivered")
+  sharesDelivered     Int      @default(0) @map("shares_delivered")
+  commentsDelivered   Int      @default(0) @map("comments_delivered")
+  // Ratios stored as percentages e.g. 4.0 = 4%
+  likesRatioPct       Float    @default(4.0) @map("likes_ratio_pct")
+  savesRatioPct       Float    @default(2.0) @map("saves_ratio_pct")
+  sharesRatioPct      Float    @default(0.5) @map("shares_ratio_pct")
+  commentsRatioPct    Float    @default(0.2) @map("comments_ratio_pct")
+
+  // Curve config
+  curveStyle        CurveStyle @default(ORGANIC) @map("curve_style")
+  durationHours     Int      @default(24) @map("duration_hours")
+  warmupHours       Int      @default(4) @map("warmup_hours")
+  peakHours         Int      @default(8) @map("peak_hours")
+  decayHours        Int      @default(12) @map("decay_hours")
+
+  // Panel order tracking
+  panelOrderId      String?  @map("panel_order_id")
+  panelServiceId    String?  @map("panel_service_id")
+
+  status          OrderStatus @default(PENDING)
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  failReason      String?  @map("fail_reason")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  deliveryEvents  DeliveryEvent[]
+
+  @@map("orders")
+}
+
+enum CurveStyle {
+  ORGANIC   // 24-48h S-curve
+  FAST      // 6-12h compressed
+  AGGRESSIVE // 2-6h rapid peak
+}
+
+enum OrderStatus {
+  PENDING
+  QUEUED
+  DELIVERING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PAUSED
+}
+
+// ─────────────── DELIVERY EVENT ─────────────────────────────
+model DeliveryEvent {
+  id              String   @id @default(cuid())
+  orderId         String   @map("order_id")
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  panelId         String   @map("panel_id")
+  panel           Panel    @relation(fields: [panelId], references: [id])
+
+  viewsBatch      Int      @map("views_batch")
+  scheduledAt     DateTime @map("scheduled_at")
+  executedAt      DateTime? @map("executed_at")
+  status          EventStatus @default(SCHEDULED)
+  responseData    Json?    @map("response_data")
+  errorMessage    String?  @map("error_message")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("delivery_events")
+}
+
+enum EventStatus {
+  SCHEDULED
+  EXECUTING
+  DONE
+  FAILED
+  RETRYING
+}
+
+// ─────────────── SUBSCRIPTION ────────────────────────────────
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId  String?  @map("stripe_customer_id")
+  stripePaymentId   String?  @map("stripe_payment_id")
+  amount            Int?     // in cents ($20 = 2000)
+  currency          String   @default("usd")
+  status            SubStatus @default(ACTIVE)
+
+  paidAt            DateTime? @map("paid_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("subscriptions")
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELLED
+  REFUNDED
+}
+
+// ─────────────── AUDIT LOG ───────────────────────────────────
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  metadata  Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+// ─────────────── ADMIN SETTINGS ──────────────────────────────
+model AdminSettings {
+  id              String   @id @default("global")
+  trc20Address    String?  @map("trc20_address")
+  bep20Address    String?  @map("bep20_address")
+  priceUsdt       Float    @default(20.0) @map("price_usdt")
+  siteName        String   @default("YoyoSMM") @map("site_name")
+  maintenanceMode Boolean  @default(false) @map("maintenance_mode")
+  freeTrialHours  Int      @default(24) @map("free_trial_hours")
+  supportEmail    String?  @map("support_email")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_settings")
+}
+
+// ─────────────── CRYPTO PAYMENT ──────────────────────────────
+model CryptoPayment {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  network         CryptoNetwork
+  walletAddress   String        @map("wallet_address")
+  txHash          String        @unique @map("tx_hash")
+  amountUsdt      Float?        @map("amount_usdt")
+  status          PaymentStatus @default(PENDING)
+  verifiedAt      DateTime?     @map("verified_at")
+  verifyAttempts  Int           @default(0) @map("verify_attempts")
+  verifyError     String?       @map("verify_error")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@map("crypto_payments")
+}
+
+enum CryptoNetwork {
+  TRC20
+  BEP20
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFYING
+  CONFIRMED
+  FAILED
+  REJECTED
+}
+
+// ─────────────── SERVICE CONFIG ──────────────────────────────
+model ServiceConfig {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  panelId     String   @map("panel_id")
+  panel       Panel    @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  platform    Platform
+  serviceId   String   @map("service_id")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, panelId, platform])
+  @@map("service_configs")
+}
+
+// ─────────────── CURVE TEMPLATE ──────────────────────────────
+model CurveTemplate {
+  id              String      @id @default(cuid())
+  userId          String      @map("user_id")
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  style           CurveStyle  @default(ORGANIC) @map("curve_style")
+  durationHours   Int         @default(24) @map("duration_hours")
+  warmupHours     Int         @default(4) @map("warmup_hours")
+  peakHours       Int         @default(8) @map("peak_hours")
+  decayHours      Int         @default(12) @map("decay_hours")
+  
+  // Default engagement ratios (stored as percentages)
+  likesRatioPct   Float       @default(4.0) @map("likes_ratio_pct")
+  savesRatioPct   Float       @default(2.0) @map("saves_ratio_pct")
+  sharesRatioPct  Float       @default(0.5) @map("shares_ratio_pct")
+  commentsRatioPct Float      @default(0.2) @map("comments_ratio_pct")
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@map("curve_templates")
+}
+
+

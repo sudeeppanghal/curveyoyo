@@ -1,0 +1,5 @@
+// ─────────────────────────────────────────────────
+// Prisma additions for Phase 4
+// Add these models to prisma/schema.prisma
+// ─────────────────────────────────────────────────
+// Run: npx prisma db push   after editing schema
