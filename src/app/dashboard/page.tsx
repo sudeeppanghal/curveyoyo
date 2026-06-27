@@ -26,11 +26,20 @@ const QUICK = [
 ];
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  let user: { email?: string; user_metadata?: Record<string, string> } | null = null;
 
-  const name = user.user_metadata?.name || user.email?.split("@")[0] || "Operator";
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) redirect("/login");
+    user = data.user;
+  } catch (err) {
+    // If Supabase env vars are missing, redirect to login instead of crashing
+    console.error("[Dashboard] Auth error:", err);
+    redirect("/login");
+  }
+
+  const name = user?.user_metadata?.name || user?.email?.split("@")[0] || "Operator";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
