@@ -2,12 +2,27 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-/* ── mock data for empty state dashboard ── */
-const MOCK_STATS = [
-  { label:"Views Delivered", value:"0", sub:"This month", icon:"📊", color:"#F59E0B" },
-  { label:"Active Orders", value:"0", sub:"Running now", icon:"⚡", color:"#34d399" },
-  { label:"Panels Connected", value:"0", sub:"Go connect one →", icon:"🔌", color:"#818cf8" },
-  { label:"Reels Added", value:"0", sub:"Add your first reel →", icon:"🎬", color:"#f472b6" },
+const C = {
+  border: "rgba(255,255,255,0.07)",
+  card: "rgba(255,255,255,0.025)",
+  amber: "#F59E0B",
+  text: "#ffffff",
+  muted: "#94a3b8",
+  faint: "#475569",
+};
+
+const STATS = [
+  { label:"Views Delivered", value:"0", sub:"This month",      icon:"📊", color:"#F59E0B" },
+  { label:"Active Orders",   value:"0", sub:"Running now",     icon:"⚡", color:"#34d399" },
+  { label:"Panels Connected",value:"0", sub:"Go connect one →",icon:"🔌", color:"#818cf8" },
+  { label:"Reels Added",     value:"0", sub:"Add your first →",icon:"🎬", color:"#f472b6" },
+];
+
+const QUICK = [
+  ["🔌","Connect SMM Panel", "/panels"],
+  ["🎬","Add Reel URL",       "/reels"],
+  ["📋","View All Orders",    "/orders"],
+  ["📈","Analytics",          "/analytics"],
 ];
 
 export default async function DashboardPage() {
@@ -20,20 +35,24 @@ export default async function DashboardPage() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div style={{ display:"flex", flexDirection:"column", gap:24, maxWidth:1200 }}>
 
       {/* ── Welcome banner ── */}
-      <div className="rounded-2xl p-6 sm:p-8 relative overflow-hidden" style={{background:"rgba(245,158,11,0.07)",border:"1px solid rgba(245,158,11,0.2)"}}>
-        <div className="absolute top-0 right-0 text-8xl opacity-10 select-none pointer-events-none">🚀</div>
-        <div className="relative">
-          <p className="text-sm text-amber-400 font-medium mb-1">⏳ 1-Day Free Trial Active</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">{greeting}, {name} 👋</h2>
-          <p className="text-gray-400 text-sm mb-5">Your organic delivery engine is ready. Connect your first SMM panel to get started.</p>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/panels" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B0B0F] hover:opacity-90 transition" style={{background:"#F59E0B"}}>
+      <div style={{ borderRadius:20, padding:"28px 32px", position:"relative", overflow:"hidden", background:"rgba(245,158,11,0.06)", border:"1px solid rgba(245,158,11,0.18)" }}>
+        <div style={{ position:"absolute", top:-10, right:16, fontSize:100, opacity:0.08, lineHeight:1, pointerEvents:"none", userSelect:"none" }}>🚀</div>
+        <div style={{ position:"relative" }}>
+          <p style={{ fontSize:12, fontWeight:700, color:C.amber, marginBottom:6, margin:"0 0 6px" }}>⏳ 1-Day Free Trial Active</p>
+          <h2 style={{ fontSize:28, fontWeight:800, color:C.text, margin:"0 0 8px", letterSpacing:"-0.5px" }}>
+            {greeting}, {name} 👋
+          </h2>
+          <p style={{ fontSize:14, color:C.muted, margin:"0 0 20px" }}>
+            Your organic delivery engine is ready. Connect your first SMM panel to get started.
+          </p>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:10 }}>
+            <Link href="/panels" style={{ padding:"10px 20px", borderRadius:10, fontSize:13, fontWeight:700, textDecoration:"none", background:"linear-gradient(135deg,#F59E0B,#F97316)", color:"#08080c" }}>
               🔌 Connect a Panel →
             </Link>
-            <Link href="/reels/new" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/10 transition border" style={{borderColor:"rgba(255,255,255,0.1)"}}>
+            <Link href="/reels/new" style={{ padding:"10px 20px", borderRadius:10, fontSize:13, fontWeight:600, textDecoration:"none", color:C.muted, border:`1px solid ${C.border}`, background:"rgba(255,255,255,0.03)" }}>
               🎬 Add First Reel
             </Link>
           </div>
@@ -41,90 +60,97 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Stats grid ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {MOCK_STATS.map(({label,value,sub,icon,color}) => (
-          <div key={label} className="rounded-2xl border p-5 transition-all hover:border-white/10" style={{background:"rgba(255,255,255,0.03)",borderColor:"rgba(255,255,255,0.06)"}}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-2xl">{icon}</span>
-              <div className="w-2 h-2 rounded-full" style={{background:color}} />
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16 }}>
+        {STATS.map(({ label, value, sub, icon, color }) => (
+          <div key={label} style={{ padding:"20px 20px", borderRadius:16, border:`1px solid ${C.border}`, background:C.card }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <span style={{ fontSize:22 }}>{icon}</span>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:color }} />
             </div>
-            <p className="text-3xl font-bold text-white">{value}</p>
-            <p className="text-sm font-medium text-white mt-0.5">{label}</p>
-            <p className="text-xs text-gray-500 mt-1">{sub}</p>
+            <p style={{ fontSize:32, fontWeight:800, color:C.text, margin:"0 0 4px", letterSpacing:"-1px" }}>{value}</p>
+            <p style={{ fontSize:13, fontWeight:600, color:C.text, margin:"0 0 4px" }}>{label}</p>
+            <p style={{ fontSize:12, color:C.faint, margin:0 }}>{sub}</p>
           </div>
         ))}
       </div>
 
-      {/* ── Main two-col layout ── */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      {/* ── Two-col: orders + actions ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:20 }}>
 
-        {/* Recent orders (placeholder) */}
-        <div className="lg:col-span-2 rounded-2xl border" style={{background:"rgba(255,255,255,0.02)",borderColor:"rgba(255,255,255,0.06)"}}>
-          <div className="flex items-center justify-between p-5 border-b" style={{borderColor:"rgba(255,255,255,0.06)"}}>
-            <h3 className="font-semibold text-white">Recent Orders</h3>
-            <Link href="/orders" className="text-xs text-amber-400 hover:underline">View all →</Link>
+        {/* Recent orders */}
+        <div style={{ borderRadius:20, border:`1px solid ${C.border}`, background:C.card, overflow:"hidden" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:`1px solid ${C.border}` }}>
+            <h3 style={{ fontWeight:700, fontSize:15, color:C.text, margin:0 }}>Recent Orders</h3>
+            <Link href="/orders" style={{ fontSize:12, color:C.amber, textDecoration:"none" }}>View all →</Link>
           </div>
-          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-4" style={{background:"rgba(255,255,255,0.05)"}}>📋</div>
-            <p className="text-white font-medium mb-1">No orders yet</p>
-            <p className="text-gray-500 text-sm mb-5">Connect a panel and add a reel to place your first order.</p>
-            <Link href="/reels/new" className="px-5 py-2.5 rounded-xl text-sm font-medium text-[#0B0B0F] hover:opacity-90 transition" style={{background:"#F59E0B"}}>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"56px 24px", textAlign:"center" }}>
+            <div style={{ width:52, height:52, borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, marginBottom:14, background:"rgba(255,255,255,0.04)" }}>📋</div>
+            <p style={{ fontWeight:600, fontSize:15, color:C.text, margin:"0 0 6px" }}>No orders yet</p>
+            <p style={{ fontSize:13, color:C.muted, margin:"0 0 20px" }}>Connect a panel and add a reel to place your first order.</p>
+            <Link href="/reels/new" style={{ padding:"10px 20px", borderRadius:10, fontSize:13, fontWeight:700, textDecoration:"none", background:"linear-gradient(135deg,#F59E0B,#F97316)", color:"#08080c" }}>
               Create First Order →
             </Link>
           </div>
         </div>
 
-        {/* Quick actions + panel status */}
-        <div className="space-y-4">
+        {/* Right col */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           {/* Quick actions */}
-          <div className="rounded-2xl border p-5" style={{background:"rgba(255,255,255,0.02)",borderColor:"rgba(255,255,255,0.06)"}}>
-            <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
-            <div className="space-y-2">
-              {[["🔌","Connect SMM Panel","/panels"],["🎬","Add Reel URL","/reels"],["📋","View All Orders","/orders"],["📈","Analytics","/analytics"]].map(([icon,label,href])=>(
-                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
-                  <span>{icon}</span>{label}
-                  <span className="ml-auto text-gray-600">→</span>
+          <div style={{ borderRadius:20, border:`1px solid ${C.border}`, background:C.card, padding:"16px 16px" }}>
+            <h3 style={{ fontWeight:700, fontSize:14, color:C.text, margin:"0 0 14px" }}>Quick Actions</h3>
+            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+              {QUICK.map(([icon, label, href]) => (
+                <Link key={href} href={href} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10, fontSize:13, textDecoration:"none", color:C.muted, transition:"all 0.15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; (e.currentTarget as HTMLElement).style.color = C.text; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = C.muted; }}>
+                  <span style={{ fontSize:16 }}>{icon}</span>
+                  <span>{label}</span>
+                  <span style={{ marginLeft:"auto", color:C.faint }}>→</span>
                 </Link>
               ))}
             </div>
           </div>
 
           {/* Panel status */}
-          <div className="rounded-2xl border p-5" style={{background:"rgba(255,255,255,0.02)",borderColor:"rgba(255,255,255,0.06)"}}>
-            <h3 className="font-semibold text-white mb-4">Panel Status</h3>
-            <div className="flex flex-col items-center py-4 text-center">
-              <div className="text-3xl mb-2">🔌</div>
-              <p className="text-sm text-gray-500">No panels connected yet</p>
-              <Link href="/panels" className="mt-3 text-xs text-amber-400 hover:underline">Add your first panel →</Link>
+          <div style={{ borderRadius:20, border:`1px solid ${C.border}`, background:C.card, padding:"16px 16px" }}>
+            <h3 style={{ fontWeight:700, fontSize:14, color:C.text, margin:"0 0 14px" }}>Panel Status</h3>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"16px 0", textAlign:"center" }}>
+              <div style={{ fontSize:28, marginBottom:8 }}>🔌</div>
+              <p style={{ fontSize:12, color:C.faint, margin:"0 0 8px" }}>No panels connected yet</p>
+              <Link href="/panels" style={{ fontSize:12, color:C.amber, textDecoration:"none" }}>Add your first panel →</Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Delivery curve chart (live placeholder) ── */}
-      <div className="rounded-2xl border p-6" style={{background:"rgba(255,255,255,0.02)",borderColor:"rgba(255,255,255,0.06)"}}>
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-semibold text-white">Views Delivered — Last 7 Days</h3>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Views
+      {/* ── Chart area ── */}
+      <div style={{ borderRadius:20, border:`1px solid ${C.border}`, background:C.card, padding:"20px 24px" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+          <h3 style={{ fontWeight:700, fontSize:15, color:C.text, margin:0 }}>Views Delivered — Last 7 Days</h3>
+          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:C.faint }}>
+            <span style={{ width:8, height:8, borderRadius:"50%", background:C.amber, display:"inline-block" }} />
+            Views
           </div>
         </div>
         <PlaceholderChart />
-        <p className="text-center text-gray-600 text-xs mt-4">No delivery data yet — place your first order to see live curves</p>
+        <p style={{ textAlign:"center", fontSize:12, color:C.faint, marginTop:12, margin:"12px 0 0" }}>
+          No delivery data yet — place your first order to see live curves
+        </p>
       </div>
+
     </div>
   );
 }
 
 function PlaceholderChart() {
-  const w = 600, h = 100, pad = 8;
-  const pts = Array.from({length:30},(_,i) => ({
-    x: pad + (i/29)*(w-2*pad),
-    y: h - pad - 2,
+  const W = 600, H = 120, pad = 10;
+  const pts = Array.from({ length: 28 }, (_, i) => ({
+    x: pad + (i / 27) * (W - 2 * pad),
+    y: H - pad - 3,
   }));
-  const d = pts.map((p,i)=>`${i===0?"M":"L"} ${p.x} ${p.y}`).join(" ");
+  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
   return (
-    <svg width="100%" viewBox={`0 0 ${w} ${h}`} className="opacity-20">
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ opacity:0.18 }}>
       <path d={d} fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="6 4" />
     </svg>
   );
