@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { curveForChart, calculateEngagementTargets } from "@/lib/delivery/curve";
+import { generateDeliverySchedule, calculateEngagementTargets } from "@/lib/delivery/curve";
 
 // ── Types ───────────────────────────────────────────────────────
 type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
@@ -41,58 +41,247 @@ const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warm
   CROSSWAVE:  { label: "Crosswave",  desc: "Periodic multi-platform cross pacing — oscillatory crest/trough waves simulating syndication.", warmup: 4, peak: 8, icon: "🌊" },
 };
 
-// ── Mini SVG Chart ───────────────────────────────────────────────
+// ── Premium Neon Animated Chart ──────────────────────────────────
 function CurvePreview({
   views, durationHours, style, warmup, peak,
-  likesRatio, savesRatio,
+  likesRatio, savesRatio, sharesRatio, commentsRatio,
+  likesOn, savesOn, sharesOn, commentsOn, engEnabled
 }: {
   views: number; durationHours: number; style: CurveStyle; warmup: number; peak: number;
-  likesRatio: number; savesRatio: number;
+  likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number;
+  likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean; engEnabled: boolean;
 }) {
-  const points = curveForChart({ totalViews: views, durationHours, style, warmupHours: warmup, peakHours: peak });
-  if (!points.length) return null;
-  const W = 400, H = 100, pad = 8;
-  const maxViews = Math.max(...points.map((p) => p.views), 1);
-  const pts = points.map((p, i) => ({
-    x: pad + (i / Math.max(points.length - 1, 1)) * (W - 2 * pad),
-    y: H - pad - (p.views / maxViews) * (H - 2 * pad),
-  }));
-  const likesPts = points.map((p, i) => ({
-    x: pad + (i / Math.max(points.length - 1, 1)) * (W - 2 * pad),
-    y: H - pad - ((p.likes ?? 0) / Math.max(...points.map((q) => q.likes ?? 0), 1)) * (H - 2 * pad),
-  }));
-  const line = (arr: { x: number; y: number }[]) =>
-    arr.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-  const fill = (arr: { x: number; y: number }[], last: number) =>
-    [line(arr), `L ${arr.at(-1)!.x.toFixed(1)} ${last}`, `L ${arr[0].x.toFixed(1)} ${last} Z`].join(" ");
+  const [hoveredHour, setHoveredHour] = useState<number | null>(null);
+  const [activeMetric, setActiveMetric] = useState<"all" | "views" | "likes" | "saves" | "shares" | "comments">("all");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playHour, setPlayHour] = useState(0);
+  const playTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const batches = generateDeliverySchedule({
+    totalViews: views,
+    durationHours,
+    warmupHours: warmup,
+    peakHours: peak,
+    style,
+    engagementEnabled: engEnabled,
+    likesRatioPct: likesOn ? likesRatio : 0,
+    savesRatioPct: savesOn ? savesRatio : 0,
+    sharesRatioPct: sharesOn ? sharesRatio : 0,
+    commentsRatioPct: commentsOn ? commentsRatio : 0,
+  });
+
+  // Playhead simulation timer
+  useEffect(() => {
+    if (isPlaying) {
+      playTimerRef.current = setInterval(() => {
+        setPlayHour((h) => {
+          if (h >= durationHours - 1) {
+            setIsPlaying(false);
+            return 0;
+          }
+          return h + 1;
+        });
+      }, Math.max(80, 2000 / durationHours)); // target ~2 seconds for full simulation
+    } else {
+      if (playTimerRef.current) clearInterval(playTimerRef.current);
+    }
+    return () => {
+      if (playTimerRef.current) clearInterval(playTimerRef.current);
+    };
+  }, [isPlaying, durationHours]);
+
+  if (!batches.length) return null;
+
+  const W = 500, H = 150, pad = 12;
+  const maxViews = Math.max(...batches.map((b) => b.views), 1);
+  const maxLikes = Math.max(...batches.map((b) => b.likes), 1);
+  const maxSaves = Math.max(...batches.map((b) => b.saves), 1);
+  const maxShares = Math.max(...batches.map((b) => b.shares), 1);
+  const maxComments = Math.max(...batches.map((b) => b.comments), 1);
+
+  // Helper to map index & quantity to coordinates
+  const getCoords = (val: number, max: number, idx: number) => {
+    const x = pad + (idx / (batches.length - 1)) * (W - 2 * pad);
+    const y = H - pad - (val / max) * (H - 2 * pad);
+    return { x, y };
+  };
+
+  const viewsPts = batches.map((b, i) => getCoords(b.views, maxViews, i));
+  const likesPts = batches.map((b, i) => getCoords(b.likes, maxLikes, i));
+  const savesPts = batches.map((b, i) => getCoords(b.saves, maxSaves, i));
+  const sharesPts = batches.map((b, i) => getCoords(b.shares, maxShares, i));
+  const commentsPts = batches.map((b, i) => getCoords(b.comments, maxComments, i));
+
+  const makePath = (pts: { x: number; y: number }[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+  const makeFill = (pts: { x: number; y: number }[]) => [
+    makePath(pts),
+    `L ${pts.at(-1)!.x.toFixed(1)} ${H - pad}`,
+    `L ${pts[0].x.toFixed(1)} ${H - pad} Z`,
+  ].join(" ");
+
+  const metrics = [
+    { key: "views", label: "Views", color: "#d97706", glow: "rgba(217,119,6,0.4)", active: true, pts: viewsPts, fillGrad: "vGrad" },
+    { key: "likes", label: "Likes", color: "#16a34a", glow: "rgba(22,163,74,0.4)", active: engEnabled && likesOn && maxLikes > 0, pts: likesPts, fillGrad: "lGrad" },
+    { key: "saves", label: "Saves", color: "#2563eb", glow: "rgba(37,99,235,0.4)", active: engEnabled && savesOn && maxSaves > 0, pts: savesPts, fillGrad: "saGrad" },
+    { key: "shares", label: "Shares", color: "#8b5cf6", glow: "rgba(139,92,246,0.4)", active: engEnabled && sharesOn && maxShares > 0, pts: sharesPts, fillGrad: "shGrad" },
+    { key: "comments", label: "Comments", color: "#ef4444", glow: "rgba(239,68,68,0.4)", active: engEnabled && commentsOn && maxComments > 0, pts: commentsPts, fillGrad: "cGrad" },
+  ];
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    if (isPlaying) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, (x - pad) / (rect.width - 2 * pad)));
+    const hourIdx = Math.round(percent * (batches.length - 1));
+    setHoveredHour(hourIdx);
+  };
+
+  const activeHoverData = hoveredHour !== null ? batches[hoveredHour] : isPlaying ? batches[playHour] : null;
+  const currentProgressHour = hoveredHour !== null ? hoveredHour : isPlaying ? playHour : null;
 
   return (
-    <div style={{ marginTop:16, borderRadius:14, overflow:"hidden", background:N.bg, padding:"12px 16px", boxShadow:N.inset }}>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
-        <defs>
-          <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d97706" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#d97706" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {/* Views */}
-        <path d={fill(pts, H - pad)} fill="url(#vg)" />
-        <path d={line(pts)} fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Likes overlay */}
-        {likesRatio > 0 && (
-          <>
-            <path d={fill(likesPts, H - pad)} fill="url(#lg)" />
-            <path d={line(likesPts)} fill="none" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 2" />
-          </>
+    <div style={{ marginTop:16, borderRadius:20, background:N.bg, padding:"16px", boxShadow:N.raised, display:"flex", flexDirection:"column", gap:14 }}>
+      {/* Chart Header Toolbar */}
+      <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <button onClick={() => { setIsPlaying(!isPlaying); setHoveredHour(null); }} className="neo-btn"
+            style={{ width:34, height:34, borderRadius:"50%", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", background:N.bg, color:N.accent, boxShadow:N.raisedSm, fontSize:12 }}>
+            {isPlaying ? "⏸" : "▶️"}
+          </button>
+          <span style={{ fontSize:12, fontWeight:850, color:N.text }}>Pacing Simulation</span>
+        </div>
+
+        {/* Metric Toggles */}
+        <div style={{ display:"flex", gap:4, overflowX:"auto", paddingBottom:2 }}>
+          <button onClick={() => { setActiveMetric("all"); }} className="neo-btn"
+            style={{ border:"none", padding:"5px 10px", borderRadius:8, fontSize:10, fontWeight:800, cursor:"pointer", background:N.bg,
+              color: activeMetric === "all" ? N.accent : N.muted,
+              boxShadow: activeMetric === "all" ? N.inset : N.raisedSm
+            }}>
+            All Metrics
+          </button>
+          {metrics.filter((m) => m.active).map((m) => (
+            <button key={m.key} onClick={() => { setActiveMetric(m.key as any); }} className="neo-btn"
+              style={{ border:"none", padding:"5px 10px", borderRadius:8, fontSize:10, fontWeight:800, cursor:"pointer", background:N.bg,
+                color: activeMetric === m.key ? m.color : N.muted,
+                boxShadow: activeMetric === m.key ? N.inset : N.raisedSm
+              }}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* SVG Neon Chart wrapper */}
+      <div style={{ position:"relative", borderRadius:14, background:N.bg, boxShadow:N.inset, padding:"12px 6px" }}>
+        <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredHour(null)} style={{ overflow:"visible", cursor:"crosshair" }}>
+          <defs>
+            {/* Gradients */}
+            <linearGradient id="vGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d97706" stopOpacity="0.25" /><stop offset="100%" stopColor="#d97706" stopOpacity="0" /></linearGradient>
+            <linearGradient id="lGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" /><stop offset="100%" stopColor="#16a34a" stopOpacity="0" /></linearGradient>
+            <linearGradient id="saGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" /><stop offset="100%" stopColor="#2563eb" stopOpacity="0" /></linearGradient>
+            <linearGradient id="shGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.25" /><stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" /></linearGradient>
+            <linearGradient id="cGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" /><stop offset="100%" stopColor="#ef4444" stopOpacity="0" /></linearGradient>
+
+            {/* Neon Glow Filters */}
+            {metrics.map((m) => (
+              <filter key={m.key} id={`glow-${m.key}`} x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            ))}
+          </defs>
+
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75].map((val) => (
+            <line key={val} x1={pad} y1={H - pad - val * (H - 2 * pad)} x2={W - pad} y2={H - pad - val * (H - 2 * pad)}
+              stroke={N.border} strokeWidth="1" strokeDasharray="3 3" />
+          ))}
+
+          {/* Render lines and fills */}
+          {metrics.map((m) => {
+            const isFaded = activeMetric !== "all" && activeMetric !== m.key;
+            if (!m.active) return null;
+            return (
+              <g key={m.key} style={{ opacity: isFaded ? 0.08 : 1, transition:"all 0.3s ease" }}>
+                {activeMetric === m.key && (
+                  <path d={makeFill(m.pts)} fill={`url(#${m.fillGrad})`} style={{ transition:"all 0.5s ease" }} />
+                )}
+                <path d={makePath(m.pts)} fill="none" stroke={m.color} strokeWidth={activeMetric === m.key ? 3 : 2}
+                  strokeLinecap="round" strokeLinejoin="round" filter={`url(#glow-${m.key})`} style={{ transition:"all 0.5s ease" }} />
+              </g>
+            );
+          })}
+
+          {/* Scrubber vertical line */}
+          {currentProgressHour !== null && (
+            <line
+              x1={pad + (currentProgressHour / (batches.length - 1)) * (W - 2 * pad)}
+              y1={pad}
+              x2={pad + (currentProgressHour / (batches.length - 1)) * (W - 2 * pad)}
+              y2={H - pad}
+              stroke={isPlaying ? "#d97706" : N.accent}
+              strokeWidth={isPlaying ? 2 : 1.5}
+              strokeDasharray={isPlaying ? "none" : "3 3"}
+              style={{ filter: isPlaying ? "drop-shadow(0 0 4px #d97706)" : "none" }}
+            />
+          )}
+        </svg>
+
+        {/* Hover / Simulation Tooltip details */}
+        {activeHoverData && currentProgressHour !== null && (
+          <div style={{
+            position:"absolute", top:10, left: (currentProgressHour / (batches.length - 1)) > 0.5 ? "auto" : 20,
+            right: (currentProgressHour / (batches.length - 1)) > 0.5 ? 20 : "auto",
+            background:"rgba(238,242,247,0.92)", border:`1px solid ${N.border}`, borderRadius:10,
+            padding:"8px 12px", fontSize:11, pointerEvents:"none", boxShadow:N.raisedSm, display:"flex", flexDirection:"column", gap:4, backdropFilter:"blur(4px)"
+          }}>
+            <div style={{ fontWeight:850, color:N.text, borderBottom:`1px solid ${N.border}`, paddingBottom:3, marginBottom:2 }}>
+              🕒 hour {activeHoverData.hour + 1} of {durationHours}h
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
+              <span style={{ color:N.muted, fontWeight:700 }}>👁 Views</span>
+              <strong style={{ color:"#d97706" }}>{activeHoverData.views.toLocaleString()}</strong>
+            </div>
+            {engEnabled && likesOn && activeHoverData.likes > 0 && (
+              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
+                <span style={{ color:N.muted, fontWeight:700 }}>👍 Likes</span>
+                <strong style={{ color:"#16a34a" }}>{activeHoverData.likes.toLocaleString()}</strong>
+              </div>
+            )}
+            {engEnabled && savesOn && activeHoverData.saves > 0 && (
+              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
+                <span style={{ color:N.muted, fontWeight:700 }}>🔖 Saves</span>
+                <strong style={{ color:"#2563eb" }}>{activeHoverData.saves.toLocaleString()}</strong>
+              </div>
+            )}
+            {engEnabled && sharesOn && activeHoverData.shares > 0 && (
+              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
+                <span style={{ color:N.muted, fontWeight:700 }}>📤 Shares</span>
+                <strong style={{ color:"#8b5cf6" }}>{activeHoverData.shares.toLocaleString()}</strong>
+              </div>
+            )}
+            {engEnabled && commentsOn && activeHoverData.comments > 0 && (
+              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
+                <span style={{ color:N.muted, fontWeight:700 }}>💬 Comments</span>
+                <strong style={{ color:"#ef4444" }}>{activeHoverData.comments.toLocaleString()}</strong>
+              </div>
+            )}
+          </div>
         )}
-      </svg>
-      <div style={{ display:"flex", alignItems:"center", gap:16, marginTop:8, fontSize:11 }}>
-        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"#d97706" }} /> Views</span>
-        {likesRatio > 0 && <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"#16a34a" }} /> Likes</span>}
+      </div>
+
+      {/* Cumulative info bar */}
+      <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"space-between", gap:12, fontSize:11, color:N.muted, fontWeight:700, borderTop:`1px solid ${N.border}`, paddingTop:10 }}>
+        <span>Style: <strong style={{ color:N.text }}>{style}</strong></span>
+        <span>Warmup: <strong style={{ color:N.text }}>{warmup}h</strong></span>
+        <span>Peak: <strong style={{ color:N.text }}>{peak}h</strong></span>
+        <span>Decay: <strong style={{ color:N.text }}>{durationHours - warmup - peak}h</strong></span>
       </div>
     </div>
   );
@@ -489,7 +678,22 @@ export default function NewReelPage() {
             <p style={{ fontSize:12, color:N.muted, marginTop:10, fontWeight:600, lineHeight:1.5 }}>{curveInfo.desc}</p>
           </div>
 
-          <CurvePreview views={views} durationHours={durationHours} style={style} warmup={curveInfo.warmup} peak={curveInfo.peak} likesRatio={likesRatio} savesRatio={0} />
+          <CurvePreview
+            views={views}
+            durationHours={durationHours}
+            style={style}
+            warmup={curveInfo.warmup}
+            peak={curveInfo.peak}
+            likesRatio={likesRatio}
+            savesRatio={savesRatio}
+            sharesRatio={sharesRatio}
+            commentsRatio={commentsRatio}
+            likesOn={likesOn}
+            savesOn={savesOn}
+            sharesOn={sharesOn}
+            commentsOn={commentsOn}
+            engEnabled={engEnabled}
+          />
 
           <div style={{ fontSize:12, color:N.muted, textAlign:"center", fontWeight:600 }}>
             ≈ {Math.round(views / durationDays).toLocaleString()} views/day · {durationHours} hourly batches
@@ -562,7 +766,22 @@ export default function NewReelPage() {
         <div style={{ borderRadius:24, padding:28, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:20, animation:"fadeUp 0.3s ease" }}>
           <h2 style={{ fontSize:14, fontWeight:800, color:N.text, margin:0 }}>4. Confirm Campaign</h2>
 
-          <CurvePreview views={views} durationHours={durationHours} style={style} warmup={curveInfo.warmup} peak={curveInfo.peak} likesRatio={engEnabled && likesOn ? likesRatio : 0} savesRatio={0} />
+          <CurvePreview
+            views={views}
+            durationHours={durationHours}
+            style={style}
+            warmup={curveInfo.warmup}
+            peak={curveInfo.peak}
+            likesRatio={likesRatio}
+            savesRatio={savesRatio}
+            sharesRatio={sharesRatio}
+            commentsRatio={commentsRatio}
+            likesOn={likesOn}
+            savesOn={savesOn}
+            sharesOn={sharesOn}
+            commentsOn={commentsOn}
+            engEnabled={engEnabled}
+          />
 
           <div style={{ display:"flex", flexDirection:"column", gap:10, padding:18, borderRadius:16, background:N.bg, boxShadow:N.inset }}>
             {[
