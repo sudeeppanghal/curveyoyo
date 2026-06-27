@@ -8,7 +8,7 @@ export interface CurveParams {
   durationHours: number;
   warmupHours: number;
   peakHours: number;
-  style: "ORGANIC" | "FAST" | "AGGRESSIVE";
+  style: "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
   // Engagement
   engagementEnabled?: boolean;
   likesRatioPct?: number;
@@ -39,6 +39,11 @@ const RATES: Record<string, number> = {
   ORGANIC:    0.8,
   FAST:       1.2,
   AGGRESSIVE: 2.0,
+  WHOP:       0.65,
+  CLIPSTAKE:  1.0,
+  CLIPSTAR:   1.5,
+  PICSART:    0.75,
+  CROSSWAVE:  0.9,
 };
 
 /**
@@ -85,12 +90,34 @@ export function generateDeliverySchedule(params: CurveParams): DeliveryBatch[] {
     tzOffsetHours = 5.5,
   } = params;
 
-  const r = RATES[style] ?? 0.45;
+  const r = RATES[style] ?? 0.8;
   const t0 = warmupHours + peakHours / 2;
   const nowUtcHour = new Date().getUTCHours();
 
   const raw = Array.from({ length: durationHours }, (_, t) => {
-    const logistic = 1 / (1 + Math.exp(-r * (t - t0)));
+    let logistic = 1 / (1 + Math.exp(-r * (t - t0)));
+
+    // Custom shape modifications for special platforms
+    if (style === "CLIPSTAKE") {
+      // Double-plateau step-wise curve simulating viral trigger prompts
+      const progress = t / durationHours;
+      const stepFactor = progress < 0.35 ? 0.4 : progress < 0.7 ? 0.75 : 1.0;
+      logistic = logistic * stepFactor;
+    } else if (style === "CROSSWAVE") {
+      // Wave-like oscillation simulating syndication across multiple platforms
+      const wave = 1 + 0.3 * Math.sin((t * Math.PI) / 4);
+      logistic = logistic * wave;
+    } else if (style === "WHOP") {
+      // Extremely slow building ramp (commerce activity profile)
+      logistic = Math.pow(logistic, 1.5);
+    } else if (style === "CLIPSTAR") {
+      // Rapid spike with long-tail plateau retention
+      logistic = Math.sqrt(logistic);
+    } else if (style === "PICSART") {
+      // Smooth gradual S-curve but shifted to peak later in the day
+      logistic = Math.pow(logistic, 1.2);
+    }
+
     const utcHour = (nowUtcHour + t) % 24;
     return logistic * peakHourMultiplier(utcHour, tzOffsetHours);
   });

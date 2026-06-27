@@ -70,7 +70,7 @@ const grid = (cols: string, gap: number): React.CSSProperties => ({
 export default function Home() {
   const [activeFeature, setActiveFeature] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const [curveStyle, setCurveStyle] = useState<"ORGANIC"|"FAST"|"AGGRESSIVE">("ORGANIC");
+  const [curveStyle, setCurveStyle] = useState<"ORGANIC"|"FAST"|"AGGRESSIVE"|"WHOP"|"CLIPSTAKE"|"CLIPSTAR"|"PICSART"|"CROSSWAVE">("ORGANIC");
   const [duration, setDuration] = useState(24);
   const [openFaq, setOpenFaq] = useState<number|null>(null);
 
@@ -241,13 +241,13 @@ export default function Home() {
               <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase", color:C.textMuted, marginBottom:16 }}>
                 1. Choose Delivery Style
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:28 }}>
-                {(["ORGANIC","FAST","AGGRESSIVE"] as const).map(s => (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(90px, 1fr))", gap:10, marginBottom:28 }}>
+                {(["ORGANIC","FAST","AGGRESSIVE","WHOP","CLIPSTAKE","CLIPSTAR","PICSART","CROSSWAVE"] as const).map(s => (
                   <button key={s} onClick={() => setCurveStyle(s)} style={{
-                    padding:"12px 6px", borderRadius:12, border:"none",
+                    padding:"10px 4px", borderRadius:12, border:"none",
                     background: curveStyle===s ? C.bg : "transparent",
                     color: curveStyle===s ? C.amber : C.textMuted,
-                    fontSize:12, fontWeight:800, cursor:"pointer", transition:"all 0.2s",
+                    fontSize:11, fontWeight:800, cursor:"pointer", transition:"all 0.2s",
                     boxShadow: curveStyle===s ? C.inset : C.raisedSm,
                   }}>{s}</button>
                 ))}
@@ -459,14 +459,40 @@ export default function Home() {
 }
 
 /* ─── Curve Chart ─────────────────────────────────── */
-function CurveChart({ style, duration }: { style:"ORGANIC"|"FAST"|"AGGRESSIVE"; duration:number }) {
+function CurveChart({ style, duration }: { style: "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"; duration:number }) {
   const N = 26;
-  const r = style==="ORGANIC" ? 0.4 : style==="FAST" ? 0.65 : 0.9;
-  const t0 = style==="ORGANIC" ? duration*0.38 : style==="FAST" ? duration*0.28 : duration*0.18;
+  const RATES: Record<string, number> = {
+    ORGANIC:    0.4,
+    FAST:       0.65,
+    AGGRESSIVE: 0.9,
+    WHOP:       0.32,
+    CLIPSTAKE:  0.5,
+    CLIPSTAR:   0.75,
+    PICSART:    0.38,
+    CROSSWAVE:  0.45,
+  };
+  const r = RATES[style] ?? 0.4;
+  const t0 = style === "AGGRESSIVE" ? duration * 0.18 : style === "FAST" ? duration * 0.28 : duration * 0.38;
   const pts: number[] = [];
   for (let i=0;i<N;i++) {
     const x = (i/(N-1))*duration;
-    const v = 100/(1+Math.exp(-r*(x-t0)));
+    let v = 100/(1+Math.exp(-r*(x-t0)));
+
+    if (style === "CLIPSTAKE") {
+      const progress = i / N;
+      const stepFactor = progress < 0.35 ? 0.4 : progress < 0.7 ? 0.75 : 1.0;
+      v = v * stepFactor;
+    } else if (style === "CROSSWAVE") {
+      const wave = 1 + 0.3 * Math.sin((i * Math.PI) / 4);
+      v = v * wave;
+    } else if (style === "WHOP") {
+      v = Math.pow(v, 1.5);
+    } else if (style === "CLIPSTAR") {
+      v = Math.sqrt(v);
+    } else if (style === "PICSART") {
+      v = Math.pow(v, 1.2);
+    }
+
     pts.push(Math.max(2, v + Math.sin(i*1.8)*1.5));
   }
   const max = Math.max(...pts);

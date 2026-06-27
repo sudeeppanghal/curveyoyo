@@ -6,7 +6,7 @@ import { curveForChart, calculateEngagementTargets } from "@/lib/delivery/curve"
 
 // ── Types ───────────────────────────────────────────────────────
 type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
-type CurveStyle = "ORGANIC" | "FAST" | "AGGRESSIVE";
+type CurveStyle = "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
 
 interface Panel {
   id: string; name: string; isActive: boolean;
@@ -34,6 +34,11 @@ const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warm
   ORGANIC:    { label: "Organic",    desc: "Natural viral growth — slow warmup, steady peak, smooth decay. Best for account health.", warmup: 4, peak: 8, icon: "🌅" },
   FAST:       { label: "Fast",       desc: "Compressed 12h curve — quicker ramp, shorter peak. Good for time-sensitive content.", warmup: 2, peak: 4, icon: "⚡" },
   AGGRESSIVE: { label: "Aggressive", desc: "Rapid 6h burst — immediate surge. Use sparingly, higher visibility risk.", warmup: 1, peak: 2, icon: "🔥" },
+  WHOP:       { label: "Whop",       desc: "Steady commerce pacing — slow morning warmup with sustained midday activity plateau.", warmup: 5, peak: 10, icon: "💳" },
+  CLIPSTAKE:  { label: "Clipstake",  desc: "Algorithmic step-wise wave pacing — spikes at 35% and 70% of duration to mimic viral prompts.", warmup: 3, peak: 6, icon: "🎲" },
+  CLIPSTAR:   { label: "Clipstar",   desc: "Immediate sustained viral burst — quick warmup with long-tail plateau retention.", warmup: 2, peak: 12, icon: "⭐" },
+  PICSART:    { label: "Picsart",    desc: "Creative designer pacing — afternoon peak with high interaction curves.", warmup: 4, peak: 8, icon: "🎨" },
+  CROSSWAVE:  { label: "Crosswave",  desc: "Periodic multi-platform cross pacing — oscillatory crest/trough waves simulating syndication.", warmup: 4, peak: 8, icon: "🌊" },
 };
 
 // ── Mini SVG Chart ───────────────────────────────────────────────
@@ -468,8 +473,8 @@ export default function NewReelPage() {
 
           <div>
             <p style={{ fontSize:13, fontWeight:700, color:N.text, marginBottom:10 }}>Delivery Style</p>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-              {(["ORGANIC", "FAST", "AGGRESSIVE"] as CurveStyle[]).map((s) => (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10 }}>
+              {(["ORGANIC", "FAST", "AGGRESSIVE", "WHOP", "CLIPSTAKE", "CLIPSTAR", "PICSART", "CROSSWAVE"] as CurveStyle[]).map((s) => (
                 <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }} className="neo-btn"
                   style={{ padding:"14px 6px", borderRadius:14, border:"none", cursor:"pointer", transition:"all 0.2s", display:"flex", flexDirection:"column", alignItems:"center", gap:6,
                     background: N.bg,

@@ -41,7 +41,11 @@ const STATUS: Record<string, { color: string; bg: string; dot?: boolean }> = {
 
 const PLATFORM_ICON: Record<string, string> = { INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️" };
 const FILTERS: OrderStatus[] = ["All", "DELIVERING", "COMPLETED", "QUEUED", "PAUSED", "FAILED", "CANCELLED"];
-const CURVE_LABELS: Record<string, string> = { ORGANIC: "🌱 Organic", FAST: "⚡ Fast", AGGRESSIVE: "🔥 Aggressive" };
+const CURVE_LABELS: Record<string, string> = {
+  ORGANIC: "🌱 Organic", FAST: "⚡ Fast", AGGRESSIVE: "🔥 Aggressive",
+  WHOP: "💳 Whop", CLIPSTAKE: "🎲 Clipstake", CLIPSTAR: "⭐ Clipstar",
+  PICSART: "🎨 Picsart", CROSSWAVE: "🌊 Crosswave"
+};
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);

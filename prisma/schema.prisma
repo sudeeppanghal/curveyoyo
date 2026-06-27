@@ -176,6 +176,11 @@ enum CurveStyle {
   ORGANIC   // 24-48h S-curve
   FAST      // 6-12h compressed
   AGGRESSIVE // 2-6h rapid peak
+  WHOP
+  CLIPSTAKE
+  CLIPSTAR
+  PICSART
+  CROSSWAVE
 }
 
 enum OrderStatus {

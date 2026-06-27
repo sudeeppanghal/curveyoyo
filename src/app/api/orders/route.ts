@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     update: {},
   });
 
-  const curveStyle = ((styleRaw as string | undefined)?.toUpperCase() ?? "ORGANIC") as "ORGANIC" | "FAST" | "AGGRESSIVE";
+  const curveStyle = ((styleRaw as string | undefined)?.toUpperCase() ?? "ORGANIC") as "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
   const defDuration = curveStyle === "AGGRESSIVE" ? 6 : curveStyle === "FAST" ? 12 : 24;
 
   // Create order with full engagement config
