@@ -424,11 +424,11 @@ export default function AdminPage() {
                             </td>
                             <td className="px-4 py-3">
                               <div className="space-y-0.5 text-xs">
-                                <p className="text-gray-300">👁 Views: <strong>{o.viewsDelivered.toLocaleString()}</strong> / {o.viewsTarget.toLocaleString()}</p>
+                                <p className="text-gray-300">👁 Views: <strong>{(o.viewsDelivered ?? 0).toLocaleString()}</strong> / {(o.viewsTarget ?? 0).toLocaleString()}</p>
                                 {o.engagementEnabled && (
                                   <>
-                                    {o.likesTarget > 0 && <p className="text-gray-400">👍 Likes: <strong>{o.likesDelivered}</strong>/{o.likesTarget}</p>}
-                                    {o.savesTarget > 0 && <p className="text-gray-400">🔖 Saves: <strong>{o.savesDelivered}</strong>/{o.savesTarget}</p>}
+                                    {o.likesTarget > 0 && <p className="text-gray-400">👍 Likes: <strong>{o.likesDelivered ?? 0}</strong>/{o.likesTarget}</p>}
+                                    {o.savesTarget > 0 && <p className="text-gray-400">🔖 Saves: <strong>{o.savesDelivered ?? 0}</strong>/{o.savesTarget}</p>}
                                   </>
                                 )}
                               </div>
@@ -568,7 +568,7 @@ export default function AdminPage() {
                               <p className="text-white font-medium truncate max-w-xs">{e.order?.user?.email}</p>
                               <p className="text-gray-500 text-[10px] mt-0.5 truncate max-w-xs">{e.order?.reel?.url}</p>
                             </td>
-                            <td className="px-4 py-2.5 text-white font-semibold">{e.viewsBatch.toLocaleString()} views</td>
+                            <td className="px-4 py-2.5 text-white font-semibold">{(e.viewsBatch ?? 0).toLocaleString()} views</td>
                             <td className="px-4 py-2.5 text-gray-400">{e.panel?.name}</td>
                             <td className="px-4 py-2.5 text-gray-500">{new Date(e.scheduledAt).toLocaleTimeString()}</td>
                             <td className="px-4 py-2.5">

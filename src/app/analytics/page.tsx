@@ -35,7 +35,23 @@ export default function AnalyticsPage() {
   useEffect(() => {
     fetch("/api/analytics")
       .then((r) => r.json())
-      .then((d) => { setStats(d); setLoading(false); })
+      .then((d) => {
+        // Normalize all numeric fields so toLocaleString() never crashes
+        setStats({
+          totalOrders:         d.totalOrders         ?? 0,
+          completedOrders:     d.completedOrders     ?? 0,
+          deliveringOrders:    d.deliveringOrders    ?? 0,
+          activePanels:        d.activePanels        ?? 0,
+          totalViewsDelivered: d.totalViewsDelivered ?? 0,
+          successRate:         d.successRate         ?? 0,
+          weeklyChart:         d.weeklyChart         ?? [],
+          styleBreakdown:      d.styleBreakdown      ?? [],
+          plan:                d.plan                ?? "FREE",
+          trialEndsAt:         d.trialEndsAt         ?? null,
+          lifetimeUnlocked:    d.lifetimeUnlocked    ?? false,
+        });
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
