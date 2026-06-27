@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 const C = {
   border: "rgba(255,255,255,0.07)",
@@ -26,22 +27,26 @@ const QUICK = [
 ];
 
 export default async function DashboardPage() {
-  let user: { email?: string; user_metadata?: Record<string, string> } | null = null;
+  let userName = "Operator";
+  let userEmail = "";
 
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) redirect("/login");
-    user = data.user;
+    userName = data.user.user_metadata?.name || data.user.email?.split("@")[0] || "Operator";
+    userEmail = data.user.email || "";
   } catch (err) {
-    // If Supabase env vars are missing, redirect to login instead of crashing
+    // Re-throw Next.js redirect errors — they must not be swallowed
+    if (isRedirectError(err)) throw err;
+    // Any other error (e.g. missing env var) → send to login
     console.error("[Dashboard] Auth error:", err);
     redirect("/login");
   }
 
-  const name = user?.user_metadata?.name || user?.email?.split("@")[0] || "Operator";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const name = userName;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:24, maxWidth:1200 }}>
