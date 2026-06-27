@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import MaintenanceGate from "./MaintenanceGate";
 import "./global.css";
 
+export const dynamic = "force-dynamic";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
