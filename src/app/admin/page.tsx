@@ -53,24 +53,40 @@ export default function AdminPage() {
 
   const loadAll = async () => {
     setLoading(true);
-    const [sRes, uRes, pRes, oRes, sysRes] = await Promise.all([
-      fetch("/api/admin/settings", { headers }),
-      fetch("/api/admin/users", { headers }),
-      fetch("/api/admin/payments", { headers }),
-      fetch("/api/admin/orders", { headers }),
-      fetch("/api/admin/system", { headers }),
-    ]);
-    if (!sRes.ok) { setError("Wrong admin secret"); setAuthed(false); setLoading(false); return; }
-    const [s, u, p, o, sys] = await Promise.all([
-      sRes.json(), uRes.json(), pRes.json(), oRes.json(), sysRes.json()
-    ]);
-    if (s.settings) setSettings(s.settings);
-    setUsers(u.users ?? []);
-    setPayments(p.payments ?? []);
-    setOrders(o.orders ?? []);
-    setSystemData(sys ?? { events: [], panels: [], orderStats: [], eventStats: [] });
+    setError("");
+    try {
+      // Check auth first with settings
+      const sRes = await fetch("/api/admin/settings", { headers });
+      if (sRes.status === 403) {
+        setError("Wrong admin secret");
+        setAuthed(false);
+        setLoading(false);
+        return;
+      }
+      if (!sRes.ok) {
+        setError(`Server error ${sRes.status} — check DATABASE_URL in Vercel env vars`);
+        setLoading(false);
+        return;
+      }
+      const s = await sRes.json();
+      if (s.settings) setSettings(s.settings);
+      setAuthed(true);
+
+      // Load remaining in parallel, fail gracefully
+      const [uRes, pRes, oRes, sysRes] = await Promise.all([
+        fetch("/api/admin/users",    { headers }),
+        fetch("/api/admin/payments", { headers }),
+        fetch("/api/admin/orders",   { headers }),
+        fetch("/api/admin/system",   { headers }),
+      ]);
+      if (uRes.ok)   { const u = await uRes.json();   setUsers(u.users ?? []); }
+      if (pRes.ok)   { const p = await pRes.json();   setPayments(p.payments ?? []); }
+      if (oRes.ok)   { const o = await oRes.json();   setOrders(o.orders ?? []); }
+      if (sysRes.ok) { const sys = await sysRes.json(); setSystemData(sys ?? { events: [], panels: [], orderStats: [], eventStats: [] }); }
+    } catch (e) {
+      setError(`Network error: ${String(e)}`);
+    }
     setLoading(false);
-    setAuthed(true);
   };
 
   const handleCampaignAction = async (orderId: string, action: "pause" | "resume" | "cancel" | "refill") => {
