@@ -2,6 +2,16 @@
 import { useEffect, useState, useCallback } from "react";
 import QRCode from "qrcode";
 
+const N = {
+  bg:       "#111118",
+  raised:   "8px 8px 20px rgba(0,0,0,0.65), -4px -4px 12px rgba(255,255,255,0.05)",
+  raisedSm: "4px 4px 12px rgba(0,0,0,0.6), -2px -2px 8px rgba(255,255,255,0.04)",
+  inset:    "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 6px rgba(255,255,255,0.04)",
+  accent:   "#F59E0B",
+  text:     "#e2e8f0",
+  muted:    "#4a5568",
+};
+
 type Network = "TRC20" | "BEP20";
 type PaymentStatus = "PENDING" | "VERIFYING" | "CONFIRMED" | "FAILED" | "REJECTED";
 
@@ -20,24 +30,18 @@ const FEATURES = [
 ];
 
 const PAYMENT_STATUS_STYLE: Record<string, { color: string; label: string; icon: string }> = {
-  PENDING:   { color: "#F59E0B", label: "Pending — not yet confirmed", icon: "⏳" },
-  VERIFYING: { color: "#818cf8", label: "Verifying on-chain…",        icon: "🔍" },
-  CONFIRMED: { color: "#34d399", label: "Confirmed — Access Granted",  icon: "✅" },
-  FAILED:    { color: "#f87171", label: "Failed — see error",          icon: "✗" },
-  REJECTED:  { color: "#f87171", label: "Rejected by admin",           icon: "✗" },
+  PENDING:   { color:"#F59E0B", label:"Pending — not yet confirmed", icon:"⏳" },
+  VERIFYING: { color:"#818cf8", label:"Verifying on-chain…",        icon:"🔍" },
+  CONFIRMED: { color:"#34d399", label:"Confirmed — Access Granted",  icon:"✅" },
+  FAILED:    { color:"#f87171", label:"Failed — see error",          icon:"✗" },
+  REJECTED:  { color:"#f87171", label:"Rejected by admin",           icon:"✗" },
 };
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
-  };
+  const copy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); };
   return (
-    <button onClick={copy}
-      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-      style={copied ? { background: "rgba(52,211,153,0.15)", color: "#34d399" } : { background: "rgba(255,255,255,0.08)", color: "#9ca3af" }}>
+    <button onClick={copy} style={{ padding:"7px 14px", borderRadius:10, fontSize:12, fontWeight:700, border:"none", cursor:"pointer", transition:"all 0.2s", background:N.bg, color: copied ? "#34d399" : N.text, boxShadow: copied ? N.inset : N.raisedSm }}>
       {copied ? "✓ Copied!" : "Copy"}
     </button>
   );
@@ -46,19 +50,18 @@ function CopyButton({ text }: { text: string }) {
 function QRDisplay({ address, network }: { address: string; network: Network }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
-    QRCode.toDataURL(address, { width: 180, margin: 2, color: { dark: "#000", light: "#fff" } })
-      .then(setSrc);
+    QRCode.toDataURL(address, { width:180, margin:2, color:{ dark:"#000", light:"#fff" } }).then(setSrc);
   }, [address]);
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
       {src ? (
-        <div className="p-2 rounded-xl bg-white">
+        <div style={{ padding:10, borderRadius:14, background:"#fff", boxShadow:N.raised }}>
           <img src={src} alt={`${network} QR`} width={160} height={160} />
         </div>
       ) : (
-        <div className="w-44 h-44 rounded-xl bg-white/5 animate-pulse" />
+        <div style={{ width:180, height:180, borderRadius:14, background:N.bg, boxShadow:N.inset, animation:"pulse 2s infinite" }}/>
       )}
-      <p className="text-xs text-gray-500 text-center">Scan to get address</p>
+      <p style={{ fontSize:11, color:N.muted }}>Scan to get address</p>
     </div>
   );
 }
@@ -76,19 +79,13 @@ export default function BillingPage() {
     if (res.ok) { const d = await res.json(); setData(d); }
     setLoading(false);
   }, []);
-
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const submitPayment = async () => {
     if (!txHash.trim()) return;
-    setSubmitting(true);
-    setSubmitResult(null);
+    setSubmitting(true); setSubmitResult(null);
     try {
-      const res = await fetch("/api/billing/submit-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash: txHash.trim(), network }),
-      });
+      const res = await fetch("/api/billing/submit-payment", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ txHash:txHash.trim(), network }) });
       const json = await res.json();
       setSubmitResult({ ok: json.ok, message: json.ok ? json.message : json.error ?? json.message });
       if (json.ok) { setTxHash(""); fetchData(); }
@@ -96,37 +93,37 @@ export default function BillingPage() {
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:240 }}>
+      <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(245,158,11,0.15)", borderTopColor:N.accent, animation:"spin 0.8s linear infinite" }}/>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  // ── Already lifetime ─────────────────────────────────────
+  /* ── Already lifetime ── */
   if (data?.lifetimeUnlocked) return (
-    <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-white">Billing</h1>
-      <div className="rounded-2xl border p-8 text-center" style={{ background: "rgba(52,211,153,0.05)", borderColor: "rgba(52,211,153,0.25)" }}>
-        <div className="text-5xl mb-4">🎉</div>
-        <h2 className="text-2xl font-bold text-white mb-2">You have Lifetime Access!</h2>
-        <p className="text-gray-400 mb-6">No renewals. No limits. All features unlocked forever.</p>
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold" style={{ background: "rgba(52,211,153,0.15)", color: "#34d399" }}>
+    <div style={{ maxWidth:620, display:"flex", flexDirection:"column", gap:20 }}>
+      <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:0 }}>Billing</h1>
+      <div style={{ borderRadius:24, padding:"48px 32px", background:N.bg, boxShadow:N.raised, textAlign:"center" }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>🎉</div>
+        <h2 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 10px" }}>You have Lifetime Access!</h2>
+        <p style={{ fontSize:14, color:N.muted, margin:"0 0 24px" }}>No renewals. No limits. All features unlocked forever.</p>
+        <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:20, fontSize:13, fontWeight:800, color:"#34d399", background:N.bg, boxShadow:N.inset }}>
           💎 LIFETIME MEMBER
         </div>
       </div>
-      {/* Payment history */}
       {data.payments.length > 0 && (
-        <div className="rounded-2xl border p-6" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-          <h3 className="font-semibold text-white mb-4">Payment History</h3>
-          {data.payments.map((p) => {
+        <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised }}>
+          <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 16px" }}>Payment History</h3>
+          {data.payments.map(p => {
             const s = PAYMENT_STATUS_STYLE[p.status] ?? PAYMENT_STATUS_STYLE.PENDING;
             return (
-              <div key={p.id} className="flex items-center gap-3 py-3 border-b last:border-0" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+              <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
                 <span>{s.icon}</span>
-                <div className="flex-1">
-                  <p className="text-xs font-mono text-amber-400">{p.txHash.slice(0, 24)}…</p>
-                  <p className="text-xs text-gray-500">{p.network} · {new Date(p.createdAt).toLocaleDateString()}</p>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:11, fontFamily:"monospace", color:N.accent, margin:"0 0 2px" }}>{p.txHash.slice(0,24)}…</p>
+                  <p style={{ fontSize:11, color:N.muted, margin:0 }}>{p.network} · {new Date(p.createdAt).toLocaleDateString()}</p>
                 </div>
-                <span className="text-xs font-semibold" style={{ color: s.color }}>{p.status}</span>
+                <span style={{ fontSize:12, fontWeight:700, color:s.color }}>{p.status}</span>
               </div>
             );
           })}
@@ -135,125 +132,134 @@ export default function BillingPage() {
     </div>
   );
 
-  // ── Not yet paid ─────────────────────────────────────────
+  /* ── Not yet paid ── */
   const selectedAddress = network === "TRC20" ? data?.wallet.trc20 : data?.wallet.bep20;
   const price = data?.wallet.priceUsdt ?? 20;
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
+    <div style={{ maxWidth:920, display:"flex", flexDirection:"column", gap:24 }}>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px rgba(0,0,0,0.7),-4px -4px 12px rgba(255,255,255,0.07) !important}
+        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px rgba(0,0,0,0.6),inset -1px -1px 4px rgba(255,255,255,0.04) !important}
+        .neo-input:focus{box-shadow:inset 5px 5px 14px rgba(0,0,0,0.7),inset -3px -3px 8px rgba(255,255,255,0.05),0 0 0 2px rgba(245,158,11,0.25) !important;outline:none}
+      `}</style>
+
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
         <div>
-          <h1 className="text-2xl font-bold text-white">Upgrade to Lifetime</h1>
-          <p className="text-gray-400 text-sm mt-1">One-time USDT payment — never pay again</p>
+          <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px" }}>Upgrade to Lifetime</h1>
+          <p style={{ fontSize:13, color:N.muted, margin:0 }}>One-time USDT payment — never pay again</p>
         </div>
-        <div className="text-right">
-          <p className="text-4xl font-black text-white">${price} <span className="text-base font-normal text-gray-400">USDT</span></p>
-          <p className="text-xs text-emerald-400 font-semibold">One-time · No subscription</p>
+        <div style={{ textAlign:"right" }}>
+          <p style={{ fontSize:36, fontWeight:900, color:N.text, margin:"0 0 2px", letterSpacing:"-1px" }}>${price} <span style={{ fontSize:14, fontWeight:400, color:N.muted }}>USDT</span></p>
+          <p style={{ fontSize:11, fontWeight:700, color:"#34d399", margin:0 }}>One-time · No subscription</p>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-6">
-        {/* ── Left: payment form ── */}
-        <div className="space-y-4">
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        {/* Left: Payment form */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           {/* Network selector */}
-          <div className="rounded-2xl border p-5" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-            <h3 className="font-semibold text-white mb-4">1. Choose Network</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {(["TRC20", "BEP20"] as Network[]).map((n) => (
+          <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised }}>
+            <h3 style={{ fontSize:13, fontWeight:800, color:N.text, margin:"0 0 16px" }}>1. Choose Network</h3>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              {(["TRC20","BEP20"] as Network[]).map(n => (
                 <button key={n} onClick={() => setNetwork(n)}
-                  className="py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={network === n ? { background: "rgba(245,158,11,0.15)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.4)" } : { background: "rgba(255,255,255,0.04)", color: "#6b7280", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  {n === "TRC20" ? "🔷" : "🔶"} USDT {n}
-                  <p className="text-xs font-normal mt-0.5 opacity-70">{n === "TRC20" ? "TRON network" : "BSC network"}</p>
+                  style={{ padding:"14px 8px", borderRadius:14, fontSize:12, fontWeight:800, border:"none", cursor:"pointer", transition:"all 0.2s", fontFamily:"inherit", color: network === n ? N.accent : N.muted, background:N.bg, boxShadow: network === n ? N.raisedSm : N.inset }}>
+                  <div style={{ fontSize:18, marginBottom:6 }}>{n === "TRC20" ? "🔷" : "🔶"}</div>
+                  USDT {n}
+                  <div style={{ fontSize:10, fontWeight:400, marginTop:3, opacity:0.7 }}>{n === "TRC20" ? "TRON network" : "BSC network"}</div>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Wallet address */}
-          <div className="rounded-2xl border p-5" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-            <h3 className="font-semibold text-white mb-4">2. Send ${price} USDT to This Address</h3>
+          <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised }}>
+            <h3 style={{ fontSize:13, fontWeight:800, color:N.text, margin:"0 0 16px" }}>2. Send ${price} USDT to This Address</h3>
             {selectedAddress ? (
               <>
-                <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <code className="flex-1 text-xs text-amber-400 break-all font-mono">{selectedAddress}</code>
-                  <CopyButton text={selectedAddress} />
+                <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:14, marginBottom:16, background:N.bg, boxShadow:N.inset }}>
+                  <code style={{ flex:1, fontSize:11, color:N.accent, wordBreak:"break-all", fontFamily:"monospace" }}>{selectedAddress}</code>
+                  <CopyButton text={selectedAddress}/>
                 </div>
-                <QRDisplay address={selectedAddress} network={network} />
-                <div className="mt-4 p-3 rounded-xl text-xs text-yellow-300 space-y-1" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}>
-                  <p>⚠️ Send exactly <strong>${price} USDT</strong> on the <strong>{network}</strong> network only.</p>
-                  <p>⚠️ Wrong network = lost funds. Double-check before sending.</p>
+                <div style={{ display:"flex", justifyContent:"center" }}>
+                  <QRDisplay address={selectedAddress} network={network}/>
+                </div>
+                <div style={{ marginTop:16, padding:"12px 14px", borderRadius:12, background:N.bg, boxShadow:"inset 3px 3px 8px rgba(245,158,11,0.2),inset -2px -2px 5px rgba(0,0,0,0.5)" }}>
+                  <p style={{ fontSize:11, color:"#fbbf24", margin:"0 0 4px" }}>⚠️ Send exactly <strong>${price} USDT</strong> on the <strong>{network}</strong> network only.</p>
+                  <p style={{ fontSize:11, color:"#fbbf24", margin:0 }}>⚠️ Wrong network = lost funds. Double-check before sending.</p>
                 </div>
               </>
             ) : (
-              <div className="py-8 text-center text-gray-500 text-sm">
-                <p className="text-2xl mb-2">⚙️</p>
-                <p>Wallet address not configured yet.</p>
-                <p className="text-xs mt-1">Contact support to get the wallet address.</p>
+              <div style={{ padding:"40px 0", textAlign:"center" }}>
+                <p style={{ fontSize:24, marginBottom:8 }}>⚙️</p>
+                <p style={{ fontSize:13, color:N.muted }}>Wallet address not configured yet.<br/><span style={{ fontSize:11 }}>Contact support to get the wallet address.</span></p>
               </div>
             )}
           </div>
         </div>
 
-        {/* ── Right: TXID submission ── */}
-        <div className="space-y-4">
-          <div className="rounded-2xl border p-5" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-            <h3 className="font-semibold text-white mb-4">3. Submit Your Transaction ID</h3>
-            <p className="text-gray-400 text-sm mb-4">After sending, paste your TXID (transaction hash) below. We verify it on-chain automatically — usually within 30 seconds.</p>
-            <div className="space-y-3">
+        {/* Right: TXID + Features */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          {/* TXID submission */}
+          <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised }}>
+            <h3 style={{ fontSize:13, fontWeight:800, color:N.text, margin:"0 0 10px" }}>3. Submit Your Transaction ID</h3>
+            <p style={{ fontSize:12, color:N.muted, margin:"0 0 16px" }}>After sending, paste your TXID below. We verify it on-chain automatically — usually within 30 seconds.</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-2">Your TXID / Transaction Hash</label>
+                <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>TXID / Transaction Hash</label>
                 <textarea
-                  value={txHash}
-                  onChange={(e) => setTxHash(e.target.value)}
+                  value={txHash} onChange={e => setTxHash(e.target.value)}
                   placeholder={network === "TRC20" ? "e.g. a1b2c3d4e5f6…" : "e.g. 0xa1b2c3d4…"}
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white font-mono placeholder-gray-600 outline-none focus:ring-2 focus:ring-amber-500/40 resize-none"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset, fontFamily:"monospace", resize:"none", transition:"box-shadow 0.2s" }}
+                  className="neo-input"
                 />
               </div>
-              <button onClick={submitPayment} disabled={submitting || !txHash.trim() || !selectedAddress}
-                className="w-full py-4 rounded-xl font-bold text-[#0B0B0F] text-base hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                style={{ background: "#F59E0B" }}>
+              <button onClick={submitPayment} disabled={submitting || !txHash.trim() || !selectedAddress} className="neo-btn"
+                style={{ width:"100%", padding:"14px", borderRadius:14, fontSize:14, fontWeight:800, border:"none", cursor:"pointer", color:"#08080c", background:"linear-gradient(135deg,#F59E0B,#F97316)", boxShadow:"6px 6px 16px rgba(0,0,0,0.6),-3px -3px 10px rgba(255,255,255,0.07)", transition:"all 0.2s", opacity: (submitting || !txHash.trim() || !selectedAddress) ? 0.5 : 1 }}>
                 {submitting ? "Verifying on-chain…" : "🔍 Verify & Activate Lifetime"}
               </button>
             </div>
-
-            {/* Result */}
             {submitResult && (
-              <div className="mt-4 px-4 py-3 rounded-xl text-sm" style={submitResult.ok ? { background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", color: "#34d399" } : { background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.25)", color: "#f87171" }}>
+              <div style={{ marginTop:14, padding:"12px 14px", borderRadius:12, fontSize:13, fontWeight:600, background:N.bg, boxShadow: submitResult.ok ? "inset 3px 3px 8px rgba(52,211,153,0.3),inset -2px -2px 5px rgba(0,0,0,0.4)" : "inset 3px 3px 8px rgba(220,38,38,0.3),inset -2px -2px 5px rgba(0,0,0,0.4)", color: submitResult.ok ? "#34d399" : "#f87171" }}>
                 {submitResult.ok ? "✅ " : "✗ "}{submitResult.message}
               </div>
             )}
           </div>
 
           {/* Features */}
-          <div className="rounded-2xl border p-5" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.07), rgba(249,115,22,0.05))", borderColor: "rgba(245,158,11,0.2)" }}>
-            <h3 className="font-semibold text-white mb-4">💎 What You Get</h3>
-            <ul className="space-y-2.5">
-              {FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-gray-300">
-                  <span className="text-amber-400 shrink-0">✓</span>{f}
-                </li>
+          <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised }}>
+            <h3 style={{ fontSize:13, fontWeight:800, color:N.accent, margin:"0 0 16px" }}>💎 What You Get</h3>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {FEATURES.map(f => (
+                <div key={f} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:24, height:24, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, background:N.bg, boxShadow:N.inset, flexShrink:0, color:N.accent, fontWeight:900 }}>✓</div>
+                  <span style={{ fontSize:13, color:N.text }}>{f}</span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
 
           {/* Payment history */}
           {data && data.payments.length > 0 && (
-            <div className="rounded-2xl border p-5" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-              <h3 className="font-semibold text-white mb-3">My Submissions</h3>
-              {data.payments.map((p) => {
+            <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised }}>
+              <h3 style={{ fontSize:13, fontWeight:800, color:N.text, margin:"0 0 14px" }}>My Submissions</h3>
+              {data.payments.map(p => {
                 const s = PAYMENT_STATUS_STYLE[p.status] ?? PAYMENT_STATUS_STYLE.PENDING;
                 return (
-                  <div key={p.id} className="py-2.5 border-b last:border-0 flex items-center gap-3" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                  <div key={p.id} style={{ padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.04)", display:"flex", alignItems:"flex-start", gap:10 }}>
                     <span>{s.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-mono text-amber-400 truncate">{p.txHash}</p>
-                      <p className="text-xs text-gray-600">{p.network} · {new Date(p.createdAt).toLocaleString()}</p>
-                      {p.verifyError && <p className="text-xs text-red-400 mt-0.5">{p.verifyError}</p>}
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:11, fontFamily:"monospace", color:N.accent, margin:"0 0 2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.txHash}</p>
+                      <p style={{ fontSize:11, color:N.muted, margin:0 }}>{p.network} · {new Date(p.createdAt).toLocaleString()}</p>
+                      {p.verifyError && <p style={{ fontSize:11, color:"#f87171", margin:"3px 0 0" }}>{p.verifyError}</p>}
                     </div>
-                    <span className="text-xs font-semibold shrink-0" style={{ color: s.color }}>{p.status}</span>
+                    <span style={{ fontSize:11, fontWeight:700, flexShrink:0, color:s.color }}>{p.status}</span>
                   </div>
                 );
               })}
@@ -263,16 +269,16 @@ export default function BillingPage() {
       </div>
 
       {/* Trust signals */}
-      <div className="grid sm:grid-cols-3 gap-4 text-center">
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, textAlign:"center" }}>
         {[
-          ["🔍", "On-chain verified", "Your TXID is verified directly on TRON or BSC blockchain"],
+          ["🔍", "On-chain verified", "TXID verified directly on TRON or BSC"],
           ["⚡", "Instant activation", "Lifetime access unlocks in under 60 seconds"],
           ["🔒", "No data needed", "No card info, no KYC — just your wallet"],
         ].map(([icon, title, desc]) => (
-          <div key={String(title)} className="rounded-xl border p-4" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}>
-            <div className="text-2xl mb-2">{icon}</div>
-            <p className="font-semibold text-white text-sm mb-1">{title}</p>
-            <p className="text-gray-500 text-xs">{desc}</p>
+          <div key={String(title)} style={{ borderRadius:16, padding:"20px 14px", background:N.bg, boxShadow:N.raised }}>
+            <div style={{ width:42, height:42, borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, background:N.bg, boxShadow:N.raisedSm, margin:"0 auto 12px" }}>{icon}</div>
+            <p style={{ fontSize:12, fontWeight:800, color:N.text, margin:"0 0 5px" }}>{title}</p>
+            <p style={{ fontSize:11, color:N.muted, margin:0 }}>{desc}</p>
           </div>
         ))}
       </div>

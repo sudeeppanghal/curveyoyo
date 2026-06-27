@@ -2,6 +2,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const N = {
+  bg:       "#111118",
+  raised:   "8px 8px 20px rgba(0,0,0,0.65), -4px -4px 12px rgba(255,255,255,0.05)",
+  raisedSm: "4px 4px 12px rgba(0,0,0,0.6), -2px -2px 8px rgba(255,255,255,0.04)",
+  inset:    "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 6px rgba(255,255,255,0.04)",
+  accent:   "#F59E0B",
+  text:     "#e2e8f0",
+  muted:    "#4a5568",
+};
+
 interface Stats {
   totalOrders: number; completedOrders: number; deliveringOrders: number;
   activePanels: number; totalViewsDelivered: number; successRate: number;
@@ -10,15 +20,20 @@ interface Stats {
   plan: string; trialEndsAt: string | null; lifetimeUnlocked: boolean;
 }
 
-function MiniBar({ views, max, label }: { views: number; max: number; label: string }) {
+const STYLE_ICONS: Record<string, string> = { ORGANIC: "🌅", FAST: "⚡", AGGRESSIVE: "🔥" };
+
+function NeoCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, ...style }}>{children}</div>;
+}
+
+function NeoBar({ views, max, label }: { views: number; max: number; label: string }) {
   const pct = max > 0 ? (views / max) * 100 : 0;
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-gray-500 w-7 shrink-0">{label}</span>
-      <div className="flex-1 h-6 rounded-lg overflow-hidden relative" style={{ background: "rgba(255,255,255,0.05)" }}>
-        <div className="h-full rounded-lg transition-all duration-700"
-          style={{ width: `${pct}%`, background: "linear-gradient(90deg, #F59E0B, #F97316)" }} />
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-white font-medium">
+    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+      <span style={{ fontSize:11, color:N.muted, width:28, flexShrink:0 }}>{label}</span>
+      <div style={{ flex:1, height:28, borderRadius:10, position:"relative", background:N.bg, boxShadow:N.inset, overflow:"hidden" }}>
+        <div style={{ height:"100%", borderRadius:10, transition:"width 0.7s ease", width:`${pct}%`, background:"linear-gradient(90deg,#F59E0B,#F97316)" }} />
+        <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", fontSize:11, color:N.text, fontWeight:700 }}>
           {views > 0 ? views.toLocaleString() : "—"}
         </span>
       </div>
@@ -26,17 +41,14 @@ function MiniBar({ views, max, label }: { views: number; max: number; label: str
   );
 }
 
-const STYLE_ICONS: Record<string, string> = { ORGANIC: "🌅", FAST: "⚡", AGGRESSIVE: "🔥" };
-
 export default function AnalyticsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/analytics")
-      .then((r) => r.json())
-      .then((d) => {
-        // Normalize all numeric fields so toLocaleString() never crashes
+      .then(r => r.json())
+      .then(d => {
         setStats({
           totalOrders:         d.totalOrders         ?? 0,
           completedOrders:     d.completedOrders     ?? 0,
@@ -56,76 +68,77 @@ export default function AnalyticsPage() {
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:240 }}>
+      <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(245,158,11,0.15)", borderTopColor:N.accent, animation:"spin 0.8s linear infinite", boxShadow:N.raised }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   if (!stats || stats.totalOrders === 0) return (
-    <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold text-white">Analytics</h1>
-      <div className="rounded-2xl border py-20 flex flex-col items-center text-center" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}>
-        <div className="text-4xl mb-3">📊</div>
-        <p className="font-semibold text-white mb-1">No data yet</p>
-        <p className="text-gray-500 text-sm mb-5">Place your first order to start seeing analytics</p>
-        <Link href="/reels/new" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B0B0F]" style={{ background: "#F59E0B" }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:20, maxWidth:800 }}>
+      <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:0, letterSpacing:"-0.5px" }}>Analytics</h1>
+      <NeoCard style={{ padding:"64px 24px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+        <div style={{ fontSize:40, marginBottom:8 }}>📊</div>
+        <p style={{ fontSize:16, fontWeight:800, color:N.text, margin:0 }}>No data yet</p>
+        <p style={{ fontSize:13, color:N.muted, margin:0 }}>Place your first order to start seeing analytics</p>
+        <Link href="/reels/new" style={{ marginTop:8, padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, textDecoration:"none", color:"#08080c", background:"linear-gradient(135deg,#F59E0B,#F97316)", boxShadow:N.raisedSm }}>
           Create First Order →
         </Link>
-      </div>
+      </NeoCard>
     </div>
   );
 
-  const maxViews = Math.max(...(stats.weeklyChart?.map((d) => d.views) ?? [1]), 1);
-  const W = 500, H = 100, pad = 12;
   const chartPts = stats.weeklyChart ?? [];
+  const maxViews = Math.max(...chartPts.map(d => d.views), 1);
+  const W = 500, H = 100, pad = 12;
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
+    <div style={{ display:"flex", flexDirection:"column", gap:24, maxWidth:900 }}>
+      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-gray-400 text-sm mt-1">Real-time delivery performance</p>
+          <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px", letterSpacing:"-0.5px" }}>Analytics</h1>
+          <p style={{ fontSize:13, color:N.muted, margin:0 }}>Real-time delivery performance</p>
         </div>
-        <div className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ background: "rgba(52,211,153,0.12)", color: "#34d399" }}>
+        <div style={{ padding:"7px 14px", borderRadius:20, fontSize:11, fontWeight:700, color:"#34d399", background:N.bg, boxShadow:N.inset }}>
           ↻ Live — 60s cache
         </div>
       </div>
 
-      {/* ── KPI grid ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* KPI Grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:16, animation:"fadeUp 0.3s ease" }}>
         {[
-          { icon: "📦", label: "Total Orders",    val: stats.totalOrders.toLocaleString(),          sub: `${stats.deliveringOrders} active` },
-          { icon: "✅", label: "Completed",        val: stats.completedOrders.toLocaleString(),       sub: `${stats.successRate}% success rate` },
-          { icon: "👁", label: "Views Delivered",  val: stats.totalViewsDelivered.toLocaleString(),  sub: "across all campaigns" },
-          { icon: "🔌", label: "Active Panels",   val: stats.activePanels.toLocaleString(),          sub: "connected panels" },
-        ].map(({ icon, label, val, sub }) => (
-          <div key={label} className="rounded-2xl border p-5" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-            <div className="text-2xl mb-3">{icon}</div>
-            <p className="text-2xl font-black text-white">{val}</p>
-            <p className="text-xs text-gray-400 mt-1">{label}</p>
-            <p className="text-xs text-gray-600 mt-0.5">{sub}</p>
-          </div>
+          { icon:"📦", label:"Total Orders",    val: stats.totalOrders.toLocaleString(),          sub:`${stats.deliveringOrders} active` },
+          { icon:"✅", label:"Completed",        val: stats.completedOrders.toLocaleString(),       sub:`${stats.successRate}% success` },
+          { icon:"👁", label:"Views Delivered",  val: stats.totalViewsDelivered.toLocaleString(),  sub:"across all campaigns" },
+          { icon:"🔌", label:"Active Panels",    val: stats.activePanels.toLocaleString(),          sub:"connected providers" },
+        ].map(({ icon, label, val, sub }, i) => (
+          <NeoCard key={label} style={{ animation:`fadeUp ${0.2 + i*0.07}s ease` }}>
+            <div style={{ fontSize:24, marginBottom:12, width:42, height:42, borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", background:N.bg, boxShadow:N.raisedSm }}>{icon}</div>
+            <p style={{ fontSize:26, fontWeight:900, color:N.text, margin:"0 0 4px", letterSpacing:"-1px" }}>{val}</p>
+            <p style={{ fontSize:11, fontWeight:700, color:N.muted, margin:"0 0 2px", textTransform:"uppercase", letterSpacing:"0.08em" }}>{label}</p>
+            <p style={{ fontSize:11, color:"#2d3748", margin:0 }}>{sub}</p>
+          </NeoCard>
         ))}
       </div>
 
-      {/* ── 7-day bar chart ── */}
-      <div className="rounded-2xl border p-6" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-        <h3 className="font-semibold text-white mb-5">📈 Views Delivered — Last 7 Days</h3>
+      {/* 7-day chart */}
+      <NeoCard>
+        <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 20px" }}>📈 Views Delivered — Last 7 Days</h3>
         {chartPts.length > 0 ? (
           <>
-            <div className="space-y-2.5">
-              {chartPts.map((d) => (
-                <MiniBar key={d.date} views={d.views} max={maxViews} label={d.label} />
-              ))}
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {chartPts.map(d => <NeoBar key={d.date} views={d.views} max={maxViews} label={d.label} />)}
             </div>
-            {/* SVG line overlay */}
-            {chartPts.some((d) => d.views > 0) && (
-              <div className="mt-6">
-                <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="rounded-xl">
+            {chartPts.some(d => d.views > 0) && (
+              <div style={{ marginTop:24, borderRadius:14, overflow:"hidden", boxShadow:N.inset, padding:12 }}>
+                <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
                   <defs>
                     <linearGradient id="aGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.35" />
-                      <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.4"/>
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity="0"/>
                     </linearGradient>
                   </defs>
                   {(() => {
@@ -137,11 +150,9 @@ export default function AnalyticsPage() {
                     const fill = [line, `L ${pts.at(-1)!.x.toFixed(1)} ${H - pad}`, `L ${pts[0].x.toFixed(1)} ${H - pad} Z`].join(" ");
                     return (
                       <>
-                        <path d={fill} fill="url(#aGrad)" />
-                        <path d={line} fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        {pts.map((p, i) => (
-                          <circle key={i} cx={p.x} cy={p.y} r="3" fill="#F59E0B" />
-                        ))}
+                        <path d={fill} fill="url(#aGrad)"/>
+                        <path d={line} fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#F59E0B" style={{ filter:"drop-shadow(0 0 4px #F59E0B)" }}/>)}
                       </>
                     );
                   })()}
@@ -150,71 +161,66 @@ export default function AnalyticsPage() {
             )}
           </>
         ) : (
-          <p className="text-gray-600 text-sm">No delivery data in last 7 days</p>
+          <p style={{ fontSize:13, color:N.muted }}>No delivery data in last 7 days</p>
         )}
-      </div>
+      </NeoCard>
 
-      {/* ── Bottom row ── */}
-      <div className="grid sm:grid-cols-2 gap-6">
+      {/* Bottom row */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
         {/* Curve style breakdown */}
-        <div className="rounded-2xl border p-5" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-          <h3 className="font-semibold text-white mb-4">Delivery Styles Used</h3>
+        <NeoCard>
+          <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 18px" }}>Delivery Styles Used</h3>
           {stats.styleBreakdown.length > 0 ? (
-            <div className="space-y-3">
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
               {stats.styleBreakdown.map(({ style, count }) => (
-                <div key={style} className="flex items-center gap-3">
-                  <span className="text-xl">{STYLE_ICONS[style] ?? "📊"}</span>
-                  <div className="flex-1">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm text-white">{style.charAt(0) + style.slice(1).toLowerCase()}</span>
-                      <span className="text-sm font-semibold text-amber-400">{count}</span>
+                <div key={style} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <span style={{ fontSize:20 }}>{STYLE_ICONS[style] ?? "📊"}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:13, color:N.text }}>{style.charAt(0) + style.slice(1).toLowerCase()}</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:N.accent }}>{count}</span>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${(count / stats.totalOrders) * 100}%`, background: "#F59E0B" }} />
+                    <div style={{ height:6, borderRadius:6, overflow:"hidden", background:N.bg, boxShadow:N.inset }}>
+                      <div style={{ height:"100%", borderRadius:6, width:`${(count / stats.totalOrders) * 100}%`, background:"linear-gradient(90deg,#F59E0B,#F97316)" }}/>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-gray-600 text-sm">No orders yet</p>
-          )}
-        </div>
+          ) : <p style={{ fontSize:13, color:N.muted }}>No orders yet</p>}
+        </NeoCard>
 
-        {/* Order status pie */}
-        <div className="rounded-2xl border p-5" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-          <h3 className="font-semibold text-white mb-4">Order Status Summary</h3>
-          <div className="space-y-3">
+        {/* Status summary */}
+        <NeoCard>
+          <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 18px" }}>Order Status Summary</h3>
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {[
-              { label: "Completed",  count: stats.completedOrders,                                     color: "#34d399" },
-              { label: "Delivering", count: stats.deliveringOrders,                                    color: "#F59E0B" },
-              { label: "Other",      count: stats.totalOrders - stats.completedOrders - stats.deliveringOrders, color: "#6b7280" },
-            ].filter((r) => r.count > 0).map(({ label, count, color }) => (
-              <div key={label} className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-                <div className="flex-1">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-gray-300">{label}</span>
-                    <span className="text-sm font-semibold" style={{ color }}>{count}</span>
+              { label:"Completed",  count: stats.completedOrders,  color:"#34d399" },
+              { label:"Delivering", count: stats.deliveringOrders, color:"#F59E0B" },
+              { label:"Other",      count: stats.totalOrders - stats.completedOrders - stats.deliveringOrders, color:"#6b7280" },
+            ].filter(r => r.count > 0).map(({ label, count, color }) => (
+              <div key={label} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:color, flexShrink:0, boxShadow:`0 0 8px ${color}` }}/>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                    <span style={{ fontSize:13, color:N.text }}>{label}</span>
+                    <span style={{ fontSize:13, fontWeight:700, color }}>{count}</span>
                   </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${(count / stats.totalOrders) * 100}%`, background: color }} />
+                  <div style={{ height:6, borderRadius:6, overflow:"hidden", background:N.bg, boxShadow:N.inset }}>
+                    <div style={{ height:"100%", borderRadius:6, width:`${(count / stats.totalOrders) * 100}%`, background:color, transition:"width 0.7s ease" }}/>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-            <span className="text-xs text-gray-500">Success rate</span>
-            <span className="text-lg font-black text-white">{stats.successRate}%</span>
+          <div style={{ marginTop:18, paddingTop:18, borderTop:"1px solid rgba(255,255,255,0.04)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:12, color:N.muted }}>Overall success rate</span>
+            <span style={{ fontSize:24, fontWeight:900, color:N.text }}>{stats.successRate}%</span>
           </div>
-        </div>
+        </NeoCard>
       </div>
 
-      <Link href="/orders" className="inline-flex items-center gap-2 text-sm text-amber-400 hover:underline">
-        View all orders →
-      </Link>
+      <Link href="/orders" style={{ fontSize:13, color:N.accent, textDecoration:"none", fontWeight:700 }}>View all orders →</Link>
     </div>
   );
 }

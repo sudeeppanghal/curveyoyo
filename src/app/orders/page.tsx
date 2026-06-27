@@ -57,8 +57,8 @@ export default function OrdersPage() {
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
-        .order-card:hover { background: rgba(255,255,255,0.035) !important; border-color: rgba(255,255,255,0.1) !important; }
-        .filter-btn:hover { background: rgba(255,255,255,0.05) !important; }
+        .order-card:hover { box-shadow: 10px 10px 24px rgba(0,0,0,0.7),-5px -5px 14px rgba(255,255,255,0.06) !important; transform: translateY(-1px); }
+        .order-card { transition: all 0.2s; }
       `}</style>
 
       {/* Header */}
@@ -76,9 +76,10 @@ export default function OrdersPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={load} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 9,
-            fontSize: 12, fontWeight: 600, background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.08)", color: "#64748b", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10,
+            fontSize: 12, fontWeight: 600, background: "#111118",
+            border: "none", color: "#64748b", cursor: "pointer",
+            boxShadow: "4px 4px 12px rgba(0,0,0,0.6),-2px -2px 8px rgba(255,255,255,0.04)",
           }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -103,20 +104,21 @@ export default function OrdersPage() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {FILTERS.map(f => (
           (counts[f] > 0 || f === "All") ? (
-            <button key={f} onClick={() => setFilter(f)} className="filter-btn" style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
-              fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s",
-              background: filter === f ? "rgba(245,158,11,0.12)" : "transparent",
+            <button key={f} onClick={() => setFilter(f)} style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20, border: "none",
+              fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit",
+              background: "#111118",
               color: filter === f ? "#F59E0B" : "#475569",
-              border: filter === f ? "1px solid rgba(245,158,11,0.3)" : "1px solid rgba(255,255,255,0.06)",
+              boxShadow: filter === f ? "4px 4px 12px rgba(0,0,0,0.6),-2px -2px 8px rgba(255,255,255,0.04)" : "inset 3px 3px 8px rgba(0,0,0,0.5),inset -2px -2px 5px rgba(255,255,255,0.03)",
             }}>
               {f === "DELIVERING" && (
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F59E0B", animation: "pulse 1.5s infinite", display: "inline-block" }} />
               )}
               {f === "All" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
               <span style={{
-                padding: "1px 6px", borderRadius: 10, fontSize: 10, fontWeight: 700,
-                background: filter === f ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.06)",
+                padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 700,
+                background: "#111118",
+                boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.5),inset -1px -1px 3px rgba(255,255,255,0.03)",
                 color: filter === f ? "#F59E0B" : "#334155",
               }}>{counts[f]}</span>
             </button>
