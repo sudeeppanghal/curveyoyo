@@ -1,9 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-// Force server-side rendering — uses cookies() for auth
-export const dynamic = "force-dynamic";
+import { createClient } from "@/lib/supabase/client";
 
 const C = {
   border: "rgba(255,255,255,0.07)",
@@ -28,15 +27,31 @@ const QUICK = [
   { icon:"📈", label:"Analytics",          href:"/analytics" },
 ];
 
-export default async function DashboardPage() {
-  // Simple auth check — no try/catch needed with force-dynamic
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+export default function DashboardPage() {
+  const router = useRouter();
+  const [name, setName] = useState("Operator");
+  const [loading, setLoading] = useState(true);
 
-  const name = user.user_metadata?.name || user.email?.split("@")[0] || "Operator";
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { router.push("/login"); return; }
+      setName(user.user_metadata?.name || user.email?.split("@")[0] || "Operator");
+      setLoading(false);
+    });
+  }, [router]);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+  if (loading) {
+    return (
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"60vh" }}>
+        <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(245,158,11,0.2)", borderTopColor:C.amber, animation:"spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:24, maxWidth:1200 }}>
@@ -99,7 +114,6 @@ export default async function DashboardPage() {
 
         {/* Right col */}
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          {/* Quick actions — static links, no event handlers */}
           <div style={{ borderRadius:20, border:`1px solid ${C.border}`, background:C.card, padding:"16px" }}>
             <h3 style={{ fontWeight:700, fontSize:14, color:C.text, margin:"0 0 14px" }}>Quick Actions</h3>
             <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
@@ -112,8 +126,6 @@ export default async function DashboardPage() {
               ))}
             </div>
           </div>
-
-          {/* Panel status */}
           <div style={{ borderRadius:20, border:`1px solid ${C.border}`, background:C.card, padding:"16px" }}>
             <h3 style={{ fontWeight:700, fontSize:14, color:C.text, margin:"0 0 14px" }}>Panel Status</h3>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"16px 0", textAlign:"center" }}>
@@ -130,30 +142,17 @@ export default async function DashboardPage() {
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
           <h3 style={{ fontWeight:700, fontSize:15, color:C.text, margin:0 }}>Views Delivered — Last 7 Days</h3>
           <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:C.faint }}>
-            <span style={{ width:8, height:8, borderRadius:"50%", background:C.amber, display:"inline-block" }} />
-            Views
+            <span style={{ width:8, height:8, borderRadius:"50%", background:C.amber, display:"inline-block" }} /> Views
           </div>
         </div>
-        <PlaceholderChart />
+        <svg width="100%" height={100} viewBox="0 0 600 100" style={{ opacity:0.15 }}>
+          <path d="M10 97 L630 97" fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="6 4" />
+        </svg>
         <p style={{ textAlign:"center", fontSize:12, color:C.faint, margin:"12px 0 0" }}>
           No delivery data yet — place your first order to see live curves
         </p>
       </div>
 
     </div>
-  );
-}
-
-function PlaceholderChart() {
-  const W = 600, H = 100, pad = 10;
-  const pts = Array.from({ length: 28 }, (_, i) => ({
-    x: pad + (i / 27) * (W - 2 * pad),
-    y: H - pad - 3,
-  }));
-  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  return (
-    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ opacity:0.15 }}>
-      <path d={d} fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="6 4" />
-    </svg>
   );
 }
