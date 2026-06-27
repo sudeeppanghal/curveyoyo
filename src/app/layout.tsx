@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { prisma } from "@/lib/prisma";
+import MaintenanceGate from "./MaintenanceGate";
 import "./global.css";
 
 const inter = Inter({
@@ -43,11 +45,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  let isMaintenance = false;
+  let supportEmail: string | null = null;
+  try {
+    const settings = await prisma.adminSettings.findUnique({ where: { id: "global" } });
+    if (settings) {
+      isMaintenance = settings.maintenanceMode;
+      supportEmail = settings.supportEmail;
+    }
+  } catch (e) {
+    console.error("Failed to load global maintenanceMode setting in RootLayout:", e);
+  }
+
   return (
     <html lang="en" className={inter.variable}>
       <head>
@@ -56,7 +70,9 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
       </head>
       <body style={{ margin:0, padding:0, minHeight:"100vh", background:"#eef2f7", color:"#2d3748", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,sans-serif", WebkitFontSmoothing:"antialiased" }}>
-        {children}
+        <MaintenanceGate initialMaintenance={isMaintenance} supportEmail={supportEmail}>
+          {children}
+        </MaintenanceGate>
       </body>
     </html>
   );
