@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import { prisma } from "@/lib/prisma";
 import { placePanelOrder } from "@/lib/delivery/panel-client";
 import { cachePanelStatus } from "@/lib/redis";
 import { calculateEngagementDue, applyJitter } from "@/lib/delivery/curve";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
+
+// Force dynamic so Next.js never tries to statically analyse this route
+// (prevents build-time crash when QSTASH env vars are not present during build)
+export const dynamic = "force-dynamic";
 
 interface TickPayload {
   eventId: string;
@@ -280,4 +283,22 @@ async function handler(request: NextRequest) {
   });
 }
 
-export const POST = verifySignatureAppRouter(handler);
+/**
+ * Wrap with QStash signature verification lazily (at request time, not build time).
+ * This prevents the Next.js static build from crashing when QSTASH env vars
+ * are not present in the Vercel build environment.
+ */
+export async function POST(req: NextRequest) {
+  // In production, always verify the QStash signature
+  if (process.env.NODE_ENV === "production") {
+    const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
+    const nextKey    = process.env.QSTASH_NEXT_SIGNING_KEY;
+    if (!currentKey || !nextKey) {
+      return NextResponse.json({ error: "QStash signing keys not configured" }, { status: 500 });
+    }
+    const { verifySignatureAppRouter } = await import("@upstash/qstash/nextjs");
+    return verifySignatureAppRouter(handler)(req);
+  }
+  // In development/staging: skip verification for easier local testing
+  return handler(req);
+}
