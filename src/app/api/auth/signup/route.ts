@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
       },
     });
 
