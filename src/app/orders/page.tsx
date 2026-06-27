@@ -9,7 +9,6 @@ interface Order {
   progressPct: number; curveStyle: string; createdAt: string;
   reel: { url: string; platform: string };
   panel: { name: string } | null;
-  // Engagement
   engagementEnabled: boolean;
   likesTarget: number; likesDelivered: number;
   savesTarget: number; savesDelivered: number;
@@ -17,144 +16,230 @@ interface Order {
   commentsTarget: number; commentsDelivered: number;
 }
 
-const STATUS_STYLES: Record<string, { color: string; bg: string }> = {
-  PENDING:    { color:"#9ca3af", bg:"rgba(107,114,128,0.1)" },
-  QUEUED:     { color:"#818cf8", bg:"rgba(99,102,241,0.1)" },
-  DELIVERING: { color:"#F59E0B", bg:"rgba(245,158,11,0.1)" },
-  COMPLETED:  { color:"#34d399", bg:"rgba(52,211,153,0.1)" },
-  FAILED:     { color:"#f87171", bg:"rgba(248,113,113,0.1)" },
-  CANCELLED:  { color:"#6b7280", bg:"rgba(107,114,128,0.1)" },
-  PAUSED:     { color:"#fbbf24", bg:"rgba(251,191,36,0.1)" },
+const STATUS: Record<string, { color: string; bg: string; border: string; dot?: boolean }> = {
+  QUEUED:     { color: "#818cf8", bg: "rgba(129,140,248,0.08)", border: "rgba(129,140,248,0.2)" },
+  DELIVERING: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.2)", dot: true },
+  COMPLETED:  { color: "#34d399", bg: "rgba(52,211,153,0.08)",  border: "rgba(52,211,153,0.2)" },
+  FAILED:     { color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.2)" },
+  CANCELLED:  { color: "#64748b", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)" },
+  PAUSED:     { color: "#fbbf24", bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.2)" },
+  PENDING:    { color: "#64748b", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)" },
 };
 
-const PLATFORM_ICONS: Record<string, string> = { INSTAGRAM:"📷", TIKTOK:"🎵", YOUTUBE:"▶️" };
-const FILTERS: OrderStatus[] = ["All","DELIVERING","COMPLETED","QUEUED","FAILED","CANCELLED","PAUSED"];
+const PLATFORM_ICON: Record<string, string> = { INSTAGRAM: "IG", TIKTOK: "TK", YOUTUBE: "YT" };
+const PLATFORM_COLOR: Record<string, string> = { INSTAGRAM: "#e1306c", TIKTOK: "#00f2ea", YOUTUBE: "#ff0000" };
+const FILTERS: OrderStatus[] = ["All", "DELIVERING", "COMPLETED", "QUEUED", "PAUSED", "FAILED", "CANCELLED"];
+const CURVE_LABELS: Record<string, string> = { ORGANIC: "🌱 Organic", FAST: "⚡ Fast", AGGRESSIVE: "🔥 Aggressive" };
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<OrderStatus>("All");
 
-  useEffect(() => {
+  const load = () => {
     fetch("/api/orders")
-      .then((r) => r.json())
-      .then((d) => { setOrders(d.orders ?? []); setLoading(false); })
+      .then(r => r.json())
+      .then(d => { setOrders(d.orders ?? []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
+  };
 
-  const filtered = filter === "All" ? orders : orders.filter((o) => o.status === filter);
+  useEffect(() => { load(); }, []);
+
+  const filtered = filter === "All" ? orders : orders.filter(o => o.status === filter);
   const counts = FILTERS.reduce((acc, f) => {
-    acc[f] = f === "All" ? orders.length : orders.filter((o) => o.status === f).length;
+    acc[f] = f === "All" ? orders.length : orders.filter(o => o.status === f).length;
     return acc;
   }, {} as Record<string, number>);
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 900 }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+        .order-card:hover { background: rgba(255,255,255,0.035) !important; border-color: rgba(255,255,255,0.1) !important; }
+        .filter-btn:hover { background: rgba(255,255,255,0.05) !important; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
-          <h1 className="text-2xl font-bold text-white">Orders</h1>
-          <p className="text-gray-400 text-sm mt-1">{orders.length} total deliveries</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.5px" }}>Orders</h1>
+          <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>
+            {orders.length} total campaign{orders.length !== 1 ? "s" : ""}
+            {orders.filter(o => o.status === "DELIVERING").length > 0 && (
+              <span style={{ marginLeft: 10, color: "#F59E0B", fontWeight: 600 }}>
+                · {orders.filter(o => o.status === "DELIVERING").length} live
+              </span>
+            )}
+          </p>
         </div>
-        <Link href="/reels/new" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B0B0F] hover:opacity-90 transition" style={{ background:"#F59E0B" }}>
-          + New Order
-        </Link>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={load} style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 9,
+            fontSize: 12, fontWeight: 600, background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)", color: "#64748b", cursor: "pointer",
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Refresh
+          </button>
+          <Link href="/reels/new" style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 9,
+            fontSize: 12, fontWeight: 700, textDecoration: "none", color: "#08080c",
+            background: "linear-gradient(135deg, #F59E0B, #F97316)",
+            boxShadow: "0 4px 14px rgba(245,158,11,0.3)",
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#08080c" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New Order
+          </Link>
+        </div>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          counts[f] > 0 || f === "All" ? (
-            <button key={f} onClick={() => setFilter(f)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all"
-              style={filter === f ? { background:"rgba(245,158,11,0.12)", color:"#F59E0B", border:"1px solid rgba(245,158,11,0.3)" } : { color:"#6b7280", border:"1px solid rgba(255,255,255,0.06)", background:"transparent" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {FILTERS.map(f => (
+          (counts[f] > 0 || f === "All") ? (
+            <button key={f} onClick={() => setFilter(f)} className="filter-btn" style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20,
+              fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s",
+              background: filter === f ? "rgba(245,158,11,0.12)" : "transparent",
+              color: filter === f ? "#F59E0B" : "#475569",
+              border: filter === f ? "1px solid rgba(245,158,11,0.3)" : "1px solid rgba(255,255,255,0.06)",
+            }}>
+              {f === "DELIVERING" && (
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F59E0B", animation: "pulse 1.5s infinite", display: "inline-block" }} />
+              )}
               {f === "All" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
-              <span className="px-1.5 py-0.5 rounded-md text-xs font-bold"
-                style={{ background:"rgba(255,255,255,0.08)", color:filter === f ? "#F59E0B" : "#6b7280" }}>
-                {counts[f]}
-              </span>
+              <span style={{
+                padding: "1px 6px", borderRadius: 10, fontSize: 10, fontWeight: 700,
+                background: filter === f ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.06)",
+                color: filter === f ? "#F59E0B" : "#334155",
+              }}>{counts[f]}</span>
             </button>
           ) : null
         ))}
       </div>
 
+      {/* List */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0", flexDirection: "column", gap: 14 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(245,158,11,0.15)", borderTopColor: "#F59E0B", animation: "spin 0.8s linear infinite" }} />
+          <p style={{ fontSize: 13, color: "#334155" }}>Loading orders…</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border py-16 flex flex-col items-center text-center" style={{ background:"rgba(255,255,255,0.02)", borderColor:"rgba(255,255,255,0.06)" }}>
-          <div className="text-4xl mb-3">📋</div>
-          <p className="font-semibold text-white mb-1">{filter === "All" ? "No orders yet" : `No ${filter.toLowerCase()} orders`}</p>
-          <p className="text-gray-500 text-sm mb-5">Connect a panel and add a reel to start delivering.</p>
-          <Link href="/reels/new" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B0B0F] hover:opacity-90 transition" style={{ background:"#F59E0B" }}>
+        <div style={{
+          borderRadius: 20, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.018)",
+          padding: "64px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 8,
+        }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+          </div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", margin: 0 }}>
+            {filter === "All" ? "No orders yet" : `No ${filter.toLowerCase()} orders`}
+          </p>
+          <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>Connect a panel and add a reel to start delivering views.</p>
+          <Link href="/reels/new" style={{
+            marginTop: 12, padding: "10px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700,
+            textDecoration: "none", color: "#08080c", background: "linear-gradient(135deg, #F59E0B, #F97316)",
+          }}>
             Create First Order →
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((order) => {
-            const st = STATUS_STYLES[order.status] ?? STATUS_STYLES.PENDING;
-            const isLive = order.status === "DELIVERING";
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {filtered.map((order, i) => {
+            const st = STATUS[order.status] ?? STATUS.PENDING;
+            const pct = Math.min(100, order.progressPct ?? 0);
+            const platColor = PLATFORM_COLOR[order.reel.platform] ?? "#64748b";
+            const platLabel = PLATFORM_ICON[order.reel.platform] ?? "??";
+            const cleanUrl = order.reel.url.replace(/^https?:\/\/(www\.)?/, "");
             return (
-              <Link key={order.id} href={`/orders/${order.id}`}
-                className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border p-5 hover:border-white/10 transition-all group"
-                style={{ background:"rgba(255,255,255,0.02)", borderColor:"rgba(255,255,255,0.06)" }}>
-                {/* Platform icon */}
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ background:"rgba(255,255,255,0.05)" }}>
-                  {PLATFORM_ICONS[order.reel.platform] ?? "🎬"}
+              <Link key={order.id} href={`/orders/${order.id}`} className="order-card" style={{
+                display: "flex", alignItems: "center", gap: 16, padding: "16px 18px",
+                borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)",
+                background: "rgba(255,255,255,0.02)", textDecoration: "none",
+                transition: "all 0.15s", animation: `fadeUp ${0.2 + i * 0.04}s ease`,
+              }}>
+                {/* Platform badge */}
+                <div style={{
+                  width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                  background: `${platColor}15`, border: `1px solid ${platColor}30`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 900, color: platColor, letterSpacing: "0.5px",
+                }}>
+                  {platLabel}
                 </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold text-white truncate">{order.reel.url.replace("https://","").slice(0, 50)}…</p>
-                    <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1"
-                      style={{ background:st.bg, color:st.color }}>
-                      {isLive && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+
+                {/* Main info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>
+                      {cleanUrl.length > 50 ? cleanUrl.slice(0, 50) + "…" : cleanUrl}
+                    </p>
+                    <span style={{
+                      display: "flex", alignItems: "center", gap: 5, padding: "2px 10px", borderRadius: 20,
+                      fontSize: 11, fontWeight: 700, flexShrink: 0,
+                      background: st.bg, color: st.color, border: `1px solid ${st.border}`,
+                    }}>
+                      {st.dot && <span style={{ width: 5, height: 5, borderRadius: "50%", background: st.color, animation: "pulse 1.5s infinite", display: "inline-block" }} />}
                       {order.status.charAt(0) + order.status.slice(1).toLowerCase()}
                     </span>
                   </div>
+
                   {/* Progress bar */}
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background:"rgba(255,255,255,0.07)" }}>
-                      <div className="h-full rounded-full transition-all" style={{ width:`${order.progressPct}%`, background:"linear-gradient(90deg, #F59E0B, #F97316)" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
+                    <div style={{ flex: 1, height: 4, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                      <div style={{
+                        height: "100%", borderRadius: 4, transition: "width 0.6s ease",
+                        width: `${pct}%`,
+                        background: order.status === "COMPLETED"
+                          ? "linear-gradient(90deg, #34d399, #10b981)"
+                          : "linear-gradient(90deg, #F59E0B, #F97316)",
+                      }} />
                     </div>
-                    <span className="text-xs text-amber-400 font-semibold shrink-0">{order.progressPct}%</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: order.status === "COMPLETED" ? "#34d399" : "#F59E0B", flexShrink: 0 }}>
+                      {pct}%
+                    </span>
                   </div>
-                  <div className="flex gap-4 mt-1.5 text-xs text-gray-500">
-                    <span>{order.viewsDelivered.toLocaleString()} / {order.viewsTarget.toLocaleString()} views</span>
-                    <span>{order.curveStyle.toLowerCase()}</span>
-                    {order.panel && <span>via {order.panel.name}</span>}
+
+                  {/* Meta row */}
+                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#475569", flexWrap: "wrap" }}>
+                    <span>{(order.viewsDelivered ?? 0).toLocaleString()} / {(order.viewsTarget ?? 0).toLocaleString()} views</span>
+                    {order.curveStyle && <span style={{ color: "#334155" }}>·</span>}
+                    {order.curveStyle && <span>{CURVE_LABELS[order.curveStyle] ?? order.curveStyle}</span>}
+                    {order.panel && <><span style={{ color: "#334155" }}>·</span><span>via {order.panel.name}</span></>}
                   </div>
-                  {/* Engagement mini-badges */}
+
+                  {/* Engagement badges */}
                   {order.engagementEnabled && (order.likesTarget > 0 || order.savesTarget > 0) && (
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
                       {order.likesTarget > 0 && (
-                        <span className="px-2 py-0.5 rounded-md text-xs" style={{ background: "rgba(52,211,153,0.08)", color: "#34d399", border: "1px solid rgba(52,211,153,0.15)" }}>
-                          👍 {order.likesDelivered.toLocaleString()}/{order.likesTarget.toLocaleString()}
+                        <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, background: "rgba(244,114,182,0.08)", color: "#f472b6", border: "1px solid rgba(244,114,182,0.2)" }}>
+                          ♥ {(order.likesDelivered ?? 0)}/{order.likesTarget}
                         </span>
                       )}
                       {order.savesTarget > 0 && (
-                        <span className="px-2 py-0.5 rounded-md text-xs" style={{ background: "rgba(52,211,153,0.08)", color: "#34d399", border: "1px solid rgba(52,211,153,0.15)" }}>
-                          🔖 {order.savesDelivered.toLocaleString()}/{order.savesTarget.toLocaleString()}
-                        </span>
-                      )}
-                      {order.sharesTarget > 0 && (
-                        <span className="px-2 py-0.5 rounded-md text-xs" style={{ background: "rgba(52,211,153,0.08)", color: "#34d399", border: "1px solid rgba(52,211,153,0.15)" }}>
-                          📤 {order.sharesDelivered.toLocaleString()}/{order.sharesTarget.toLocaleString()}
-                        </span>
-                      )}
-                      {order.commentsTarget > 0 && (
-                        <span className="px-2 py-0.5 rounded-md text-xs" style={{ background: "rgba(52,211,153,0.08)", color: "#34d399", border: "1px solid rgba(52,211,153,0.15)" }}>
-                          💬 {order.commentsDelivered.toLocaleString()}/{order.commentsTarget.toLocaleString()}
+                        <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, background: "rgba(129,140,248,0.08)", color: "#818cf8", border: "1px solid rgba(129,140,248,0.2)" }}>
+                          ⊞ {(order.savesDelivered ?? 0)}/{order.savesTarget}
                         </span>
                       )}
                     </div>
                   )}
                 </div>
-                <div className="shrink-0 text-xs text-gray-600 hidden sm:block">
-                  {new Date(order.createdAt).toLocaleDateString()}
+
+                {/* Date + arrow */}
+                <div style={{ flexShrink: 0, textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                  <span style={{ fontSize: 11, color: "#334155" }}>{new Date(order.createdAt).toLocaleDateString()}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
                 </div>
-                <span className="text-gray-600 group-hover:text-amber-400 transition hidden sm:block">→</span>
               </Link>
             );
           })}
