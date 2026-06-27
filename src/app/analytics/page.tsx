@@ -3,13 +3,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const N = {
-  bg:       "#111118",
-  raised:   "8px 8px 20px rgba(0,0,0,0.65), -4px -4px 12px rgba(255,255,255,0.05)",
-  raisedSm: "4px 4px 12px rgba(0,0,0,0.6), -2px -2px 8px rgba(255,255,255,0.04)",
-  inset:    "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 6px rgba(255,255,255,0.04)",
-  accent:   "#F59E0B",
-  text:     "#e2e8f0",
-  muted:    "#4a5568",
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
 };
 
 interface Stats {
@@ -30,10 +31,10 @@ function NeoBar({ views, max, label }: { views: number; max: number; label: stri
   const pct = max > 0 ? (views / max) * 100 : 0;
   return (
     <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-      <span style={{ fontSize:11, color:N.muted, width:28, flexShrink:0 }}>{label}</span>
+      <span style={{ fontSize:11, color:N.muted, width:28, flexShrink:0, fontWeight:700 }}>{label}</span>
       <div style={{ flex:1, height:28, borderRadius:10, position:"relative", background:N.bg, boxShadow:N.inset, overflow:"hidden" }}>
-        <div style={{ height:"100%", borderRadius:10, transition:"width 0.7s ease", width:`${pct}%`, background:"linear-gradient(90deg,#F59E0B,#F97316)" }} />
-        <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", fontSize:11, color:N.text, fontWeight:700 }}>
+        <div style={{ height:"100%", borderRadius:10, transition:"width 0.7s ease", width:`${pct}%`, background:"linear-gradient(90deg,#d97706,#ea580c)" }} />
+        <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", fontSize:11, color:N.text, fontWeight:800 }}>
           {views > 0 ? views.toLocaleString() : "—"}
         </span>
       </div>
@@ -69,7 +70,7 @@ export default function AnalyticsPage() {
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:240 }}>
-      <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(245,158,11,0.15)", borderTopColor:N.accent, animation:"spin 0.8s linear infinite", boxShadow:N.raised }} />
+      <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(217,119,6,0.15)", borderTopColor:N.accent, animation:"spin 0.8s linear infinite", boxShadow:N.raised }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -80,8 +81,8 @@ export default function AnalyticsPage() {
       <NeoCard style={{ padding:"64px 24px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
         <div style={{ fontSize:40, marginBottom:8 }}>📊</div>
         <p style={{ fontSize:16, fontWeight:800, color:N.text, margin:0 }}>No data yet</p>
-        <p style={{ fontSize:13, color:N.muted, margin:0 }}>Place your first order to start seeing analytics</p>
-        <Link href="/reels/new" style={{ marginTop:8, padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, textDecoration:"none", color:"#08080c", background:"linear-gradient(135deg,#F59E0B,#F97316)", boxShadow:N.raisedSm }}>
+        <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Place your first order to start seeing analytics</p>
+        <Link href="/reels/new" style={{ marginTop:8, padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, textDecoration:"none", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm }}>
           Create First Order →
         </Link>
       </NeoCard>
@@ -100,9 +101,9 @@ export default function AnalyticsPage() {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
           <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px", letterSpacing:"-0.5px" }}>Analytics</h1>
-          <p style={{ fontSize:13, color:N.muted, margin:0 }}>Real-time delivery performance</p>
+          <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Real-time delivery performance</p>
         </div>
-        <div style={{ padding:"7px 14px", borderRadius:20, fontSize:11, fontWeight:700, color:"#34d399", background:N.bg, boxShadow:N.inset }}>
+        <div style={{ padding:"7px 14px", borderRadius:20, fontSize:11, fontWeight:700, color:"#16a34a", background:N.bg, boxShadow:N.inset }}>
           ↻ Live — 60s cache
         </div>
       </div>
@@ -118,8 +119,8 @@ export default function AnalyticsPage() {
           <NeoCard key={label} style={{ animation:`fadeUp ${0.2 + i*0.07}s ease` }}>
             <div style={{ fontSize:24, marginBottom:12, width:42, height:42, borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", background:N.bg, boxShadow:N.raisedSm }}>{icon}</div>
             <p style={{ fontSize:26, fontWeight:900, color:N.text, margin:"0 0 4px", letterSpacing:"-1px" }}>{val}</p>
-            <p style={{ fontSize:11, fontWeight:700, color:N.muted, margin:"0 0 2px", textTransform:"uppercase", letterSpacing:"0.08em" }}>{label}</p>
-            <p style={{ fontSize:11, color:"#2d3748", margin:0 }}>{sub}</p>
+            <p style={{ fontSize:11, fontWeight:800, color:N.muted, margin:"0 0 2px", textTransform:"uppercase", letterSpacing:"0.08em" }}>{label}</p>
+            <p style={{ fontSize:11, color:N.muted, margin:0, fontWeight:600 }}>{sub}</p>
           </NeoCard>
         ))}
       </div>
@@ -137,8 +138,8 @@ export default function AnalyticsPage() {
                 <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
                   <defs>
                     <linearGradient id="aGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.4"/>
-                      <stop offset="100%" stopColor="#F59E0B" stopOpacity="0"/>
+                      <stop offset="0%" stopColor="#d97706" stopOpacity="0.3"/>
+                      <stop offset="100%" stopColor="#d97706" stopOpacity="0"/>
                     </linearGradient>
                   </defs>
                   {(() => {
@@ -151,8 +152,8 @@ export default function AnalyticsPage() {
                     return (
                       <>
                         <path d={fill} fill="url(#aGrad)"/>
-                        <path d={line} fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#F59E0B" style={{ filter:"drop-shadow(0 0 4px #F59E0B)" }}/>)}
+                        <path d={line} fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#d97706" />)}
                       </>
                     );
                   })()}
@@ -161,12 +162,12 @@ export default function AnalyticsPage() {
             )}
           </>
         ) : (
-          <p style={{ fontSize:13, color:N.muted }}>No delivery data in last 7 days</p>
+          <p style={{ fontSize:13, color:N.muted, fontWeight:600 }}>No delivery data in last 7 days</p>
         )}
       </NeoCard>
 
       {/* Bottom row */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:20 }}>
         {/* Curve style breakdown */}
         <NeoCard>
           <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 18px" }}>Delivery Styles Used</h3>
@@ -177,17 +178,17 @@ export default function AnalyticsPage() {
                   <span style={{ fontSize:20 }}>{STYLE_ICONS[style] ?? "📊"}</span>
                   <div style={{ flex:1 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                      <span style={{ fontSize:13, color:N.text }}>{style.charAt(0) + style.slice(1).toLowerCase()}</span>
-                      <span style={{ fontSize:13, fontWeight:700, color:N.accent }}>{count}</span>
+                      <span style={{ fontSize:13, color:N.text, fontWeight:700 }}>{style.charAt(0) + style.slice(1).toLowerCase()}</span>
+                      <span style={{ fontSize:13, fontWeight:800, color:N.accent }}>{count}</span>
                     </div>
                     <div style={{ height:6, borderRadius:6, overflow:"hidden", background:N.bg, boxShadow:N.inset }}>
-                      <div style={{ height:"100%", borderRadius:6, width:`${(count / stats.totalOrders) * 100}%`, background:"linear-gradient(90deg,#F59E0B,#F97316)" }}/>
+                      <div style={{ height:"100%", borderRadius:6, width:`${(count / stats.totalOrders) * 100}%`, background:"linear-gradient(90deg,#d97706,#ea580c)" }}/>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : <p style={{ fontSize:13, color:N.muted }}>No orders yet</p>}
+          ) : <p style={{ fontSize:13, color:N.muted, fontWeight:600 }}>No orders yet</p>}
         </NeoCard>
 
         {/* Status summary */}
@@ -195,16 +196,16 @@ export default function AnalyticsPage() {
           <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 18px" }}>Order Status Summary</h3>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {[
-              { label:"Completed",  count: stats.completedOrders,  color:"#34d399" },
-              { label:"Delivering", count: stats.deliveringOrders, color:"#F59E0B" },
-              { label:"Other",      count: stats.totalOrders - stats.completedOrders - stats.deliveringOrders, color:"#6b7280" },
+              { label:"Completed",  count: stats.completedOrders,  color:"#16a34a" },
+              { label:"Delivering", count: stats.deliveringOrders, color:"#d97706" },
+              { label:"Other",      count: stats.totalOrders - stats.completedOrders - stats.deliveringOrders, color:"#718096" },
             ].filter(r => r.count > 0).map(({ label, count, color }) => (
               <div key={label} style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <span style={{ width:8, height:8, borderRadius:"50%", background:color, flexShrink:0, boxShadow:`0 0 8px ${color}` }}/>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:color, flexShrink:0, boxShadow:`0 0 6px ${color}` }}/>
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                    <span style={{ fontSize:13, color:N.text }}>{label}</span>
-                    <span style={{ fontSize:13, fontWeight:700, color }}>{count}</span>
+                    <span style={{ fontSize:13, color:N.text, fontWeight:700 }}>{label}</span>
+                    <span style={{ fontSize:13, fontWeight:800, color }}>{count}</span>
                   </div>
                   <div style={{ height:6, borderRadius:6, overflow:"hidden", background:N.bg, boxShadow:N.inset }}>
                     <div style={{ height:"100%", borderRadius:6, width:`${(count / stats.totalOrders) * 100}%`, background:color, transition:"width 0.7s ease" }}/>
@@ -213,14 +214,14 @@ export default function AnalyticsPage() {
               </div>
             ))}
           </div>
-          <div style={{ marginTop:18, paddingTop:18, borderTop:"1px solid rgba(255,255,255,0.04)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontSize:12, color:N.muted }}>Overall success rate</span>
+          <div style={{ marginTop:18, paddingTop:18, borderTop:`1px solid ${N.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:12, color:N.muted, fontWeight:700 }}>Overall success rate</span>
             <span style={{ fontSize:24, fontWeight:900, color:N.text }}>{stats.successRate}%</span>
           </div>
         </NeoCard>
       </div>
 
-      <Link href="/orders" style={{ fontSize:13, color:N.accent, textDecoration:"none", fontWeight:700 }}>View all orders →</Link>
+      <Link href="/orders" style={{ fontSize:13, color:N.accent, textDecoration:"none", fontWeight:800, display:"inline-block", width:"fit-content" }} className="neo-btn">View all orders →</Link>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface AdminSettings {
   trc20Address: string | null; bep20Address: string | null;
@@ -23,9 +24,21 @@ interface Payment {
 
 type AdminTab = "settings" | "users" | "payments" | "campaigns" | "system";
 
+const N = {
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
+};
+
 const PLAN_COLORS: Record<string, string> = {
-  FREE: "#6b7280", TRIAL: "#818cf8", LIFETIME: "#34d399",
-  SUSPENDED: "#f87171",
+  FREE: "#718096", TRIAL: "#4f46e5", LIFETIME: "#16a34a",
+  SUSPENDED: "#dc2626",
 };
 
 export default function AdminPage() {
@@ -124,20 +137,25 @@ export default function AdminPage() {
   };
 
   if (!authed) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0B0B0F" }}>
-      <div className="w-full max-w-sm rounded-2xl border p-8 space-y-5" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.08)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: N.bg }}>
+      <style>{`
+        .neo-input:focus{box-shadow:inset 6px 6px 12px #c8d0e7,inset -6px -6px 12px #ffffff,0 0 0 2px rgba(217,119,6,0.25) !important}
+        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
+        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
+      `}</style>
+      <div className="w-full max-w-sm rounded-2xl p-8 space-y-6" style={{ background: N.bg, boxShadow: N.raised }}>
         <div className="text-center">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold text-[#0B0B0F]" style={{ background: "#F59E0B" }}>Y</div>
-          <h1 className="text-xl font-bold text-white">Admin Panel</h1>
-          <p className="text-gray-500 text-sm mt-1">Enter admin secret to continue</p>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-black text-white" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
+          <h1 className="text-xl font-black" style={{ color: N.text }}>Admin Panel</h1>
+          <p style={{ color: N.muted, fontSize: 13, fontWeight: 600, marginTop: 4 }}>Enter admin secret key to continue</p>
         </div>
         <input type="password" value={secret} onChange={(e) => setSecret(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && loadAll()}
           placeholder="Admin secret key…"
-          className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-amber-500/40"
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }} />
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <button onClick={loadAll} className="w-full py-3 rounded-xl font-bold text-[#0B0B0F] hover:opacity-90 transition" style={{ background: "#F59E0B" }}>
+          className="w-full px-4 py-3 rounded-xl text-sm outline-none neo-input"
+          style={{ background: N.bg, border: "none", color: N.text, boxShadow: N.inset, fontFamily: "inherit" }} />
+        {error && <p style={{ color: "#dc2626", fontSize: 12, fontWeight: 700, margin: 0 }}>⚠️ {error}</p>}
+        <button onClick={loadAll} className="w-full py-3 rounded-xl font-bold text-white neo-btn" style={{ background: N.accentBg, border: "none", cursor: "pointer", boxShadow: N.raisedSm }}>
           Enter Admin Panel →
         </button>
       </div>
@@ -145,20 +163,26 @@ export default function AdminPage() {
   );
 
   return (
-    <div className="min-h-screen" style={{ background: "#0B0B0F" }}>
+    <div className="min-h-screen" style={{ background: N.bg }}>
+      <style>{`
+        .neo-input:focus{box-shadow:inset 6px 6px 12px #c8d0e7,inset -6px -6px 12px #ffffff,0 0 0 2px rgba(217,119,6,0.25) !important}
+        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
+        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+      `}</style>
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-[#0B0B0F]" style={{ background: "#F59E0B" }}>Y</div>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-white" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
             <div>
-              <h1 className="text-xl font-bold text-white">YoyoSMM Admin</h1>
-              <p className="text-gray-500 text-xs">Manage your platform</p>
+              <h1 className="text-xl font-black" style={{ color: N.text, margin: 0 }}>YoyoSMM Admin</h1>
+              <p style={{ color: N.muted, fontSize: 12, fontWeight: 600, margin: 0 }}>Manage platform and global settings</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            {saved && <span className="px-3 py-1.5 rounded-lg text-xs text-emerald-400 font-semibold" style={{ background: "rgba(52,211,153,0.1)" }}>✓ {saved}</span>}
-            <button onClick={() => router.push("/dashboard")} className="px-3 py-1.5 rounded-lg text-xs text-gray-400 border hover:bg-white/5 transition" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <div className="flex gap-2 items-center">
+            {saved && <span className="px-3 py-1.5 rounded-lg text-xs text-emerald-600 font-bold" style={{ background: "rgba(22,163,74,0.1)", boxShadow: N.inset }}>✓ {saved}</span>}
+            <button onClick={() => router.push("/dashboard")} className="px-3 py-1.5 rounded-lg text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: N.muted, boxShadow: N.raisedSm, cursor: "pointer" }}>
               ← Dashboard
             </button>
           </div>
@@ -172,10 +196,10 @@ export default function AdminPage() {
             ["🔄", "Free Trial", users.filter((u) => u.plan === "FREE" || u.plan === "TRIAL").length],
             ["💰", "Revenue", `$${payments.filter((p) => p.status === "CONFIRMED").reduce((a, p) => a + (p.amountUsdt ?? 0), 0).toFixed(0)} USDT`],
           ].map(([icon, label, val]) => (
-            <div key={String(label)} className="rounded-xl border p-4" style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}>
+            <div key={String(label)} className="rounded-xl p-4" style={{ background: N.bg, boxShadow: N.raised }}>
               <div className="text-2xl mb-1">{icon}</div>
-              <p className="text-xl font-bold text-white">{val}</p>
-              <p className="text-xs text-gray-500">{label}</p>
+              <p className="text-xl font-black" style={{ color: N.text, margin: 0 }}>{val}</p>
+              <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0 }}>{label}</p>
             </div>
           ))}
         </div>
@@ -192,9 +216,14 @@ export default function AdminPage() {
             };
             return (
               <button key={t} onClick={() => setTab(t)}
-                className="px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all"
-                style={tab === t ? { background: "rgba(245,158,11,0.12)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.3)" } : { color: "#6b7280", border: "1px solid rgba(255,255,255,0.06)", background: "transparent" }}>
-                {iconMap[t]}{t.charAt(0).toUpperCase() + t.slice(1)}
+                className="px-4 py-2 rounded-xl text-sm font-bold capitalize transition-all neo-btn"
+                style={{
+                  border: "none", cursor: "pointer",
+                  background: N.bg,
+                  color: tab === t ? N.accent : N.muted,
+                  boxShadow: tab === t ? N.inset : N.raisedSm
+                }}>
+                {iconMap[t]}{t}
               </button>
             );
           })}
@@ -203,52 +232,52 @@ export default function AdminPage() {
         {/* ── SETTINGS TAB ─── */}
         {tab === "settings" && (
           <div className="space-y-5">
-            <div className="rounded-2xl border p-6" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-              <h2 className="text-lg font-bold text-white mb-5">💳 Crypto Wallet Addresses</h2>
+            <div className="rounded-2xl p-6" style={{ background: N.bg, boxShadow: N.raised }}>
+              <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, marginBottom: 20 }}>💳 Crypto Wallet Addresses</h2>
               <div className="space-y-4">
                 {[
                   { key: "trc20Address", label: "🔷 USDT TRC20 Address (TRON)", placeholder: "T..." },
                   { key: "bep20Address", label: "🔶 USDT BEP20 Address (BSC)", placeholder: "0x..." },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: N.muted, marginBottom: 8 }}>{label}</label>
                     <input value={(settings as unknown as Record<string, string>)[key] ?? ""}
                       onChange={(e) => setSettings((prev) => ({ ...prev, [key]: e.target.value }))}
                       placeholder={placeholder}
-                      className="w-full px-4 py-3 rounded-xl text-sm text-white font-mono outline-none focus:ring-2 focus:ring-amber-500/40"
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }} />
+                      className="w-full px-4 py-3 rounded-xl text-sm font-mono outline-none neo-input"
+                      style={{ background: N.bg, border: "none", color: N.text, boxShadow: N.inset }} />
                   </div>
                 ))}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">💵 Price (USDT)</label>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: N.muted, marginBottom: 8 }}>💵 Price (USDT)</label>
                     <input type="number" value={settings.priceUsdt} onChange={(e) => setSettings((p) => ({ ...p, priceUsdt: parseFloat(e.target.value) }))}
-                      className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-amber-500/40"
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }} />
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none neo-input"
+                      style={{ background: N.bg, border: "none", color: N.text, boxShadow: N.inset }} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">⏱ Free Trial Hours</label>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: N.muted, marginBottom: 8 }}>⏱ Free Trial Hours</label>
                     <input type="number" value={settings.freeTrialHours} onChange={(e) => setSettings((p) => ({ ...p, freeTrialHours: parseInt(e.target.value) }))}
-                      className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-amber-500/40"
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }} />
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none neo-input"
+                      style={{ background: N.bg, border: "none", color: N.text, boxShadow: N.inset }} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">📧 Support Email</label>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: N.muted, marginBottom: 8 }}>📧 Support Email</label>
                   <input value={settings.supportEmail ?? ""} onChange={(e) => setSettings((p) => ({ ...p, supportEmail: e.target.value }))}
                     placeholder="support@yoyosmm.online"
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-amber-500/40"
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }} />
+                    className="w-full px-4 py-3 rounded-xl text-sm outline-none neo-input"
+                    style={{ background: N.bg, border: "none", color: N.text, boxShadow: N.inset }} />
                 </div>
-                <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: N.bg, boxShadow: N.inset }}>
                   <input type="checkbox" id="maintenance" checked={settings.maintenanceMode}
                     onChange={(e) => setSettings((p) => ({ ...p, maintenanceMode: e.target.checked }))}
-                    className="w-4 h-4 accent-amber-400" />
-                  <label htmlFor="maintenance" className="text-sm text-gray-300">🔧 Maintenance Mode (shows maintenance page to users)</label>
+                    style={{ width: 16, height: 16, accentColor: N.accent, cursor: "pointer" }} />
+                  <label htmlFor="maintenance" style={{ fontSize: 13, color: N.text, fontWeight: 700, cursor: "pointer" }}>🔧 Maintenance Mode (shows maintenance page to users)</label>
                 </div>
               </div>
-              <button onClick={saveSettings} className="mt-5 px-6 py-3 rounded-xl font-bold text-[#0B0B0F] hover:opacity-90 transition" style={{ background: "#F59E0B" }}>
-                Save Settings ✓
+              <button onClick={saveSettings} className="mt-5 px-6 py-3 rounded-xl font-bold text-white neo-btn" style={{ background: N.accentBg, border: "none", cursor: "pointer", boxShadow: N.raisedSm }}>
+                Save Settings
               </button>
             </div>
           </div>
@@ -256,95 +285,101 @@ export default function AdminPage() {
 
         {/* ── USERS TAB ─── */}
         {tab === "users" && (
-          <div className="rounded-2xl border overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-            <div className="p-5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-              <h2 className="font-bold text-white">All Users ({users.length})</h2>
+          <div className="rounded-2xl overflow-hidden" style={{ background: N.bg, boxShadow: N.raised }}>
+            <div className="p-5 border-b" style={{ borderColor: N.border }}>
+              <h2 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Platform Registered Users ({users.length})</h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                    {["Email", "Plan", "Orders", "Panels", "Joined", "Actions"].map((h) => (
-                      <th key={h} className="px-4 py-3 font-medium">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-b hover:bg-white/[0.02]" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                      <td className="px-4 py-3">
-                        <p className="text-white font-medium">{u.email}</p>
-                        {u.name && <p className="text-gray-500 text-xs">{u.name}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ color: PLAN_COLORS[u.plan] ?? "#6b7280", background: `${PLAN_COLORS[u.plan] ?? "#6b7280"}1a` }}>
-                          {u.plan}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">{u._count.orders}</td>
-                      <td className="px-4 py-3 text-gray-400">{u._count.panels}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{new Date(u.createdAt).toLocaleDateString()}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1.5">
-                          {u.plan !== "LIFETIME" && (
-                            <button onClick={() => userAction(u.id, "upgrade")} className="px-2.5 py-1 rounded-lg text-xs font-medium text-emerald-400 hover:bg-emerald-400/10 transition" style={{ border: "1px solid rgba(52,211,153,0.3)" }}>
-                              Upgrade
-                            </button>
-                          )}
-                          <button onClick={() => userAction(u.id, u.plan === "SUSPENDED" ? "unsuspend" : "suspend")}
-                            className="px-2.5 py-1 rounded-lg text-xs font-medium text-red-400 hover:bg-red-400/10 transition"
-                            style={{ border: "1px solid rgba(248,113,113,0.3)" }}>
-                            {u.plan === "SUSPENDED" ? "Unsuspend" : "Suspend"}
-                          </button>
-                        </div>
-                      </td>
+            {users.length === 0 ? (
+              <div className="py-12 text-center text-sm font-semibold" style={{ color: N.muted }}>No users found</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr style={{ color: N.muted, borderBottom: `1px solid ${N.border}`, fontWeight: 800 }}>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Created</th>
+                      <th className="px-4 py-3">Plan Status</th>
+                      <th className="px-4 py-3">Connected Panels</th>
+                      <th className="px-4 py-3">Total Campaigns</th>
+                      <th className="px-4 py-3">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-b" style={{ borderColor: N.border }}>
+                        <td className="px-4 py-3 font-semibold" style={{ color: N.text }}>{u.email}</td>
+                        <td className="px-4 py-3" style={{ color: N.muted }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: PLAN_COLORS[u.plan] + "1A", color: PLAN_COLORS[u.plan] }}>
+                            {u.plan}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-bold" style={{ color: N.text }}>{u._count?.panels ?? 0} panels</td>
+                        <td className="px-4 py-3 font-bold" style={{ color: N.text }}>{u._count?.orders ?? 0} campaigns</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            {u.plan !== "LIFETIME" && (
+                              <button onClick={() => userAction(u.id, "upgrade")} className="px-2 py-1 rounded text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: "#16a34a", cursor: "pointer", boxShadow: N.raisedSm }}>
+                                Upgrade Lifetime
+                              </button>
+                            )}
+                            {u.plan !== "SUSPENDED" ? (
+                              <button onClick={() => userAction(u.id, "suspend")} className="px-2 py-1 rounded text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: "#dc2626", cursor: "pointer", boxShadow: N.raisedSm }}>
+                                Suspend
+                              </button>
+                            ) : (
+                              <button onClick={() => userAction(u.id, "unsuspend")} className="px-2 py-1 rounded text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: N.accent, cursor: "pointer", boxShadow: N.raisedSm }}>
+                                Unsuspend
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── PAYMENTS TAB ─── */}
         {tab === "payments" && (
-          <div className="rounded-2xl border overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-            <div className="p-5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-              <h2 className="font-bold text-white">Crypto Payments ({payments.length})</h2>
+          <div className="rounded-2xl overflow-hidden" style={{ background: N.bg, boxShadow: N.raised }}>
+            <div className="p-5 border-b" style={{ borderColor: N.border }}>
+              <h2 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Crypto Payments ({payments.length})</h2>
             </div>
             {payments.length === 0 ? (
-              <div className="py-12 text-center text-gray-500 text-sm">No payments yet</div>
+              <div className="py-12 text-center text-sm font-semibold" style={{ color: N.muted }}>No payments yet</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm text-left">
                   <thead>
-                    <tr className="text-left text-xs text-gray-500 uppercase border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                    <tr style={{ color: N.muted, borderBottom: `1px solid ${N.border}`, fontWeight: 800 }}>
                       {["User", "Network", "TXID", "Amount", "Status", "Date"].map((h) => (
-                        <th key={h} className="px-4 py-3 font-medium">{h}</th>
+                        <th key={h} className="px-4 py-3">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {payments.map((p) => {
-                      const statusColors: Record<string, string> = { CONFIRMED: "#34d399", PENDING: "#F59E0B", FAILED: "#f87171", VERIFYING: "#818cf8" };
+                      const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", FAILED: "#dc2626", VERIFYING: "#2563eb" };
                       return (
-                        <tr key={p.id} className="border-b hover:bg-white/[0.02]" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                        <tr key={p.id} className="border-b" style={{ borderColor: N.border }}>
+                          <td className="px-4 py-3 font-semibold" style={{ color: N.text }}>{p.user?.email}</td>
                           <td className="px-4 py-3">
-                            <p className="text-white">{p.user?.email}</p>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: p.network === "TRC20" ? "rgba(99,102,241,0.15)" : "rgba(245,158,11,0.15)", color: p.network === "TRC20" ? "#818cf8" : "#F59E0B" }}>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: p.network === "TRC20" ? "rgba(37,99,235,0.1)" : "rgba(217,119,6,0.1)", color: p.network === "TRC20" ? "#2563eb" : "#d97706" }}>
                               {p.network}
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <code className="text-amber-400 text-xs">{p.txHash.slice(0, 16)}…</code>
+                            <code style={{ color: N.accent, fontSize: 12, fontWeight: 700 }}>{p.txHash.slice(0, 16)}…</code>
                           </td>
-                          <td className="px-4 py-3 text-white">{p.amountUsdt ? `$${p.amountUsdt}` : "—"}</td>
+                          <td className="px-4 py-3 font-black" style={{ color: N.text }}>{p.amountUsdt ? `$${p.amountUsdt}` : "—"}</td>
                           <td className="px-4 py-3">
-                            <span style={{ color: statusColors[p.status] ?? "#6b7280" }} className="text-xs font-semibold">{p.status}</span>
+                            <span style={{ color: statusColors[p.status] ?? "#718096" }} className="text-xs font-bold">{p.status}</span>
                           </td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">{new Date(p.createdAt).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-xs" style={{ color: N.muted }}>{new Date(p.createdAt).toLocaleDateString()}</td>
                         </tr>
                       );
                     })}
@@ -364,14 +399,14 @@ export default function AdminPage() {
                 placeholder="Search by Email, Reel URL, or ID…"
                 value={orderQuery}
                 onChange={(e) => setOrderQuery(e.target.value)}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm text-white outline-none"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none neo-input"
+                style={{ background: N.bg, border: "none", color: N.text, boxShadow: N.inset }}
               />
               <select
                 value={orderFilter}
                 onChange={(e) => setOrderFilter(e.target.value)}
-                className="px-4 py-2.5 rounded-xl text-sm text-white bg-neutral-900 border outline-none"
-                style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                className="px-4 py-2.5 rounded-xl text-sm outline-none neo-btn"
+                style={{ border: "none", background: N.bg, color: N.text, boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}
               >
                 <option value="All">All Statuses</option>
                 <option value="DELIVERING">Delivering</option>
@@ -383,13 +418,13 @@ export default function AdminPage() {
               </select>
             </div>
 
-            <div className="rounded-2xl border overflow-hidden animate-fade-in" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
+            <div className="rounded-2xl overflow-hidden animate-fade-in" style={{ background: N.bg, boxShadow: N.raised }}>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm text-left">
                   <thead>
-                    <tr className="text-left text-xs text-gray-500 uppercase border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                    <tr style={{ color: N.muted, borderBottom: `1px solid ${N.border}`, fontWeight: 800 }}>
                       {["User & Reel", "Speed & Curve", "Delivery Targets", "Status", "Actions"].map((h) => (
-                        <th key={h} className="px-4 py-3 font-medium">{h}</th>
+                        <th key={h} className="px-4 py-3">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -404,59 +439,49 @@ export default function AdminPage() {
                         return matchesQuery && matchesFilter;
                       })
                       .map((o) => {
-                        const statusColors: Record<string, string> = {
-                          COMPLETED: "#34d399", DELIVERING: "#818cf8", PAUSED: "#F59E0B",
-                          CANCELLED: "#ef4444", FAILED: "#ef4444", QUEUED: "#6b7280"
-                        };
+                        const statusColors: Record<string, string> = { DELIVERING: "#d97706", COMPLETED: "#16a34a", PAUSED: "#718096", CANCELLED: "#dc2626", FAILED: "#dc2626", QUEUED: "#2563eb" };
                         return (
-                          <tr key={o.id} className="border-b hover:bg-white/[0.01]" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                            <td className="px-4 py-3 max-w-[240px]">
-                              <p className="text-white font-medium truncate" title={o.user.email}>{o.user.email}</p>
-                              <a href={o.reel.url} target="_blank" rel="noopener noreferrer" className="text-amber-400 text-xs hover:underline truncate block max-w-xs mt-0.5">
-                                {o.reel.platform === "INSTAGRAM" ? "📷" : o.reel.platform === "TIKTOK" ? "🎵" : "▶️"} {o.reel.url}
-                              </a>
+                          <tr key={o.id} className="border-b" style={{ borderColor: N.border }}>
+                            <td className="px-4 py-3">
+                              <p className="font-bold" style={{ color: N.text, margin: 0 }}>{o.user?.email}</p>
+                              <a href={o.reel?.url} target="_blank" rel="noreferrer" className="text-xs hover:underline block truncate max-w-xs mt-0.5" style={{ color: N.accent, fontWeight: 600 }}>{o.reel?.url}</a>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "rgba(245,158,11,0.1)", color: "#F59E0B" }}>
+                              <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "rgba(217,119,6,0.1)", color: N.accent }}>
                                 {o.curveStyle}
                               </span>
-                              <p className="text-gray-500 text-xs mt-1">{o.durationHours}h duration</p>
+                              <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0" }}>{o.durationHours} hours schedule</p>
                             </td>
                             <td className="px-4 py-3">
-                              <div className="space-y-0.5 text-xs">
-                                <p className="text-gray-300">👁 Views: <strong>{(o.viewsDelivered ?? 0).toLocaleString()}</strong> / {(o.viewsTarget ?? 0).toLocaleString()}</p>
-                                {o.engagementEnabled && (
-                                  <>
-                                    {o.likesTarget > 0 && <p className="text-gray-400">👍 Likes: <strong>{o.likesDelivered ?? 0}</strong>/{o.likesTarget}</p>}
-                                    {o.savesTarget > 0 && <p className="text-gray-400">🔖 Saves: <strong>{o.savesDelivered ?? 0}</strong>/{o.savesTarget}</p>}
-                                  </>
-                                )}
-                              </div>
+                              <p style={{ color: N.text, margin: 0, fontWeight: 700 }}>👁 {o.viewsTarget.toLocaleString()} views</p>
+                              <p style={{ color: N.muted, fontSize: 11, margin: "2px 0 0" }}>
+                                {o.likesTarget > 0 && `👍 ${o.likesTarget.toLocaleString()} `}
+                                {o.savesTarget > 0 && `🔖 ${o.savesTarget.toLocaleString()} `}
+                                {o.commentsTarget > 0 && `💬 ${o.commentsTarget.toLocaleString()}`}
+                              </p>
                             </td>
                             <td className="px-4 py-3">
-                              <span style={{ color: statusColors[o.status] ?? "#6b7280", background: `${statusColors[o.status] ?? "#6b7280"}15` }} className="text-xs px-2 py-0.5 rounded-full font-bold">
-                                {o.status}
-                              </span>
+                              <span className="text-xs font-bold" style={{ color: statusColors[o.status] ?? "#718096" }}>{o.status}</span>
                             </td>
                             <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-1">
+                              <div className="flex gap-2">
                                 {o.status === "DELIVERING" && (
-                                  <button onClick={() => handleCampaignAction(o.id, "pause")} className="px-2 py-1 rounded text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition">
+                                  <button onClick={() => handleCampaignAction(o.id, "pause")} className="px-2 py-1 rounded text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: N.accent, cursor: "pointer", boxShadow: N.raisedSm }}>
                                     Pause
                                   </button>
                                 )}
                                 {o.status === "PAUSED" && (
-                                  <button onClick={() => handleCampaignAction(o.id, "resume")} className="px-2 py-1 rounded text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition">
+                                  <button onClick={() => handleCampaignAction(o.id, "resume")} className="px-2 py-1 rounded text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: "#16a34a", cursor: "pointer", boxShadow: N.raisedSm }}>
                                     Resume
                                   </button>
                                 )}
                                 {["DELIVERING", "PAUSED", "QUEUED"].includes(o.status) && (
-                                  <button onClick={() => handleCampaignAction(o.id, "cancel")} className="px-2 py-1 rounded text-xs bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition">
+                                  <button onClick={() => handleCampaignAction(o.id, "cancel")} className="px-2 py-1 rounded text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: "#dc2626", cursor: "pointer", boxShadow: N.raisedSm }}>
                                     Cancel
                                   </button>
                                 )}
                                 {["DELIVERING", "COMPLETED"].includes(o.status) && (
-                                  <button onClick={() => handleCampaignAction(o.id, "refill")} className="px-2 py-1 rounded text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition" title="Query status & place refill if partial">
+                                  <button onClick={() => handleCampaignAction(o.id, "refill")} className="px-2 py-1 rounded text-xs font-bold neo-btn" style={{ background: N.bg, border: "none", color: "#16a34a", cursor: "pointer", boxShadow: N.raisedSm }} title="Query status & place refill if partial">
                                     Refill
                                   </button>
                                 )}
@@ -477,62 +502,62 @@ export default function AdminPage() {
           <div className="space-y-6">
             {/* Status counts grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="rounded-xl border p-4" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Active Campaigns</p>
-                <p className="text-2xl font-bold text-indigo-400 mt-1">
+              <div className="rounded-xl p-4" style={{ background: N.bg, boxShadow: N.raised }}>
+                <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Active Campaigns</p>
+                <p className="text-2xl font-black mt-1" style={{ color: N.accent, margin: 0 }}>
                   {orders.filter((o) => ["DELIVERING", "QUEUED"].includes(o.status)).length}
                 </p>
               </div>
-              <div className="rounded-xl border p-4" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Completed Campaigns</p>
-                <p className="text-2xl font-bold text-emerald-400 mt-1">
+              <div className="rounded-xl p-4" style={{ background: N.bg, boxShadow: N.raised }}>
+                <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Completed Campaigns</p>
+                <p className="text-2xl font-black mt-1" style={{ color: "#16a34a", margin: 0 }}>
                   {orders.filter((o) => o.status === "COMPLETED").length}
                 </p>
               </div>
-              <div className="rounded-xl border p-4" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Scheduled Ticks</p>
-                <p className="text-2xl font-bold text-gray-400 mt-1">
+              <div className="rounded-xl p-4" style={{ background: N.bg, boxShadow: N.raised }}>
+                <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Scheduled Ticks</p>
+                <p className="text-2xl font-black mt-1" style={{ color: N.text, margin: 0 }}>
                   {systemData.eventStats.find((s) => s.status === "SCHEDULED")?.count ?? 0}
                 </p>
               </div>
-              <div className="rounded-xl border p-4" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Failed Ticks</p>
-                <p className="text-2xl font-bold text-red-400 mt-1">
+              <div className="rounded-xl p-4" style={{ background: N.bg, boxShadow: N.raised }}>
+                <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Failed Ticks</p>
+                <p className="text-2xl font-black mt-1" style={{ color: "#dc2626", margin: 0 }}>
                   {systemData.eventStats.find((s) => s.status === "FAILED")?.count ?? 0}
                 </p>
               </div>
             </div>
 
             {/* Panels Diagnostics */}
-            <div className="rounded-2xl border overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-              <div className="p-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                <h3 className="font-bold text-white">Global User Panel Connections ({systemData.panels.length})</h3>
+            <div className="rounded-2xl overflow-hidden" style={{ background: N.bg, boxShadow: N.raised }}>
+              <div className="p-4 border-b" style={{ borderColor: N.border }}>
+                <h3 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Global User Panel Connections ({systemData.panels.length})</h3>
               </div>
               {systemData.panels.length === 0 ? (
-                <p className="p-4 text-xs text-gray-500">No panel APIs connected yet</p>
+                <p className="p-4 text-xs font-semibold" style={{ color: N.muted, margin: 0 }}>No panel APIs connected yet</p>
               ) : (
                 <div className="overflow-x-auto text-xs">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="text-gray-500 uppercase border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                      <tr style={{ color: N.muted, borderBottom: `1px solid ${N.border}`, fontWeight: 800 }}>
                         {["User", "Panel Name", "API URL", "Status", "Latency", "Success %"].map((h) => (
-                          <th key={h} className="px-4 py-3 font-medium">{h}</th>
+                          <th key={h} className="px-4 py-3">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {systemData.panels.map((p) => {
-                        const colors: Record<string, string> = { ONLINE: "text-emerald-400", OFFLINE: "text-red-400", SLOW: "text-amber-400", UNKNOWN: "text-gray-400" };
+                        const colors: Record<string, string> = { ONLINE: "text-emerald-600", OFFLINE: "text-red-600", SLOW: "text-amber-600", UNKNOWN: "text-gray-500" };
                         return (
-                          <tr key={p.id} className="border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                            <td className="px-4 py-2.5 text-gray-400">{p.user?.email}</td>
-                            <td className="px-4 py-2.5 text-white font-medium">{p.name}</td>
-                            <td className="px-4 py-2.5 text-gray-500 truncate max-w-xs">{p.apiUrl}</td>
+                          <tr key={p.id} className="border-b" style={{ borderColor: N.border }}>
+                            <td className="px-4 py-2.5" style={{ color: N.muted }}>{p.user?.email}</td>
+                            <td className="px-4 py-2.5 font-bold" style={{ color: N.text }}>{p.name}</td>
+                            <td className="px-4 py-2.5 truncate max-w-xs" style={{ color: N.muted }}>{p.apiUrl}</td>
                             <td className="px-4 py-2.5">
-                              <span className={`font-semibold ${colors[p.status] ?? "text-gray-400"}`}>{p.status}</span>
+                              <span className={`font-bold ${colors[p.status] ?? "text-gray-500"}`}>{p.status}</span>
                             </td>
-                            <td className="px-4 py-2.5 text-white">{p.lastResponseMs ? `${p.lastResponseMs}ms` : "—"}</td>
-                            <td className="px-4 py-2.5 text-white font-medium">{p.successRate.toFixed(1)}%</td>
+                            <td className="px-4 py-2.5 font-bold" style={{ color: N.text }}>{p.lastResponseMs ? `${p.lastResponseMs}ms` : "—"}</td>
+                            <td className="px-4 py-2.5 font-bold" style={{ color: N.text }}>{p.successRate.toFixed(1)}%</td>
                           </tr>
                         );
                       })}
@@ -543,38 +568,38 @@ export default function AdminPage() {
             </div>
 
             {/* Queue Events Ticks */}
-            <div className="rounded-2xl border overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.07)" }}>
-              <div className="p-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                <h3 className="font-bold text-white">Recent Queue Webhook Ticks ({systemData.events.length})</h3>
+            <div className="rounded-2xl overflow-hidden" style={{ background: N.bg, boxShadow: N.raised }}>
+              <div className="p-4 border-b" style={{ borderColor: N.border }}>
+                <h3 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Recent Queue Webhook Ticks ({systemData.events.length})</h3>
               </div>
               {systemData.events.length === 0 ? (
-                <p className="p-4 text-xs text-gray-500">No queue events logged</p>
+                <p className="p-4 text-xs font-semibold" style={{ color: N.muted, margin: 0 }}>No queue events logged</p>
               ) : (
                 <div className="overflow-x-auto text-xs">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="text-gray-500 uppercase border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                      <tr style={{ color: N.muted, borderBottom: `1px solid ${N.border}`, fontWeight: 800 }}>
                         {["Campaign", "Batch size", "Panel", "Scheduled", "Status", "Diagnostics"].map((h) => (
-                          <th key={h} className="px-4 py-3 font-medium">{h}</th>
+                          <th key={h} className="px-4 py-3">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {systemData.events.map((e) => {
-                        const statusColors: Record<string, string> = { DONE: "text-emerald-400", FAILED: "text-red-400", SCHEDULED: "text-gray-400", EXECUTING: "text-amber-400", RETRYING: "text-indigo-400" };
+                        const statusColors: Record<string, string> = { DONE: "text-emerald-600", FAILED: "text-red-600", SCHEDULED: "text-gray-500", EXECUTING: "text-amber-600", RETRYING: "text-indigo-600" };
                         return (
-                          <tr key={e.id} className="border-b hover:bg-white/[0.01]" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                          <tr key={e.id} className="border-b" style={{ borderColor: N.border }}>
                             <td className="px-4 py-2.5">
-                              <p className="text-white font-medium truncate max-w-xs">{e.order?.user?.email}</p>
-                              <p className="text-gray-500 text-[10px] mt-0.5 truncate max-w-xs">{e.order?.reel?.url}</p>
+                              <p className="font-bold truncate max-w-xs" style={{ color: N.text, margin: 0 }}>{e.order?.user?.email}</p>
+                              <p className="text-[10px] truncate max-w-xs mt-0.5" style={{ color: N.muted, margin: 0 }}>{e.order?.reel?.url}</p>
                             </td>
-                            <td className="px-4 py-2.5 text-white font-semibold">{(e.viewsBatch ?? 0).toLocaleString()} views</td>
-                            <td className="px-4 py-2.5 text-gray-400">{e.panel?.name}</td>
-                            <td className="px-4 py-2.5 text-gray-500">{new Date(e.scheduledAt).toLocaleTimeString()}</td>
+                            <td className="px-4 py-2.5 font-bold" style={{ color: N.text }}>{(e.viewsBatch ?? 0).toLocaleString()} views</td>
+                            <td className="px-4 py-2.5 font-semibold" style={{ color: N.muted }}>{e.panel?.name}</td>
+                            <td className="px-4 py-2.5" style={{ color: N.muted }}>{new Date(e.scheduledAt).toLocaleTimeString()}</td>
                             <td className="px-4 py-2.5">
-                              <span className={`font-semibold ${statusColors[e.status] ?? "text-gray-400"}`}>{e.status}</span>
+                              <span className={`font-bold ${statusColors[e.status] ?? "text-gray-500"}`}>{e.status}</span>
                             </td>
-                            <td className="px-4 py-2.5 max-w-xs truncate text-red-400" title={e.errorMessage ?? ""}>
+                            <td className="px-4 py-2.5 max-w-xs truncate font-bold text-red-600" title={e.errorMessage ?? ""}>
                               {e.errorMessage ?? "—"}
                             </td>
                           </tr>

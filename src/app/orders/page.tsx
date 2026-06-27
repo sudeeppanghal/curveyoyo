@@ -16,18 +16,30 @@ interface Order {
   commentsTarget: number; commentsDelivered: number;
 }
 
-const STATUS: Record<string, { color: string; bg: string; border: string; dot?: boolean }> = {
-  QUEUED:     { color: "#818cf8", bg: "rgba(129,140,248,0.08)", border: "rgba(129,140,248,0.2)" },
-  DELIVERING: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.2)", dot: true },
-  COMPLETED:  { color: "#34d399", bg: "rgba(52,211,153,0.08)",  border: "rgba(52,211,153,0.2)" },
-  FAILED:     { color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.2)" },
-  CANCELLED:  { color: "#64748b", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)" },
-  PAUSED:     { color: "#fbbf24", bg: "rgba(251,191,36,0.08)",  border: "rgba(251,191,36,0.2)" },
-  PENDING:    { color: "#64748b", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)" },
+const N = {
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  faint:    "#a0aec0",
+  border:   "rgba(200, 208, 231, 0.4)",
 };
 
-const PLATFORM_ICON: Record<string, string> = { INSTAGRAM: "IG", TIKTOK: "TK", YOUTUBE: "YT" };
-const PLATFORM_COLOR: Record<string, string> = { INSTAGRAM: "#e1306c", TIKTOK: "#00f2ea", YOUTUBE: "#ff0000" };
+const STATUS: Record<string, { color: string; bg: string; dot?: boolean }> = {
+  QUEUED:     { color: "#4f46e5", bg: "rgba(79, 70, 229, 0.12)" },
+  DELIVERING: { color: "#d97706", bg: "rgba(217, 119, 6, 0.12)", dot: true },
+  COMPLETED:  { color: "#16a34a", bg: "rgba(22, 163, 74, 0.12)" },
+  FAILED:     { color: "#dc2626", bg: "rgba(220, 38, 38, 0.12)" },
+  CANCELLED:  { color: "#4b5563", bg: "rgba(75, 85, 99, 0.12)" },
+  PAUSED:     { color: "#d97706", bg: "rgba(217, 119, 6, 0.12)" },
+  PENDING:    { color: "#4b5563", bg: "rgba(75, 85, 99, 0.12)" },
+};
+
+const PLATFORM_ICON: Record<string, string> = { INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️" };
 const FILTERS: OrderStatus[] = ["All", "DELIVERING", "COMPLETED", "QUEUED", "PAUSED", "FAILED", "CANCELLED"];
 const CURVE_LABELS: Record<string, string> = { ORGANIC: "🌱 Organic", FAST: "⚡ Fast", AGGRESSIVE: "🔥 Aggressive" };
 
@@ -56,19 +68,18 @@ export default function OrdersPage() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
-        .order-card:hover { box-shadow: 10px 10px 24px rgba(0,0,0,0.7),-5px -5px 14px rgba(255,255,255,0.06) !important; transform: translateY(-1px); }
+        .order-card:hover { box-shadow: 10px 10px 24px #c8d0e7,-5px -5px 14px #ffffff !important; transform: translateY(-1px); }
         .order-card { transition: all 0.2s; }
       `}</style>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.5px" }}>Orders</h1>
-          <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: "0 0 4px", letterSpacing: "-0.5px" }}>Orders</h1>
+          <p style={{ fontSize: 13, color: N.muted, margin: 0, fontWeight: 600 }}>
             {orders.length} total campaign{orders.length !== 1 ? "s" : ""}
             {orders.filter(o => o.status === "DELIVERING").length > 0 && (
-              <span style={{ marginLeft: 10, color: "#F59E0B", fontWeight: 600 }}>
+              <span style={{ marginLeft: 10, color: N.accent, fontWeight: 700 }}>
                 · {orders.filter(o => o.status === "DELIVERING").length} live
               </span>
             )}
@@ -77,22 +88,22 @@ export default function OrdersPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={load} style={{
             display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10,
-            fontSize: 12, fontWeight: 600, background: "#111118",
-            border: "none", color: "#64748b", cursor: "pointer",
-            boxShadow: "4px 4px 12px rgba(0,0,0,0.6),-2px -2px 8px rgba(255,255,255,0.04)",
-          }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            fontSize: 12, fontWeight: 700, background: N.bg,
+            border: "none", color: N.muted, cursor: "pointer",
+            boxShadow: N.raisedSm,
+          }} className="neo-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
             </svg>
             Refresh
           </button>
           <Link href="/reels/new" style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 9,
-            fontSize: 12, fontWeight: 700, textDecoration: "none", color: "#08080c",
-            background: "linear-gradient(135deg, #F59E0B, #F97316)",
-            boxShadow: "0 4px 14px rgba(245,158,11,0.3)",
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#08080c" strokeWidth="2.5" strokeLinecap="round">
+            display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10,
+            fontSize: 12, fontWeight: 800, textDecoration: "none", color: "#ffffff",
+            background: N.accentBg,
+            boxShadow: N.raisedSm,
+          }} className="neo-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             New Order
@@ -101,25 +112,25 @@ export default function OrdersPage() {
       </div>
 
       {/* Filter tabs */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {FILTERS.map(f => (
           (counts[f] > 0 || f === "All") ? (
             <button key={f} onClick={() => setFilter(f)} style={{
               display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20, border: "none",
               fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit",
-              background: "#111118",
-              color: filter === f ? "#F59E0B" : "#475569",
-              boxShadow: filter === f ? "4px 4px 12px rgba(0,0,0,0.6),-2px -2px 8px rgba(255,255,255,0.04)" : "inset 3px 3px 8px rgba(0,0,0,0.5),inset -2px -2px 5px rgba(255,255,255,0.03)",
+              background: N.bg,
+              color: filter === f ? N.accent : N.muted,
+              boxShadow: filter === f ? N.raisedSm : N.inset,
             }}>
               {f === "DELIVERING" && (
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F59E0B", animation: "pulse 1.5s infinite", display: "inline-block" }} />
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: N.accent, animation: "pulse 1.5s infinite", display: "inline-block" }} />
               )}
               {f === "All" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
               <span style={{
-                padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 700,
-                background: "#111118",
-                boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.5),inset -1px -1px 3px rgba(255,255,255,0.03)",
-                color: filter === f ? "#F59E0B" : "#334155",
+                padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 800,
+                background: N.bg,
+                boxShadow: filter === f ? N.inset : N.raisedSm,
+                color: filter === f ? N.accent : N.muted,
               }}>{counts[f]}</span>
             </button>
           ) : null
@@ -129,120 +140,104 @@ export default function OrdersPage() {
       {/* List */}
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0", flexDirection: "column", gap: 14 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(245,158,11,0.15)", borderTopColor: "#F59E0B", animation: "spin 0.8s linear infinite" }} />
-          <p style={{ fontSize: 13, color: "#334155" }}>Loading orders…</p>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid rgba(217,119,6,0.15)", borderTopColor: N.accent, animation: "spin 0.8s linear infinite" }} />
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{
-          borderRadius: 20, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.018)",
-          padding: "64px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 8,
-        }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.5" strokeLinecap="round">
-              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-            </svg>
-          </div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", margin: 0 }}>
-            {filter === "All" ? "No orders yet" : `No ${filter.toLowerCase()} orders`}
+        <div style={{ borderRadius: 20, padding: 60, textAlign: "center", background: N.bg, boxShadow: N.raised }}>
+          <span style={{ fontSize: 36 }}>📋</span>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: N.text, margin: "12px 0 4px" }}>No orders found</h3>
+          <p style={{ fontSize: 13, color: N.muted, margin: "0 0 20px" }}>
+            {filter === "All" ? "You haven't placed any campaigns yet." : `No campaigns found with status ${filter.toLowerCase()}.`}
           </p>
-          <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>Connect a panel and add a reel to start delivering views.</p>
-          <Link href="/reels/new" style={{
-            marginTop: 12, padding: "10px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700,
-            textDecoration: "none", color: "#08080c", background: "linear-gradient(135deg, #F59E0B, #F97316)",
-          }}>
-            Create First Order →
-          </Link>
+          {filter === "All" && (
+            <Link href="/reels/new" style={{
+              display: "inline-flex", padding: "10px 24px", borderRadius: 10,
+              fontSize: 13, fontWeight: 800, color: "#ffffff", background: N.accentBg,
+              boxShadow: N.raisedSm, textDecoration: "none"
+            }} className="neo-btn">
+              Create Campaign →
+            </Link>
+          )}
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {filtered.map((order, i) => {
-            const st = STATUS[order.status] ?? STATUS.PENDING;
-            const pct = Math.min(100, order.progressPct ?? 0);
-            const platColor = PLATFORM_COLOR[order.reel.platform] ?? "#64748b";
-            const platLabel = PLATFORM_ICON[order.reel.platform] ?? "??";
-            const cleanUrl = order.reel.url.replace(/^https?:\/\/(www\.)?/, "");
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {filtered.map(o => {
+            const st = STATUS[o.status] ?? STATUS.PENDING;
             return (
-              <Link key={order.id} href={`/orders/${order.id}`} className="order-card" style={{
-                display: "flex", alignItems: "center", gap: 16, padding: "16px 18px",
-                borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.02)", textDecoration: "none",
-                transition: "all 0.15s", animation: `fadeUp ${0.2 + i * 0.04}s ease`,
+              <div key={o.id} className="order-card" style={{
+                borderRadius: 20, padding: 20, background: N.bg, boxShadow: N.raised,
+                display: "flex", flexDirection: "column", gap: 16,
               }}>
-                {/* Platform badge */}
-                <div style={{
-                  width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-                  background: `${platColor}15`, border: `1px solid ${platColor}30`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 900, color: platColor, letterSpacing: "0.5px",
-                }}>
-                  {platLabel}
-                </div>
-
-                {/* Main info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>
-                      {cleanUrl.length > 50 ? cleanUrl.slice(0, 50) + "…" : cleanUrl}
-                    </p>
+                {/* Header info */}
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ width: 32, height: 32, borderRadius: 10, background: N.bg, boxShadow: N.inset, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                      {PLATFORM_ICON[o.reel.platform.toUpperCase()] ?? "🎬"}
+                    </span>
+                    <div>
+                      <a href={o.reel.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 800, color: N.accent, textDecoration: "none" }}>
+                        {o.reel.url.length > 36 ? o.reel.url.slice(0, 36) + "…" : o.reel.url}
+                      </a>
+                      <p style={{ fontSize: 11, color: N.muted, margin: "2px 0 0", fontWeight: 600 }}>
+                        {new Date(o.createdAt).toLocaleDateString()} · {CURVE_LABELS[o.curveStyle] ?? o.curveStyle}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {o.panel && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: N.muted, background: N.bg, padding: "4px 10px", borderRadius: 20, boxShadow: N.inset }}>
+                        🔌 {o.panel.name}
+                      </span>
+                    )}
                     <span style={{
-                      display: "flex", alignItems: "center", gap: 5, padding: "2px 10px", borderRadius: 20,
-                      fontSize: 11, fontWeight: 700, flexShrink: 0,
-                      background: st.bg, color: st.color, border: `1px solid ${st.border}`,
+                      fontSize: 11, fontWeight: 800, color: st.color, background: N.bg,
+                      padding: "4px 12px", borderRadius: 20, boxShadow: N.inset,
+                      display: "flex", alignItems: "center", gap: 6
                     }}>
-                      {st.dot && <span style={{ width: 5, height: 5, borderRadius: "50%", background: st.color, animation: "pulse 1.5s infinite", display: "inline-block" }} />}
-                      {order.status.charAt(0) + order.status.slice(1).toLowerCase()}
+                      {st.dot && <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, animation: "pulse 1.5s infinite", display: "inline-block" }} />}
+                      {o.status}
                     </span>
                   </div>
-
-                  {/* Progress bar */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
-                    <div style={{ flex: 1, height: 4, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                      <div style={{
-                        height: "100%", borderRadius: 4, transition: "width 0.6s ease",
-                        width: `${pct}%`,
-                        background: order.status === "COMPLETED"
-                          ? "linear-gradient(90deg, #34d399, #10b981)"
-                          : "linear-gradient(90deg, #F59E0B, #F97316)",
-                      }} />
-                    </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: order.status === "COMPLETED" ? "#34d399" : "#F59E0B", flexShrink: 0 }}>
-                      {pct}%
-                    </span>
-                  </div>
-
-                  {/* Meta row */}
-                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#475569", flexWrap: "wrap" }}>
-                    <span>{(order.viewsDelivered ?? 0).toLocaleString()} / {(order.viewsTarget ?? 0).toLocaleString()} views</span>
-                    {order.curveStyle && <span style={{ color: "#334155" }}>·</span>}
-                    {order.curveStyle && <span>{CURVE_LABELS[order.curveStyle] ?? order.curveStyle}</span>}
-                    {order.panel && <><span style={{ color: "#334155" }}>·</span><span>via {order.panel.name}</span></>}
-                  </div>
-
-                  {/* Engagement badges */}
-                  {order.engagementEnabled && (order.likesTarget > 0 || order.savesTarget > 0) && (
-                    <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                      {order.likesTarget > 0 && (
-                        <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, background: "rgba(244,114,182,0.08)", color: "#f472b6", border: "1px solid rgba(244,114,182,0.2)" }}>
-                          ♥ {(order.likesDelivered ?? 0)}/{order.likesTarget}
-                        </span>
-                      )}
-                      {order.savesTarget > 0 && (
-                        <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, background: "rgba(129,140,248,0.08)", color: "#818cf8", border: "1px solid rgba(129,140,248,0.2)" }}>
-                          ⊞ {(order.savesDelivered ?? 0)}/{order.savesTarget}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                {/* Date + arrow */}
-                <div style={{ flexShrink: 0, textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                  <span style={{ fontSize: 11, color: "#334155" }}>{new Date(order.createdAt).toLocaleDateString()}</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round">
-                    <polyline points="9 18 15 12 9 6"/>
-                  </svg>
+                {/* Progress bar */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                    <span style={{ color: N.text }}>Views Pacing</span>
+                    <span style={{ color: N.accent }}>{o.viewsDelivered.toLocaleString()} / {o.viewsTarget.toLocaleString()} ({Math.round(o.progressPct)}%)</span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 10, background: N.bg, boxShadow: N.inset, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 10, background: N.accentBg,
+                      width: `${Math.min(100, o.progressPct)}%`, transition: "width 0.4s"
+                    }} />
+                  </div>
                 </div>
-              </Link>
+
+                {/* Engagement sub-states */}
+                {o.engagementEnabled && (
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10,
+                    padding: 14, borderRadius: 14, background: N.bg, boxShadow: N.inset
+                  }}>
+                    {[
+                      { icon: "👍", label: "Likes", cur: o.likesDelivered, tgt: o.likesTarget },
+                      { icon: "🔖", label: "Saves", cur: o.savesDelivered, tgt: o.savesTarget },
+                      { icon: "📤", label: "Shares", cur: o.sharesDelivered, tgt: o.sharesTarget },
+                      { icon: "💬", label: "Comments", cur: o.commentsDelivered, tgt: o.commentsTarget },
+                    ].filter(e => e.tgt > 0).map(e => (
+                      <div key={e.label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <div style={{ fontSize: 11, color: N.muted, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span>{e.icon}</span><span>{e.label}</span>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: N.text }}>
+                          {e.cur} <span style={{ color: N.faint, fontSize: 10 }}>/ {e.tgt}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

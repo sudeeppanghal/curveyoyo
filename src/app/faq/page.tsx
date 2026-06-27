@@ -6,10 +6,21 @@ export const metadata: Metadata = {
   description: "Frequently asked questions about YoyoSMM organic delivery engine, pricing, panels, and features.",
 };
 
+const N = {
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
+};
+
 const FAQ_SECTIONS = [
   {
     title: "Getting Started",
-    color: "#F59E0B",
     items: [
       ["How long does it take to set up?", "Less than 5 minutes. Sign up, add your first SMM panel (copy-paste API key), and you're ready to place your first order."],
       ["Do I need existing SMM panels to use YoyoSMM?", "Yes. YoyoSMM is a management layer for your existing panels. You need balance in at least one SMM panel (like SMMKings, Peakerr, or any other). We don't resell views — we manage your panels."],
@@ -18,7 +29,6 @@ const FAQ_SECTIONS = [
   },
   {
     title: "Technical",
-    color: "#F59E0B",
     items: [
       ["How many panels can I connect?", "You can connect unlimited SMM panels and add or remove them anytime from Settings."],
       ["Is my API key safe?", "Yes. API keys are AES-256 encrypted at rest, never logged in plain text, and never shared with anyone. You can revoke access anytime."],
@@ -27,7 +37,6 @@ const FAQ_SECTIONS = [
   },
   {
     title: "Organic Delivery",
-    color: "#F59E0B",
     items: [
       ["Why does organic delivery matter?", "Flat, all-at-once delivery produces an unnatural, machine-flat pattern. Organic curves spread views over 24–48 hours in natural-looking patterns, for steadier, more consistent performance."],
       ["Can I customize delivery timing?", "Yes. Set warmup duration, peak intensity, and decay timing for each order. Save custom curves as templates for reuse."],
@@ -36,7 +45,6 @@ const FAQ_SECTIONS = [
   },
   {
     title: "Failover & Reliability",
-    color: "#F59E0B",
     items: [
       ["What happens if my primary panel goes down?", "Orders automatically route to your backup panel. If you have Panel A (primary) and Panel B (backup), orders switch to B in <1 second. Zero customer impact."],
       ["Can I set which panel handles which types of orders?", "Yes. Set priority levels (1, 2, 3...) and load percentages. Panel A handles 70%, Panel B handles 25%, Panel C handles 5%. Adjust anytime."],
@@ -45,7 +53,6 @@ const FAQ_SECTIONS = [
   },
   {
     title: "Pricing & Billing",
-    color: "#F59E0B",
     items: [
       ["Is the $20 really a one-time payment?", "Yes, absolutely. $20 once, use YoyoSMM forever. No monthly fees, no annual renewals, no hidden charges. Future updates included."],
       ["Do you charge a commission on views?", "No. You pay your panel's rate directly. We don't take any cut. If your panel charges $20 per 1k views, you pay $20. No markup."],
@@ -54,7 +61,6 @@ const FAQ_SECTIONS = [
   },
   {
     title: "Account Security",
-    color: "#F59E0B",
     items: [
       ["Can I use 2FA?", "Yes. Optional two-factor authentication available. We support TOTP apps (Google Authenticator, Authy) and SMS."],
       ["Is my data encrypted?", "Yes. All data encrypted in transit (HTTPS) and at rest (AES-256). API keys, panel credentials, and order data all encrypted."],
@@ -64,23 +70,29 @@ const FAQ_SECTIONS = [
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen text-white" style={{background:"#0B0B0F"}}>
+    <div className="min-h-screen text-slate-800" style={{ background: N.bg }}>
+      <style>{`
+        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
+        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
+      `}</style>
+      
       {/* Nav */}
-      <nav className="border-b" style={{background:"rgba(11,11,15,0.95)",borderColor:"rgba(255,255,255,0.06)"}}>
+      <nav className="border-b" style={{ background: "rgba(238,242,247,0.95)", borderColor: N.border }}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style={{background:"#F59E0B",color:"#0B0B0F"}}>Y</div>
-            <span className="font-semibold">YoyoSMM</span>
+          <Link href="/" className="flex items-center gap-3 no-underline">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
+            <span className="font-extrabold text-slate-800">YoyoSMM</span>
           </Link>
-          <Link href="/signup" className="px-5 py-2.5 rounded-full font-medium text-sm text-[#0B0B0F]" style={{background:"#F59E0B"}}>Get started →</Link>
+          <Link href="/signup" className="px-5 py-2.5 rounded-full font-bold text-sm text-white no-underline neo-btn" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Get started →</Link>
         </div>
       </nav>
 
       {/* Header */}
       <div className="max-w-4xl mx-auto px-6 py-20">
-        <h1 className="text-5xl font-bold mb-4">Frequently Asked Questions</h1>
-        <p className="text-xl text-gray-300">Everything you need to know about YoyoSMM.{" "}
-          <a href="mailto:hello@yoyosmm.online" className="text-amber-400 hover:underline">hello@yoyosmm.online</a>
+        <h1 className="text-5xl font-black mb-4 leading-tight" style={{ color: N.text, letterSpacing: "-1.5px" }}>Frequently Asked Questions</h1>
+        <p className="text-xl font-medium" style={{ color: N.muted }}>
+          Everything you need to know about YoyoSMM. Contact at{" "}
+          <a href="mailto:hello@yoyosmm.online" className="font-bold hover:underline" style={{ color: N.accent }}>hello@yoyosmm.online</a>
         </p>
       </div>
 
@@ -88,15 +100,15 @@ export default function FAQPage() {
       <div className="max-w-4xl mx-auto px-6 pb-24 space-y-16">
         {FAQ_SECTIONS.map((section) => (
           <section key={section.title}>
-            <h2 className="text-3xl font-bold mb-8" style={{color:"#F59E0B"}}>{section.title}</h2>
-            <div className="space-y-4">
+            <h2 className="text-3xl font-black mb-8" style={{ color: N.accent, letterSpacing: "-0.5px" }}>{section.title}</h2>
+            <div className="space-y-6">
               {section.items.map(([q, a]) => (
-                <details key={q} className="rounded-2xl p-6 group" style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}>
-                  <summary className="cursor-pointer flex justify-between items-start gap-4 list-none">
-                    <h3 className="text-lg font-bold text-white hover:text-amber-400 transition">{q}</h3>
-                    <span className="text-amber-400 text-2xl leading-none shrink-0 group-open:rotate-45 transition-transform">+</span>
+                <details key={q} className="rounded-2xl p-6 group transition-all" style={{ background: N.bg, boxShadow: N.raised }}>
+                  <summary className="cursor-pointer flex justify-between items-start gap-4 list-none outline-none">
+                    <h3 className="text-lg font-black transition-colors" style={{ color: N.text, margin: 0, letterSpacing: "-0.2px" }}>{q}</h3>
+                    <span className="text-2xl leading-none shrink-0 group-open:rotate-45 transition-transform" style={{ color: N.accent }}>+</span>
                   </summary>
-                  <p className="text-gray-300 mt-4 leading-relaxed">{a}</p>
+                  <p className="mt-4 leading-relaxed font-medium" style={{ color: N.muted, margin: "16px 0 0" }}>{a}</p>
                 </details>
               ))}
             </div>
@@ -105,11 +117,11 @@ export default function FAQPage() {
       </div>
 
       {/* CTA */}
-      <div style={{background:"linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.15))"}}>
+      <div style={{ background: N.bg, boxShadow: N.inset, borderTop: `1px solid ${N.border}` }}>
         <div className="max-w-4xl mx-auto px-6 py-16 text-center">
-          <h2 className="text-3xl font-bold mb-4">Still Have Questions?</h2>
-          <p className="text-lg mb-8 text-gray-300">Our team responds within 24 hours.</p>
-          <Link href="/contact" className="inline-block px-8 py-3 rounded-xl font-bold text-[#0B0B0F] transition-all hover:opacity-90" style={{background:"#F59E0B"}}>Contact Us →</Link>
+          <h2 className="text-3xl font-black mb-4" style={{ color: N.text }}>Still Have Questions?</h2>
+          <p className="text-lg mb-8 font-medium" style={{ color: N.muted }}>Our team responds within 24 hours.</p>
+          <a href="mailto:hello@yoyosmm.online" className="inline-block px-8 py-3 rounded-xl font-bold text-white no-underline neo-btn" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Contact Us →</a>
         </div>
       </div>
     </div>

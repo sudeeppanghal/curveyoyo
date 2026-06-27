@@ -4,19 +4,19 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-/* ─── Neomorphism Design Tokens ─────────────────────────────────── */
+/* ─── Whitish Neomorphism Design Tokens ───────────────────────── */
 const N = {
-  bg:        "#111118",
-  surface:   "#111118",
-  raised:    "8px 8px 20px rgba(0,0,0,0.65), -4px -4px 12px rgba(255,255,255,0.05)",
-  raisedSm:  "4px 4px 12px rgba(0,0,0,0.6), -2px -2px 8px rgba(255,255,255,0.04)",
-  inset:     "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 6px rgba(255,255,255,0.04)",
-  accent:    "#F59E0B",
-  accentBg:  "linear-gradient(135deg, #F59E0B, #F97316)",
-  text:      "#e2e8f0",
-  muted:     "#4a5568",
-  faint:     "#2d3748",
-  border:    "rgba(255,255,255,0.04)",
+  bg:        "#eef2f7",
+  surface:   "#eef2f7",
+  raised:    "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm:  "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:     "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:    "#d97706",
+  accentBg:  "linear-gradient(135deg, #d97706, #ea580c)",
+  text:      "#2d3748",
+  muted:     "#718096",
+  faint:     "#a0aec0",
+  border:    "rgba(200, 208, 231, 0.4)",
 };
 
 const NAV = [
@@ -69,21 +69,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         *{box-sizing:border-box}
-        ::-webkit-scrollbar{width:3px}
+        ::-webkit-scrollbar{width:4px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:3px}
+        ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.15);border-radius:4px}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         .nav-link{transition:all 0.2s}
-        .nav-link:hover{box-shadow:4px 4px 12px rgba(0,0,0,0.5),-2px -2px 8px rgba(255,255,255,0.04) !important;color:#94a3b8 !important}
-        .neo-btn:hover{box-shadow:6px 6px 16px rgba(0,0,0,0.7),-3px -3px 10px rgba(255,255,255,0.07) !important;transform:translateY(-1px)}
-        .neo-btn:active{box-shadow:inset 3px 3px 8px rgba(0,0,0,0.6),inset -2px -2px 5px rgba(255,255,255,0.04) !important;transform:translateY(0)}
-        .neo-input:focus{box-shadow:inset 5px 5px 12px rgba(0,0,0,0.7),inset -3px -3px 8px rgba(255,255,255,0.05),0 0 0 2px rgba(245,158,11,0.25) !important;outline:none}
+        .nav-link:hover{box-shadow:4px 4px 12px #c8d0e7,-2px -2px 8px #ffffff !important;color:${N.accent} !important}
+        .neo-btn:hover{box-shadow:6px 6px 16px #c8d0e7,-3px -3px 10px #ffffff !important;transform:translateY(-1px)}
+        .neo-btn:active{box-shadow:inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff !important;transform:translateY(0)}
+        .neo-input:focus{box-shadow:inset 5px 5px 12px #c8d0e7,inset -3px -3px 8px #ffffff,0 0 0 2px rgba(217,119,6,0.25) !important;outline:none}
       `}</style>
 
       {/* Mobile overlay */}
       {sidebarOpen && isMobile && (
-        <div onClick={() => setSidebarOpen(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.8)", backdropFilter:"blur(6px)" }} />
+        <div onClick={() => setSidebarOpen(false)} style={{ position:"fixed", inset:0, zIndex:40, background:"rgba(0,0,0,0.3)", backdropFilter:"blur(4px)" }} />
       )}
 
       {/* ═══ SIDEBAR ═══ */}
@@ -92,31 +92,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         position: isMobile ? "fixed" : "sticky", top:0, left:0, zIndex:50,
         display:"flex", flexDirection:"column",
         background: N.bg,
-        boxShadow: "4px 0 24px rgba(0,0,0,0.5), -1px 0 0 rgba(255,255,255,0.03)",
+        boxShadow: "6px 0 20px #c8d0e7, -1px 0 0 rgba(0,0,0,0.02)",
         transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-232px)") : "none",
         transition:"transform 0.3s cubic-bezier(0.4,0,0.2,1)",
       }}>
 
         {/* Logo */}
-        <div style={{ padding:"20px 16px 18px", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+        <div style={{ padding:"20px 16px 18px", borderBottom:`1px solid ${N.border}` }}>
           <Link href="/" style={{ textDecoration:"none", display:"flex", alignItems:"center", gap:12 }}>
             <div style={{
               width:36, height:36, borderRadius:12, flexShrink:0,
               background: N.accentBg,
-              boxShadow: N.raised,
+              boxShadow: N.raisedSm,
               display:"flex", alignItems:"center", justifyContent:"center",
-              fontWeight:900, fontSize:14, color:"#08080c",
+              fontWeight:900, fontSize:14, color:"#ffffff",
             }}>Y</div>
             <div>
               <div style={{ fontWeight:800, fontSize:14, color:N.text, letterSpacing:"-0.3px" }}>YoyoSMM</div>
-              <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:500 }}>Organic Delivery</div>
+              <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:700 }}>Organic Delivery</div>
             </div>
           </Link>
         </div>
 
         {/* Nav */}
         <nav style={{ flex:1, overflowY:"auto", padding:"14px 12px", display:"flex", flexDirection:"column", gap:4 }}>
-          <div style={{ padding:"4px 6px 8px", fontSize:10, fontWeight:700, color:N.faint, textTransform:"uppercase", letterSpacing:"0.1em" }}>
+          <div style={{ padding:"4px 6px 8px", fontSize:10, fontWeight:800, color:N.faint, textTransform:"uppercase", letterSpacing:"0.1em" }}>
             Navigation
           </div>
           {NAV.map(({ href, label, icon }) => {
@@ -126,33 +126,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="nav-link"
                 style={{
                   display:"flex", alignItems:"center", gap:11, padding:"10px 12px", borderRadius:12,
-                  fontSize:13, fontWeight: active ? 700 : 500, textDecoration:"none",
+                  fontSize:13, fontWeight: active ? 800 : 600, textDecoration:"none",
                   color: active ? N.accent : N.muted,
-                  boxShadow: active ? N.raisedSm : "none",
+                  boxShadow: active ? N.inset : "none",
                   background: N.bg,
                 }}>
                 <span style={{ color: active ? N.accent : N.muted, display:"flex" }}>{icon}</span>
                 <span>{label}</span>
                 {active && (
-                  <div style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:N.accent, boxShadow:`0 0 8px ${N.accent}` }} />
+                  <div style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:N.accent, boxShadow:`0 0 6px ${N.accent}` }} />
                 )}
               </Link>
             );
           })}
 
-          <div style={{ height:1, background:"rgba(255,255,255,0.04)", margin:"10px 4px" }} />
+          <div style={{ height:1, background:N.border, margin:"10px 4px" }} />
 
           {/* New Order CTA */}
           <Link href="/reels/new" className="neo-btn"
             style={{
               display:"flex", alignItems:"center", justifyContent:"center", gap:8,
               padding:"11px 12px", borderRadius:12, textDecoration:"none",
-              fontSize:13, fontWeight:800, color:"#08080c",
+              fontSize:13, fontWeight:800, color:"#ffffff",
               background: N.accentBg,
-              boxShadow:"6px 6px 16px rgba(0,0,0,0.6),-3px -3px 10px rgba(255,255,255,0.07)",
+              boxShadow: N.raisedSm,
               cursor:"pointer", transition:"all 0.2s",
             }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#08080c" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             New Order
@@ -160,25 +160,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Trial + Logout */}
-        <div style={{ padding:"12px", borderTop:"1px solid rgba(255,255,255,0.04)", display:"flex", flexDirection:"column", gap:8 }}>
+        <div style={{ padding:"12px", borderTop:`1px solid ${N.border}`, display:"flex", flexDirection:"column", gap:8 }}>
           <Link href="/billing" style={{
             textDecoration:"none", borderRadius:12, padding:"10px 12px",
             boxShadow: N.inset,
             display:"flex", alignItems:"center", gap:8,
           }}>
-            <div style={{ width:28, height:28, borderRadius:8, background:"rgba(245,158,11,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, boxShadow:N.raisedSm }}>⚡</div>
+            <div style={{ width:28, height:28, borderRadius:8, background: "rgba(217, 119, 6, 0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, boxShadow:N.raisedSm }}>⚡</div>
             <div>
-              <div style={{ fontSize:11, fontWeight:700, color:N.accent }}>Free Trial Active</div>
-              <div style={{ fontSize:10, color:N.muted, marginTop:1 }}>Upgrade → $20 lifetime</div>
+              <div style={{ fontSize:11, fontWeight:800, color:N.accent }}>Free Trial Active</div>
+              <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:700 }}>Upgrade → $20 lifetime</div>
             </div>
           </Link>
           <button onClick={handleLogout} disabled={loggingOut} className="neo-btn"
             style={{
               display:"flex", alignItems:"center", gap:10, width:"100%", padding:"9px 12px", borderRadius:12,
-              fontSize:12, fontWeight:600, background:N.bg, cursor:"pointer", color:"#ef4444",
+              fontSize:12, fontWeight:700, background:N.bg, cursor:"pointer", color:"#b91c1c",
               boxShadow: N.raisedSm, border:"none", transition:"all 0.2s",
             }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
             {loggingOut ? "Signing out…" : "Sign out"}
@@ -195,7 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           display:"flex", alignItems:"center", justifyContent:"space-between",
           padding:"0 24px", height:58,
           background: N.bg,
-          boxShadow:"0 4px 20px rgba(0,0,0,0.4),0 1px 0 rgba(255,255,255,0.03)",
+          boxShadow:"0 6px 15px rgba(200, 208, 231, 0.4)",
           flexShrink:0,
         }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -204,22 +204,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 background:N.bg, border:"none", cursor:"pointer", padding:8, borderRadius:10,
                 color:N.muted, display:"flex", boxShadow:N.raisedSm,
               }}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
                 </svg>
               </button>
             )}
-            <h1 style={{ fontSize:14, fontWeight:700, color:N.text, margin:0 }}>{pageTitle}</h1>
+            <h1 style={{ fontSize:15, fontWeight:800, color:N.text, margin:0 }}>{pageTitle}</h1>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <Link href="/reels/new" className="neo-btn" style={{
               display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:10,
-              fontSize:12, fontWeight:800, textDecoration:"none", color:"#08080c",
+              fontSize:12, fontWeight:800, textDecoration:"none", color:"#ffffff",
               background: N.accentBg,
-              boxShadow:"4px 4px 12px rgba(0,0,0,0.5),-2px -2px 6px rgba(255,255,255,0.06)",
+              boxShadow: N.raisedSm,
               transition:"all 0.2s",
             }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#08080c" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
               New Order
@@ -227,7 +227,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div style={{
               width:34, height:34, borderRadius:"50%",
               display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:13, fontWeight:900, color:"#08080c",
+              fontSize:13, fontWeight:900, color:"#ffffff",
               background: N.accentBg,
               boxShadow: N.raisedSm,
             }}>{userName}</div>

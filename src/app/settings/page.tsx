@@ -4,13 +4,14 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 const N = {
-  bg:       "#111118",
-  raised:   "8px 8px 20px rgba(0,0,0,0.65), -4px -4px 12px rgba(255,255,255,0.05)",
-  raisedSm: "4px 4px 12px rgba(0,0,0,0.6), -2px -2px 8px rgba(255,255,255,0.04)",
-  inset:    "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 6px rgba(255,255,255,0.04)",
-  accent:   "#F59E0B",
-  text:     "#e2e8f0",
-  muted:    "#4a5568",
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
 };
 
 function NeoInput({ label, type="text", value, onChange, placeholder, disabled }: { label:string; type?:string; value:string; onChange?:(v:string)=>void; placeholder?:string; disabled?:boolean }) {
@@ -18,14 +19,13 @@ function NeoInput({ label, type="text", value, onChange, placeholder, disabled }
     <div>
       <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>{label}</label>
       <input type={type} value={value} onChange={e => onChange?.(e.target.value)} placeholder={placeholder} disabled={disabled}
-        style={{ width:"100%", padding:"12px 16px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color: disabled ? N.muted : N.text, outline:"none", boxShadow: disabled ? N.inset : N.inset, fontFamily:"inherit", transition:"box-shadow 0.2s", cursor: disabled ? "not-allowed" : "text", opacity: disabled ? 0.6 : 1 }}
+        style={{ width:"100%", padding:"12px 16px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color: disabled ? N.muted : N.text, outline:"none", boxShadow: N.inset, fontFamily:"inherit", transition:"box-shadow 0.2s", cursor: disabled ? "not-allowed" : "text", opacity: disabled ? 0.6 : 1 }}
         className="neo-input"
       />
     </div>
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function SettingsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<"profile"|"security"|"notifications"|"templates">("profile");
@@ -90,15 +90,15 @@ export default function SettingsPage() {
   return (
     <div style={{ maxWidth:720, display:"flex", flexDirection:"column", gap:24 }}>
       <style>{`
-        .neo-input:focus{box-shadow:inset 5px 5px 14px rgba(0,0,0,0.7),inset -3px -3px 8px rgba(255,255,255,0.05),0 0 0 2px rgba(245,158,11,0.25) !important}
-        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px rgba(0,0,0,0.7),-4px -4px 12px rgba(255,255,255,0.07) !important}
-        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px rgba(0,0,0,0.6),inset -1px -1px 4px rgba(255,255,255,0.04) !important}
+        .neo-input:focus{box-shadow:inset 6px 6px 12px #c8d0e7,inset -6px -6px 12px #ffffff,0 0 0 2px rgba(217,119,6,0.25) !important}
+        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
+        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
 
       <div>
         <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px", letterSpacing:"-0.5px" }}>Settings</h1>
-        <p style={{ fontSize:13, color:N.muted, margin:0 }}>Manage your account, security, and preferences</p>
+        <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Manage your account, security, and preferences</p>
       </div>
 
       {/* Tab bar */}
@@ -110,7 +110,7 @@ export default function SettingsPage() {
               color: tab === id ? N.accent : N.muted,
               boxShadow: tab === id ? N.raisedSm : "none",
             }}>
-            <span>{icon}</span><span style={{ display:"none" }} className="sm-show">{label}</span>
+            <span>{icon}</span>
             <span style={{ display:"inline" }}>{label}</span>
           </button>
         ))}
@@ -118,7 +118,7 @@ export default function SettingsPage() {
 
       {/* Alert */}
       {msg && (
-        <div style={{ padding:"12px 16px", borderRadius:12, fontSize:13, fontWeight:600, background:N.bg, boxShadow: msg.type === "ok" ? "inset 3px 3px 8px rgba(52,211,153,0.3),inset -2px -2px 5px rgba(0,0,0,0.4)" : "inset 3px 3px 8px rgba(220,38,38,0.3),inset -2px -2px 5px rgba(0,0,0,0.4)", color: msg.type === "ok" ? "#34d399" : "#f87171" }}>
+        <div style={{ padding:"12px 16px", borderRadius:12, fontSize:13, fontWeight:700, background:N.bg, boxShadow: msg.type === "ok" ? "inset 3px 3px 8px rgba(52,211,153,0.3),inset -2px -2px 5px #ffffff" : "inset 3px 3px 8px rgba(220,38,38,0.2),inset -2px -2px 5px #ffffff", color: msg.type === "ok" ? "#16a34a" : "#dc2626" }}>
           {msg.type === "ok" ? "✓" : "✗"} {msg.text}
         </div>
       )}
@@ -132,7 +132,7 @@ export default function SettingsPage() {
             <NeoInput label={`Email (cannot change)`} type="email" value={profileForm.email} placeholder="your@email.com" disabled />
             <div>
               <button type="submit" disabled={saving} className="neo-btn"
-                style={{ padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:"#08080c", background:"linear-gradient(135deg,#F59E0B,#F97316)", boxShadow:"6px 6px 16px rgba(0,0,0,0.6),-3px -3px 10px rgba(255,255,255,0.07)", transition:"all 0.2s", opacity: saving ? 0.7 : 1 }}>
+                style={{ padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, transition:"all 0.2s", opacity: saving ? 0.7 : 1 }}>
                 {saving ? "Saving…" : "Save Profile"}
               </button>
             </div>
@@ -151,7 +151,7 @@ export default function SettingsPage() {
               <NeoInput label="Confirm New Password" type="password" value={passwordForm.confirm} onChange={v=>setPasswordForm({...passwordForm,confirm:v})} placeholder="Repeat new password"/>
               <div>
                 <button type="submit" disabled={saving} className="neo-btn"
-                  style={{ padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:N.text, background:N.bg, boxShadow:"6px 6px 16px rgba(0,0,0,0.6),-3px -3px 10px rgba(255,255,255,0.07)", transition:"all 0.2s", opacity: saving ? 0.7 : 1 }}>
+                  style={{ padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:N.text, background:N.bg, boxShadow:N.raisedSm, transition:"all 0.2s", opacity: saving ? 0.7 : 1 }}>
                   {saving ? "Updating…" : "Update Password"}
                 </button>
               </div>
@@ -162,9 +162,9 @@ export default function SettingsPage() {
           <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div>
               <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 4px" }}>Two-Factor Authentication</h3>
-              <p style={{ fontSize:12, color:N.muted, margin:0 }}>Add extra security with TOTP (Google Authenticator, Authy)</p>
+              <p style={{ fontSize:12, color:N.muted, margin:0, fontWeight:600 }}>Add extra security with TOTP (Google Authenticator, Authy)</p>
             </div>
-            <button style={{ padding:"9px 18px", borderRadius:11, fontSize:12, fontWeight:700, border:"none", cursor:"pointer", color:N.text, background:N.bg, boxShadow:N.raisedSm }}>
+            <button style={{ padding:"9px 18px", borderRadius:11, fontSize:12, fontWeight:700, border:"none", cursor:"pointer", color:N.text, background:N.bg, boxShadow:N.raisedSm }} className="neo-btn">
               Enable 2FA
             </button>
           </div>
@@ -174,13 +174,13 @@ export default function SettingsPage() {
             <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 16px" }}>Active Sessions</h3>
             <div style={{ display:"flex", alignItems:"center", gap:14 }}>
               <div style={{ width:38, height:38, borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", background:N.bg, boxShadow:N.inset }}>
-                <span style={{ width:8, height:8, borderRadius:"50%", background:"#34d399", display:"inline-block", boxShadow:"0 0 8px #34d399" }}/>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:"#16a34a", display:"inline-block", boxShadow:"0 0 8px #16a34a" }}/>
               </div>
               <div style={{ flex:1 }}>
                 <p style={{ fontSize:13, fontWeight:700, color:N.text, margin:"0 0 2px" }}>Current session</p>
-                <p style={{ fontSize:11, color:N.muted, margin:0 }}>This device · Active now</p>
+                <p style={{ fontSize:11, color:N.muted, margin:0, fontWeight:600 }}>This device · Active now</p>
               </div>
-              <span style={{ padding:"4px 12px", borderRadius:20, fontSize:11, fontWeight:700, color:"#34d399", background:N.bg, boxShadow:N.inset }}>Active</span>
+              <span style={{ padding:"4px 12px", borderRadius:20, fontSize:11, fontWeight:800, color:"#16a34a", background:N.bg, boxShadow:N.inset }}>Active</span>
             </div>
           </div>
         </div>
@@ -195,12 +195,12 @@ export default function SettingsPage() {
             { label:"Panel offline", desc:"When a panel goes offline", on:true },
             { label:"Refill triggered", desc:"When a panel top-up refill fires", on:false },
           ].map(pref => (
-            <div key={pref.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+            <div key={pref.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 0", borderBottom:`1px solid ${N.border}` }}>
               <div>
-                <p style={{ fontSize:13, fontWeight:700, color:N.text, margin:"0 0 3px" }}>{pref.label}</p>
-                <p style={{ fontSize:12, color:N.muted, margin:0 }}>{pref.desc}</p>
+                <p style={{ fontSize:13, fontWeight:800, color:N.text, margin:"0 0 3px" }}>{pref.label}</p>
+                <p style={{ fontSize:12, color:N.muted, margin:0, fontWeight:600 }}>{pref.desc}</p>
               </div>
-              <div style={{ width:44, height:24, borderRadius:12, cursor:"pointer", background:N.bg, boxShadow: pref.on ? "inset 3px 3px 8px rgba(0,0,0,0.6),inset -2px -2px 5px rgba(245,158,11,0.3)" : N.inset, position:"relative", transition:"all 0.2s", flexShrink:0 }}>
+              <div style={{ width:44, height:24, borderRadius:12, cursor:"pointer", background:N.bg, boxShadow: pref.on ? "inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff" : N.inset, position:"relative", transition:"all 0.2s", flexShrink:0 }}>
                 <div style={{ position:"absolute", top:4, left: pref.on ? 22 : 4, width:16, height:16, borderRadius:"50%", background: pref.on ? N.accent : N.muted, boxShadow:N.raisedSm, transition:"all 0.2s" }}/>
               </div>
             </div>
@@ -212,27 +212,27 @@ export default function SettingsPage() {
       {tab === "templates" && (
         <div style={{ borderRadius:20, padding:28, background:N.bg, boxShadow:N.raised, animation:"fadeUp 0.3s ease" }}>
           <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:"0 0 6px" }}>Curve Templates</h3>
-          <p style={{ fontSize:12, color:N.muted, margin:"0 0 22px" }}>Presets for views scheduling and engagement rates — load instantly during campaign creation.</p>
+          <p style={{ fontSize:12, color:N.muted, margin:"0 0 22px", fontWeight:600 }}>Presets for views scheduling and engagement rates — load instantly during campaign creation.</p>
           {loadingTemplates ? (
             <p style={{ fontSize:13, color:N.muted }}>Loading templates…</p>
           ) : templates.length === 0 ? (
             <div style={{ padding:"40px 24px", textAlign:"center", borderRadius:14, background:N.bg, boxShadow:N.inset }}>
-              <p style={{ fontSize:13, color:N.muted }}>No templates saved yet. Create a campaign and check &quot;Save as template&quot; to add one.</p>
+              <p style={{ fontSize:13, color:N.muted, fontWeight:600 }}>No templates saved yet. Create a campaign and check &quot;Save as template&quot; to add one.</p>
             </div>
           ) : (
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               {templates.map(t => (
                 <div key={t.id} style={{ borderRadius:14, padding:"16px 18px", background:N.bg, boxShadow:N.raised, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <div>
-                    <p style={{ fontSize:13, fontWeight:700, color:N.text, margin:"0 0 6px" }}>{t.name}</p>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:10, fontSize:11, color:N.muted }}>
+                    <p style={{ fontSize:13, fontWeight:800, color:N.text, margin:"0 0 6px" }}>{t.name}</p>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:10, fontSize:11, color:N.muted, fontWeight:600 }}>
                       <span>Style: <strong style={{ color:N.accent }}>{t.style}</strong></span>
                       <span>Duration: <strong style={{ color:N.text }}>{t.durationHours}h</strong></span>
                       <span>Likes: <strong style={{ color:N.text }}>{t.likesRatioPct}%</strong></span>
                       <span>Saves: <strong style={{ color:N.text }}>{t.savesRatioPct}%</strong></span>
                     </div>
                   </div>
-                  <button onClick={() => deleteTemplate(t.id)} style={{ padding:"7px 14px", borderRadius:10, fontSize:12, fontWeight:700, border:"none", cursor:"pointer", color:"#f87171", background:N.bg, boxShadow:N.raisedSm }}>
+                  <button onClick={() => deleteTemplate(t.id)} style={{ padding:"7px 14px", borderRadius:10, fontSize:12, fontWeight:800, border:"none", cursor:"pointer", color:"#dc2626", background:N.bg, boxShadow:N.raisedSm }} className="neo-btn">
                     Delete
                   </button>
                 </div>

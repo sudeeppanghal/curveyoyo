@@ -55,7 +55,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
       </head>
-      <body style={{ margin:0, padding:0, minHeight:"100vh", background:"#08080c", color:"#ffffff", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,sans-serif", WebkitFontSmoothing:"antialiased" }}>
+      <body style={{ margin:0, padding:0, minHeight:"100vh", background:"#eef2f7", color:"#2d3748", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,sans-serif", WebkitFontSmoothing:"antialiased" }}>
         {children}
       </body>
     </html>

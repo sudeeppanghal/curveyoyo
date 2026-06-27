@@ -3,13 +3,15 @@ import { useEffect, useState, useCallback } from "react";
 import QRCode from "qrcode";
 
 const N = {
-  bg:       "#111118",
-  raised:   "8px 8px 20px rgba(0,0,0,0.65), -4px -4px 12px rgba(255,255,255,0.05)",
-  raisedSm: "4px 4px 12px rgba(0,0,0,0.6), -2px -2px 8px rgba(255,255,255,0.04)",
-  inset:    "inset 4px 4px 10px rgba(0,0,0,0.6), inset -2px -2px 6px rgba(255,255,255,0.04)",
-  accent:   "#F59E0B",
-  text:     "#e2e8f0",
-  muted:    "#4a5568",
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
 };
 
 type Network = "TRC20" | "BEP20";
@@ -30,18 +32,18 @@ const FEATURES = [
 ];
 
 const PAYMENT_STATUS_STYLE: Record<string, { color: string; label: string; icon: string }> = {
-  PENDING:   { color:"#F59E0B", label:"Pending — not yet confirmed", icon:"⏳" },
-  VERIFYING: { color:"#818cf8", label:"Verifying on-chain…",        icon:"🔍" },
-  CONFIRMED: { color:"#34d399", label:"Confirmed — Access Granted",  icon:"✅" },
-  FAILED:    { color:"#f87171", label:"Failed — see error",          icon:"✗" },
-  REJECTED:  { color:"#f87171", label:"Rejected by admin",           icon:"✗" },
+  PENDING:   { color:"#d97706", label:"Pending — not yet confirmed", icon:"⏳" },
+  VERIFYING: { color:"#4f46e5", label:"Verifying on-chain…",        icon:"🔍" },
+  CONFIRMED: { color:"#16a34a", label:"Confirmed — Access Granted",  icon:"✅" },
+  FAILED:    { color:"#dc2626", label:"Failed — see error",          icon:"✗" },
+  REJECTED:  { color:"#dc2626", label:"Rejected by admin",           icon:"✗" },
 };
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); };
   return (
-    <button onClick={copy} style={{ padding:"7px 14px", borderRadius:10, fontSize:12, fontWeight:700, border:"none", cursor:"pointer", transition:"all 0.2s", background:N.bg, color: copied ? "#34d399" : N.text, boxShadow: copied ? N.inset : N.raisedSm }}>
+    <button onClick={copy} style={{ padding:"7px 14px", borderRadius:10, fontSize:12, fontWeight:700, border:"none", cursor:"pointer", transition:"all 0.2s", background:N.bg, color: copied ? "#16a34a" : N.text, boxShadow: copied ? N.inset : N.raisedSm }} className="neo-btn">
       {copied ? "✓ Copied!" : "Copy"}
     </button>
   );
@@ -50,18 +52,18 @@ function CopyButton({ text }: { text: string }) {
 function QRDisplay({ address, network }: { address: string; network: Network }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
-    QRCode.toDataURL(address, { width:180, margin:2, color:{ dark:"#000", light:"#fff" } }).then(setSrc);
+    QRCode.toDataURL(address, { width:180, margin:2, color:{ dark:"#000000", light:"#ffffff" } }).then(setSrc);
   }, [address]);
   return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
       {src ? (
-        <div style={{ padding:10, borderRadius:14, background:"#fff", boxShadow:N.raised }}>
+        <div style={{ padding:10, borderRadius:14, background:"#ffffff", boxShadow:N.raised }}>
           <img src={src} alt={`${network} QR`} width={160} height={160} />
         </div>
       ) : (
         <div style={{ width:180, height:180, borderRadius:14, background:N.bg, boxShadow:N.inset, animation:"pulse 2s infinite" }}/>
       )}
-      <p style={{ fontSize:11, color:N.muted }}>Scan to get address</p>
+      <p style={{ fontSize:11, color:N.muted, fontWeight:600 }}>Scan to get address</p>
     </div>
   );
 }
@@ -94,8 +96,7 @@ export default function BillingPage() {
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:240 }}>
-      <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(245,158,11,0.15)", borderTopColor:N.accent, animation:"spin 0.8s linear infinite" }}/>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(217,119,6,0.15)", borderTopColor:N.accent, animation:"spin 0.8s linear infinite" }}/>
     </div>
   );
 
@@ -106,8 +107,8 @@ export default function BillingPage() {
       <div style={{ borderRadius:24, padding:"48px 32px", background:N.bg, boxShadow:N.raised, textAlign:"center" }}>
         <div style={{ fontSize:48, marginBottom:16 }}>🎉</div>
         <h2 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 10px" }}>You have Lifetime Access!</h2>
-        <p style={{ fontSize:14, color:N.muted, margin:"0 0 24px" }}>No renewals. No limits. All features unlocked forever.</p>
-        <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:20, fontSize:13, fontWeight:800, color:"#34d399", background:N.bg, boxShadow:N.inset }}>
+        <p style={{ fontSize:14, color:N.muted, margin:"0 0 24px", fontWeight:600 }}>No renewals. No limits. All features unlocked forever.</p>
+        <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:20, fontSize:13, fontWeight:800, color:"#16a34a", background:N.bg, boxShadow:N.inset }}>
           💎 LIFETIME MEMBER
         </div>
       </div>
@@ -117,13 +118,13 @@ export default function BillingPage() {
           {data.payments.map(p => {
             const s = PAYMENT_STATUS_STYLE[p.status] ?? PAYMENT_STATUS_STYLE.PENDING;
             return (
-              <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+              <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:`1px solid ${N.border}` }}>
                 <span>{s.icon}</span>
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:11, fontFamily:"monospace", color:N.accent, margin:"0 0 2px" }}>{p.txHash.slice(0,24)}…</p>
-                  <p style={{ fontSize:11, color:N.muted, margin:0 }}>{p.network} · {new Date(p.createdAt).toLocaleDateString()}</p>
+                  <p style={{ fontSize:11, color:N.muted, margin:0, fontWeight:600 }}>{p.network} · {new Date(p.createdAt).toLocaleDateString()}</p>
                 </div>
-                <span style={{ fontSize:12, fontWeight:700, color:s.color }}>{p.status}</span>
+                <span style={{ fontSize:12, fontWeight:800, color:s.color }}>{p.status}</span>
               </div>
             );
           })}
@@ -142,20 +143,20 @@ export default function BillingPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px rgba(0,0,0,0.7),-4px -4px 12px rgba(255,255,255,0.07) !important}
-        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px rgba(0,0,0,0.6),inset -1px -1px 4px rgba(255,255,255,0.04) !important}
-        .neo-input:focus{box-shadow:inset 5px 5px 14px rgba(0,0,0,0.7),inset -3px -3px 8px rgba(255,255,255,0.05),0 0 0 2px rgba(245,158,11,0.25) !important;outline:none}
+        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
+        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
+        .neo-input:focus{box-shadow:inset 6px 6px 12px #c8d0e7,inset -6px -6px 12px #ffffff,0 0 0 2px rgba(217,119,6,0.25) !important;outline:none}
       `}</style>
 
       {/* Header */}
       <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
         <div>
           <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px" }}>Upgrade to Lifetime</h1>
-          <p style={{ fontSize:13, color:N.muted, margin:0 }}>One-time USDT payment — never pay again</p>
+          <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>One-time USDT payment — never pay again</p>
         </div>
         <div style={{ textAlign:"right" }}>
           <p style={{ fontSize:36, fontWeight:900, color:N.text, margin:"0 0 2px", letterSpacing:"-1px" }}>${price} <span style={{ fontSize:14, fontWeight:400, color:N.muted }}>USDT</span></p>
-          <p style={{ fontSize:11, fontWeight:700, color:"#34d399", margin:0 }}>One-time · No subscription</p>
+          <p style={{ fontSize:11, fontWeight:800, color:"#16a34a", margin:0 }}>One-time · No subscription</p>
         </div>
       </div>
 
@@ -171,7 +172,7 @@ export default function BillingPage() {
                   style={{ padding:"14px 8px", borderRadius:14, fontSize:12, fontWeight:800, border:"none", cursor:"pointer", transition:"all 0.2s", fontFamily:"inherit", color: network === n ? N.accent : N.muted, background:N.bg, boxShadow: network === n ? N.raisedSm : N.inset }}>
                   <div style={{ fontSize:18, marginBottom:6 }}>{n === "TRC20" ? "🔷" : "🔶"}</div>
                   USDT {n}
-                  <div style={{ fontSize:10, fontWeight:400, marginTop:3, opacity:0.7 }}>{n === "TRC20" ? "TRON network" : "BSC network"}</div>
+                  <div style={{ fontSize:10, fontWeight:600, marginTop:3, opacity:0.7 }}>{n === "TRC20" ? "TRON network" : "BSC network"}</div>
                 </button>
               ))}
             </div>
@@ -189,15 +190,15 @@ export default function BillingPage() {
                 <div style={{ display:"flex", justifyContent:"center" }}>
                   <QRDisplay address={selectedAddress} network={network}/>
                 </div>
-                <div style={{ marginTop:16, padding:"12px 14px", borderRadius:12, background:N.bg, boxShadow:"inset 3px 3px 8px rgba(245,158,11,0.2),inset -2px -2px 5px rgba(0,0,0,0.5)" }}>
-                  <p style={{ fontSize:11, color:"#fbbf24", margin:"0 0 4px" }}>⚠️ Send exactly <strong>${price} USDT</strong> on the <strong>{network}</strong> network only.</p>
-                  <p style={{ fontSize:11, color:"#fbbf24", margin:0 }}>⚠️ Wrong network = lost funds. Double-check before sending.</p>
+                <div style={{ marginTop:16, padding:"12px 14px", borderRadius:12, background:N.bg, boxShadow:"inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff" }}>
+                  <p style={{ fontSize:11, color:N.accent, margin:"0 0 4px", fontWeight:700 }}>⚠️ Send exactly <strong>${price} USDT</strong> on the <strong>{network}</strong> network only.</p>
+                  <p style={{ fontSize:11, color:N.accent, margin:0, fontWeight:700 }}>⚠️ Wrong network = lost funds. Double-check before sending.</p>
                 </div>
               </>
             ) : (
               <div style={{ padding:"40px 0", textAlign:"center" }}>
                 <p style={{ fontSize:24, marginBottom:8 }}>⚙️</p>
-                <p style={{ fontSize:13, color:N.muted }}>Wallet address not configured yet.<br/><span style={{ fontSize:11 }}>Contact support to get the wallet address.</span></p>
+                <p style={{ fontSize:13, color:N.muted, fontWeight:600 }}>Wallet address not configured yet.<br/><span style={{ fontSize:11 }}>Contact support to get the wallet address.</span></p>
               </div>
             )}
           </div>
@@ -208,7 +209,7 @@ export default function BillingPage() {
           {/* TXID submission */}
           <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised }}>
             <h3 style={{ fontSize:13, fontWeight:800, color:N.text, margin:"0 0 10px" }}>3. Submit Your Transaction ID</h3>
-            <p style={{ fontSize:12, color:N.muted, margin:"0 0 16px" }}>After sending, paste your TXID below. We verify it on-chain automatically — usually within 30 seconds.</p>
+            <p style={{ fontSize:12, color:N.muted, margin:"0 0 16px", fontWeight:600 }}>After sending, paste your TXID below. We verify it on-chain automatically — usually within 30 seconds.</p>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               <div>
                 <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>TXID / Transaction Hash</label>
@@ -221,12 +222,12 @@ export default function BillingPage() {
                 />
               </div>
               <button onClick={submitPayment} disabled={submitting || !txHash.trim() || !selectedAddress} className="neo-btn"
-                style={{ width:"100%", padding:"14px", borderRadius:14, fontSize:14, fontWeight:800, border:"none", cursor:"pointer", color:"#08080c", background:"linear-gradient(135deg,#F59E0B,#F97316)", boxShadow:"6px 6px 16px rgba(0,0,0,0.6),-3px -3px 10px rgba(255,255,255,0.07)", transition:"all 0.2s", opacity: (submitting || !txHash.trim() || !selectedAddress) ? 0.5 : 1 }}>
+                style={{ width:"100%", padding:"14px", borderRadius:14, fontSize:14, fontWeight:800, border:"none", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, transition:"all 0.2s", opacity: (submitting || !txHash.trim() || !selectedAddress) ? 0.5 : 1 }}>
                 {submitting ? "Verifying on-chain…" : "🔍 Verify & Activate Lifetime"}
               </button>
             </div>
             {submitResult && (
-              <div style={{ marginTop:14, padding:"12px 14px", borderRadius:12, fontSize:13, fontWeight:600, background:N.bg, boxShadow: submitResult.ok ? "inset 3px 3px 8px rgba(52,211,153,0.3),inset -2px -2px 5px rgba(0,0,0,0.4)" : "inset 3px 3px 8px rgba(220,38,38,0.3),inset -2px -2px 5px rgba(0,0,0,0.4)", color: submitResult.ok ? "#34d399" : "#f87171" }}>
+              <div style={{ marginTop:14, padding:"12px 14px", borderRadius:12, fontSize:13, fontWeight:800, background:N.bg, boxShadow: submitResult.ok ? "inset 3px 3px 8px rgba(52,211,153,0.2),inset -2px -2px 5px #ffffff" : "inset 3px 3px 8px rgba(220,38,38,0.2),inset -2px -2px 5px #ffffff", color: submitResult.ok ? "#16a34a" : "#dc2626" }}>
                 {submitResult.ok ? "✅ " : "✗ "}{submitResult.message}
               </div>
             )}
@@ -239,7 +240,7 @@ export default function BillingPage() {
               {FEATURES.map(f => (
                 <div key={f} style={{ display:"flex", alignItems:"center", gap:12 }}>
                   <div style={{ width:24, height:24, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, background:N.bg, boxShadow:N.inset, flexShrink:0, color:N.accent, fontWeight:900 }}>✓</div>
-                  <span style={{ fontSize:13, color:N.text }}>{f}</span>
+                  <span style={{ fontSize:13, color:N.text, fontWeight:600 }}>{f}</span>
                 </div>
               ))}
             </div>
@@ -252,14 +253,14 @@ export default function BillingPage() {
               {data.payments.map(p => {
                 const s = PAYMENT_STATUS_STYLE[p.status] ?? PAYMENT_STATUS_STYLE.PENDING;
                 return (
-                  <div key={p.id} style={{ padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.04)", display:"flex", alignItems:"flex-start", gap:10 }}>
+                  <div key={p.id} style={{ padding:"10px 0", borderBottom:`1px solid ${N.border}`, display:"flex", alignItems:"flex-start", gap:10 }}>
                     <span>{s.icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
                       <p style={{ fontSize:11, fontFamily:"monospace", color:N.accent, margin:"0 0 2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.txHash}</p>
-                      <p style={{ fontSize:11, color:N.muted, margin:0 }}>{p.network} · {new Date(p.createdAt).toLocaleString()}</p>
-                      {p.verifyError && <p style={{ fontSize:11, color:"#f87171", margin:"3px 0 0" }}>{p.verifyError}</p>}
+                      <p style={{ fontSize:11, color:N.muted, margin:0, fontWeight:600 }}>{p.network} · {new Date(p.createdAt).toLocaleString()}</p>
+                      {p.verifyError && <p style={{ fontSize:11, color:"#dc2626", margin:"3px 0 0", fontWeight:700 }}>{p.verifyError}</p>}
                     </div>
-                    <span style={{ fontSize:11, fontWeight:700, flexShrink:0, color:s.color }}>{p.status}</span>
+                    <span style={{ fontSize:11, fontWeight:800, flexShrink:0, color:s.color }}>{p.status}</span>
                   </div>
                 );
               })}
@@ -278,7 +279,7 @@ export default function BillingPage() {
           <div key={String(title)} style={{ borderRadius:16, padding:"20px 14px", background:N.bg, boxShadow:N.raised }}>
             <div style={{ width:42, height:42, borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, background:N.bg, boxShadow:N.raisedSm, margin:"0 auto 12px" }}>{icon}</div>
             <p style={{ fontSize:12, fontWeight:800, color:N.text, margin:"0 0 5px" }}>{title}</p>
-            <p style={{ fontSize:11, color:N.muted, margin:0 }}>{desc}</p>
+            <p style={{ fontSize:11, color:N.muted, margin:0, fontWeight:600 }}>{desc}</p>
           </div>
         ))}
       </div>
