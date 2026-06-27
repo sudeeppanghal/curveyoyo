@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
+// Must be dynamic — uses cookies() for Supabase auth session
+export const dynamic = "force-dynamic";
+
 const C = {
   border: "rgba(255,255,255,0.07)",
   card: "rgba(255,255,255,0.025)",
