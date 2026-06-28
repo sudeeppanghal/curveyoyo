@@ -15,7 +15,7 @@ const N = {
 
 interface Stats {
   totalOrders?: number; activeOrders?: number;
-  viewsDelivered?: number; panelsOnline?: number;
+  viewsDelivered?: number; activePanels?: number;
   totalReels?: number; completedOrders?: number;
 }
 
@@ -91,7 +91,7 @@ export default function DashboardPage() {
   ];
 
   const steps = [
-    { num:"01", label:"Add a Panel",     desc:"Connect your SMM provider via API",        href:"/panels",    done: (stats.panelsOnline ?? 0) > 0 },
+    { num:"01", label:"Add a Panel",     desc:"Connect your SMM provider via API",        href:"/panels",    done: (stats.activePanels ?? 0) > 0 },
     { num:"02", label:"Import a Reel",   desc:"Paste any Instagram or TikTok reel URL",   href:"/reels/new", done: (stats.totalReels ?? 0) > 0 },
     { num:"03", label:"Create an Order", desc:"Set views, curve shape, and run campaign", href:"/reels/new", done: (stats.totalOrders ?? 0) > 0 },
   ];
@@ -135,7 +135,7 @@ export default function DashboardPage() {
           <StatCard label="Total Orders"    value={stats.totalOrders ?? 0}     sub="All time campaigns"           icon="📋" />
           <StatCard label="Live Now"        value={stats.activeOrders ?? 0}    sub="Currently delivering"         icon="⚡" />
           <StatCard label="Views Sent"      value={stats.viewsDelivered ?? 0}  sub="Total organic views"          icon="👁" />
-          <StatCard label="Panels Online"   value={stats.panelsOnline ?? 0}    sub="Active SMM providers"         icon="🔌" />
+          <StatCard label="Panels Online"   value={stats.activePanels ?? 0}    sub="Active SMM providers"         icon="🔌" />
         </div>
       )}
 
