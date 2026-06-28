@@ -234,10 +234,10 @@ async function parallelBatch<T>(
 
 export async function GET(req: NextRequest) {
   const secret   = req.nextUrl.searchParams.get("secret");
-  const expected = process.env.CRON_SECRET;
+  const expected = process.env.CRON_SECRET || process.env.ADMIN_SECRET;
 
   if (!expected) {
-    return NextResponse.json({ error: "CRON_SECRET env var not set" }, { status: 500 });
+    return NextResponse.json({ error: "CRON_SECRET or ADMIN_SECRET env var not set" }, { status: 500 });
   }
   if (secret !== expected) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

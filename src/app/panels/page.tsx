@@ -23,6 +23,8 @@ interface Panel {
   loadPercentage: number; isActive: boolean; status: PanelStatus;
   lastCheckedAt: string | null; lastResponseMs: number | null; successRate: number;
   serviceIds: ServiceIds | null;
+  balance?: number;
+  currency?: string;
 }
 interface PanelFormData { name: string; apiUrl: string; apiKey: string; priority: number; loadPercentage: number; serviceIds: ServiceIds; }
 
@@ -106,13 +108,54 @@ export default function PanelsPage() {
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [checkingHealth, setCheckingHealth] = useState(false);
 
   const fetchPanels = async () => {
     const res = await fetch("/api/panels");
-    if (res.ok) { const d = await res.json(); setPanels(d.panels ?? []); }
+    if (res.ok) {
+      const d = await res.json();
+      setPanels(d.panels ?? []);
+      return d.panels ?? [];
+    }
     setLoading(false);
+    return [];
   };
-  useEffect(() => { fetchPanels(); }, []);
+
+  const checkHealth = async () => {
+    if (panels.length === 0) return;
+    setCheckingHealth(true);
+    try {
+      const res = await fetch("/api/panels/health", { method: "POST" });
+      if (res.ok) {
+        const d = await res.json();
+        setPanels(prev => prev.map(p => {
+          const match = d.panels?.find((r: any) => r.id === p.id);
+          if (match) {
+            return {
+              ...p,
+              status: match.status,
+              lastResponseMs: match.responseMs,
+              balance: match.balance,
+              currency: match.currency
+            };
+          }
+          return p;
+        }));
+      }
+    } catch (e) {
+      console.error("Health check error:", e);
+    }
+    setCheckingHealth(false);
+  };
+
+  useEffect(() => {
+    fetchPanels().then((loaded) => {
+      if (loaded && loaded.length > 0) {
+        // Run health check in background after loading
+        setTimeout(checkHealth, 500);
+      }
+    });
+  }, []);
 
   const openAdd = () => { setEditPanel(null); setForm(DEFAULT_FORM); setTestResult(null); setError(""); setShowForm(true); };
   const openEdit = (p: Panel) => { setEditPanel(p); setForm({ name:p.name, apiUrl:p.apiUrl, apiKey:"", priority:p.priority, loadPercentage:p.loadPercentage, serviceIds: p.serviceIds ?? { instagram:{}, tiktok:{}, youtube:{} } }); setTestResult(null); setError(""); setShowForm(true); };
@@ -131,7 +174,10 @@ export default function PanelsPage() {
     const res = await fetch(editPanel ? `/api/panels/${editPanel.id}` : "/api/panels", { method: editPanel ? "PATCH" : "POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(form) });
     const d = await res.json();
     if (!res.ok) { setError(d.error ?? "Save failed"); setSaving(false); return; }
-    setSaving(false); setShowForm(false); fetchPanels();
+    setSaving(false); setShowForm(false);
+    fetchPanels().then((loaded) => {
+      if (loaded.length > 0) checkHealth();
+    });
   };
 
   const deletePanel = async (id: string) => {
@@ -145,6 +191,7 @@ export default function PanelsPage() {
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
         .neo-input:focus{box-shadow:inset 6px 6px 12px #c8d0e7,inset -6px -6px 12px #ffffff,0 0 0 2px rgba(217,119,6,0.25) !important}
         .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
         .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
@@ -154,8 +201,18 @@ export default function PanelsPage() {
       {/* Header */}
       <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
         <div>
-          <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px", letterSpacing:"-0.5px" }}>SMM Panels</h1>
-          <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Connect providers — we handle routing, failover & engagement</p>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:0, letterSpacing:"-0.5px" }}>SMM Panels</h1>
+            <button onClick={checkHealth} disabled={checkingHealth || panels.length === 0} className="neo-btn"
+              style={{
+                width:28, height:28, borderRadius:8, border:"none", cursor:"pointer", background:N.bg, boxShadow:N.raisedSm,
+                display:"flex", alignItems:"center", justifyContent:"center", padding:0, opacity: (checkingHealth || panels.length === 0) ? 0.5 : 1
+              }}
+              title="Refresh all panels health & balances">
+              <span style={{ display:"inline-block", fontSize:13, animation: checkingHealth ? "spin 1s linear infinite" : "none" }}>🔄</span>
+            </button>
+          </div>
+          <p style={{ fontSize:13, color:N.muted, margin:"4px 0 0", fontWeight:600 }}>Connect providers — we handle routing, failover & engagement</p>
         </div>
         <button onClick={openAdd} className="neo-btn"
           style={{ padding:"10px 20px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, transition:"all 0.2s" }}>
@@ -198,10 +255,17 @@ export default function PanelsPage() {
                     {!p.isActive && <span style={{ fontSize:11, color:N.muted, background:N.bg, padding:"3px 8px", borderRadius:20, boxShadow:N.inset, fontWeight:700 }}>Paused</span>}
                   </div>
                   <p style={{ fontSize:12, color:N.muted, margin:"0 0 10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontWeight:600 }}>{p.apiUrl}</p>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:12, fontSize:11 }}>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:14, fontSize:11 }}>
                     <span style={{ color:N.muted, fontWeight:700 }}>Priority: <span style={{ color:N.text, fontWeight:800 }}>{p.priority}</span></span>
                     <span style={{ color:N.muted, fontWeight:700 }}>Load: <span style={{ color:N.text, fontWeight:800 }}>{p.loadPercentage}%</span></span>
                     {p.lastResponseMs && <span style={{ color:N.muted, fontWeight:700 }}>Response: <span style={{ color: p.lastResponseMs > 5000 ? "#d97706" : "#16a34a", fontWeight:800 }}>{p.lastResponseMs}ms</span></span>}
+                    {p.balance !== undefined ? (
+                      <span style={{ color:N.muted, fontWeight:700 }}>
+                        Balance: <span style={{ color: "#16a34a", fontWeight:900 }}>${p.balance.toFixed(2)} {p.currency ?? "USD"}</span>
+                      </span>
+                    ) : (
+                      checkingHealth && <span style={{ color:N.muted, fontWeight:700, animation: "pulse 1.5s infinite" }}>Checking balance…</span>
+                    )}
                     <span>{hasServiceIds ? <span style={{ color:"#16a34a", fontWeight:800 }}>✓ IDs set</span> : <span style={{ color:"#d97706", fontWeight:800 }}>⚠ No service IDs</span>}</span>
                   </div>
                 </div>
