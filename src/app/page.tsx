@@ -522,11 +522,11 @@ export default function Home() {
 
           {[
 
-            ["99.98%","Delivery Success Rate","Automatic failover catches downtime instantly"],
+            ["99.98%","Delivery Success Rate","Proprietary timing engine ensures seamless delivery"],
 
-            ["< 1 Second","Panel Switch Speed","Zero delay when prioritizing backups"],
+            ["< 1 Second","Batch Routing Speed","Zero delay when scheduling pacing campaigns"],
 
-            ["120+","Supported Providers","Works with any standard REST API panel"],
+            ["10k+","Active Campaigns","Powering high-retention views and organic engagement"],
 
           ].map(([val,title,desc]) => (
 
