@@ -161,7 +161,7 @@ export default function AdminPage() {
   };
 
   const impersonateUser = async (userId: string) => {
-    setSaved("Generating session…");
+    setSaved("Authenticating as user…");
     try {
       const res = await fetch("/api/admin/impersonate", {
         method: "POST",
@@ -169,9 +169,9 @@ export default function AdminPage() {
         body: JSON.stringify({ userId }),
       });
       const data = await res.json();
-      if (res.ok && data.link) {
-        setSaved("Signing in…");
-        window.location.href = data.link;
+      if (res.ok && data.redirectTo) {
+        setSaved("Redirecting…");
+        window.location.href = data.redirectTo;
       } else {
         setError(data.error ?? "Failed to impersonate");
         setTimeout(() => setError(""), 3000);

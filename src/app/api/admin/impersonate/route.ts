@@ -27,21 +27,33 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createServiceClient();
+
+    // 1. Generate a magic link OTP (without sending email)
     const { data, error } = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email: user.email,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`,
-      },
     });
 
-    if (error) {
-      throw error;
+    if (error) throw error;
+
+    const otp = data.properties.email_otp;
+    if (!otp) {
+      throw new Error("No OTP found in generated link");
     }
 
-    return NextResponse.json({ link: data.properties.action_link });
+    // 2. Verify the OTP on the server. Since supabase ssr client has cookie access,
+    // this will set the session cookies on the user's browser domain directly!
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: user.email,
+      token: otp,
+      type: "magiclink",
+    });
+
+    if (verifyError) throw verifyError;
+
+    return NextResponse.json({ ok: true, redirectTo: "/dashboard" });
   } catch (err: any) {
     console.error("Impersonation error:", err);
-    return NextResponse.json({ error: err.message || "Failed to generate impersonation link" }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Failed to impersonate" }, { status: 500 });
   }
 }
