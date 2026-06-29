@@ -101,13 +101,22 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
 
   let intervalMins = intervalMinutes;
   if (!intervalMins) {
+    const minBatchViews = 150; // target average views per batch to prevent merging flattening
+    const maxSteps = Math.max(1, Math.floor(totalViews / minBatchViews));
+    const idealInterval = (durationHours * 60) / maxSteps;
+    
+    // Snaps to standard intervals (15m, 30m, 1h, 2h, 4h, 6h, 12h, 24h)
+    const options = [15, 30, 60, 120, 240, 360, 720, 1440];
+    const snapped = options.find((opt) => opt >= idealInterval) ?? 1440;
+    
+    // Ensure high-volume campaigns don't get throttled to large intervals unnecessarily
     const avgViewsPerHour = totalViews / durationHours;
     if (avgViewsPerHour >= 400) {
-      intervalMins = 15;
+      intervalMins = Math.min(snapped, 15);
     } else if (avgViewsPerHour >= 200) {
-      intervalMins = 30;
+      intervalMins = Math.min(snapped, 30);
     } else {
-      intervalMins = 60;
+      intervalMins = Math.max(snapped, 60);
     }
   }
 

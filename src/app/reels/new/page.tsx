@@ -217,14 +217,15 @@ function CurvePreview({
             );
           })}
 
-          {/* X-axis labels (S0 to S8) */}
+          {/* X-axis labels */}
           {Array.from({ length: 9 }).map((_, i) => {
             const x = pad + (i / 8) * (W - 2 * pad);
+            const hourLabel = `${Math.round((i / 8) * durationHours)}h`;
             return (
               <g key={i}>
                 <line x1={x} y1={H - pad} x2={x} y2={H - pad + 4} stroke="#3b1d60" strokeWidth="1" />
                 <text x={x} y={H - pad + 15} fill="#a78bfa" fontSize="9" fontWeight="750" textAnchor="middle">
-                  S{i}
+                  {hourLabel}
                 </text>
               </g>
             );
@@ -272,7 +273,7 @@ function CurvePreview({
             transition: "all 0.1s linear"
           }}>
             <span style={{ fontSize: 11, fontWeight: 900, color: "#f3e8ff" }}>
-              S{Math.round((currentBatchIdx / (batches.length - 1)) * 8)}
+              Hour: {Math.round(currentBatch.hour)}h
             </span>
             <span style={{ fontSize: 10, fontWeight: 700, color: "#d946ef" }}>
               DispatchPct : {dispatchPct}%
@@ -313,60 +314,24 @@ function CurvePreview({
 
 // ── Mini Sparkline Curve Chart ──────────────────────────────────
 function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean }) {
-  const points = Array.from({ length: 24 }, (_, t) => {
-    const progress = t / 24;
-    let val = 1.0;
-
-    if (style === "LINEAR") {
-      val = progress;
-    } else if (style === "EXPONENTIAL") {
-      val = Math.exp(progress * 3) / Math.exp(3);
-    } else if (style === "S_CURVE" || style === "ORGANIC") {
-      val = 1 / (1 + Math.exp(-6 * (progress - 0.5)));
-    } else if (style === "BELL_CURVE") {
-      val = Math.exp(-Math.pow((progress - 0.5) / 0.2, 2));
-    } else if (style === "LOGARITHMIC") {
-      val = Math.log(1 + 9 * progress) / Math.log(10);
-    } else if (style === "QUADRATIC") {
-      val = Math.pow(progress, 2);
-    } else if (style === "CUBIC") {
-      val = Math.pow(progress, 3);
-    } else if (style === "SINE_WAVE") {
-      val = 0.5 + 0.3 * Math.sin(progress * 4 * Math.PI);
-    } else if (style === "COSINE_WAVE") {
-      val = 0.5 + 0.3 * Math.cos(progress * 4 * Math.PI);
-    } else if (style === "SAWTOOTH") {
-      val = (t % 6) / 6;
-    } else if (style === "CHAOTIC") {
-      val = 0.4 + 0.2 * Math.sin(progress * 6 * Math.PI) + 0.2 * Math.cos(progress * 14 * Math.PI);
-    } else if (style === "DOUBLE_BELL") {
-      val = 0.5 * Math.exp(-Math.pow((progress - 0.25) / 0.1, 2)) + 0.5 * Math.exp(-Math.pow((progress - 0.75) / 0.1, 2));
-    } else if (style === "STEP_LADDER") {
-      val = Math.floor(progress * 4) / 4;
-    } else if (style === "ALTERNATING") {
-      val = (t % 2 === 0) ? 0.9 : 0.1;
-    } else if (style === "FIBONACCI") {
-      val = Math.pow(1.618, progress * 8) / Math.pow(1.618, 8);
-    } else if (style === "PARETO") {
-      val = Math.pow(1 - progress, 4);
-    } else if (style === "MORNING_SURGE") {
-      val = Math.exp(-Math.pow((progress - 0.15) / 0.1, 2));
-    } else if (style === "NOON_PEAK") {
-      val = Math.exp(-Math.pow((progress - 0.5) / 0.15, 2));
-    } else if (style === "EVENING_BLAST") {
-      val = Math.exp(-Math.pow((progress - 0.8) / 0.15, 2));
-    } else if (style === "SIGMOID_DECAY") {
-      val = 1 / (1 + Math.exp(10 * (progress - 0.85)));
-    } else if (style === "STEEP_WARMUP") {
-      val = (progress < 0.1) ? (progress / 0.1) : 1.0;
-    } else {
-      val = 1 / (1 + Math.exp(-1.2 * (t - 6)));
-    }
-
-    return val;
+  const info = CURVE_DESCRIPTIONS[style];
+  const batches = generateRawSchedule({
+    totalViews: 10000,
+    durationHours: 24,
+    warmupHours: info?.warmup ?? 4,
+    peakHours: info?.peak ?? 8,
+    style,
+    engagementEnabled: false,
+    tzOffsetHours: 0,
   });
 
-  const maxVal = Math.max(...points, 0.001);
+  let runningSum = 0;
+  const points = batches.map((b) => {
+    runningSum += b.views;
+    return runningSum;
+  });
+
+  const maxVal = Math.max(...points, 1);
   const width = 80;
   const height = 24;
   const padding = 2;
