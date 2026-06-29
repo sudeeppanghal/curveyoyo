@@ -613,6 +613,14 @@ export default function NewReelPage() {
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customSchedule, setCustomSchedule] = useState<DeliveryBatch[]>([]);
   const [selectedBatchIndex, setSelectedBatchIndex] = useState<number | null>(null);
+  const [smmLimits, setSmmLimits] = useState<{
+    views: { min: number; max: number } | null;
+    likes: { min: number; max: number } | null;
+    saves: { min: number; max: number } | null;
+    shares: { min: number; max: number } | null;
+    comments: { min: number; max: number } | null;
+  }>({ views: null, likes: null, saves: null, shares: null, comments: null });
+  const [fetchingLimits, setFetchingLimits] = useState(false);
 
   const customSumViews = customSchedule.reduce((a, b) => a + b.views, 0);
   const customSumLikes = customSchedule.reduce((a, b) => a + b.likes, 0);
@@ -789,14 +797,6 @@ export default function NewReelPage() {
   const [sharesRatio, setSharesRatio] = useState(0.5);
   const [commentsRatio, setCommentsRatio] = useState(0.2);
   const [hasCustomizedEng, setHasCustomizedEng] = useState(false);
-  const [smmLimits, setSmmLimits] = useState<{
-    views: { min: number; max: number } | null;
-    likes: { min: number; max: number } | null;
-    saves: { min: number; max: number } | null;
-    shares: { min: number; max: number } | null;
-    comments: { min: number; max: number } | null;
-  }>({ views: null, likes: null, saves: null, shares: null, comments: null });
-  const [fetchingLimits, setFetchingLimits] = useState(false);
 
   useEffect(() => {
     fetch("/api/panels").then((r) => r.json()).then((d) => setPanels(d.panels ?? [])).catch(() => {});
