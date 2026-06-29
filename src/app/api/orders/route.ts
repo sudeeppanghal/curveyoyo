@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     sharesRatioPct = 0.5, commentsRatioPct = 0.2,
     likesTarget: bodyLikes, savesTarget: bodySaves,
     sharesTarget: bodyShares, commentsTarget: bodyComments,
+    customSchedule, // <--- custom schedule parameter
   } = body;
 
   const views = viewsTarget ?? totalViews;
@@ -74,6 +75,33 @@ export async function POST(request: NextRequest) {
   const allowed = await checkRateLimit(dbUser.id, 50);
   if (!allowed) {
     return NextResponse.json({ error: "Too many orders. Limit: 50/hour." }, { status: 429 });
+  }
+
+  // Validate custom schedule if present
+  if (customSchedule) {
+    if (!Array.isArray(customSchedule)) {
+      return NextResponse.json({ error: "customSchedule must be an array" }, { status: 400 });
+    }
+    for (const batch of customSchedule) {
+      if (typeof batch.hour !== "number" || typeof batch.views !== "number") {
+        return NextResponse.json({ error: "Each batch must contain numeric hour and views properties" }, { status: 400 });
+      }
+      if (batch.views > 0 && batch.views < 100) {
+        return NextResponse.json({ error: "Each batch must have at least 100 views, or 0 to skip" }, { status: 400 });
+      }
+      if (batch.likes > 0 && batch.likes < 10) {
+        return NextResponse.json({ error: "Likes on each dot must be at least 10, or 0 to skip" }, { status: 400 });
+      }
+      if (batch.saves > 0 && batch.saves < 10) {
+        return NextResponse.json({ error: "Saves on each dot must be at least 10, or 0 to skip" }, { status: 400 });
+      }
+      if (batch.shares > 0 && batch.shares < 10) {
+        return NextResponse.json({ error: "Shares on each dot must be at least 10, or 0 to skip" }, { status: 400 });
+      }
+      if (batch.comments > 0 && batch.comments < 5) {
+        return NextResponse.json({ error: "Comments on each dot must be at least 5, or 0 to skip" }, { status: 400 });
+      }
+    }
   }
 
   // Calculate engagement targets from ratios (or use submitted values)
@@ -121,6 +149,64 @@ export async function POST(request: NextRequest) {
       status: "PENDING",
     },
   });
+
+  if (Array.isArray(customSchedule) && customSchedule.length > 0) {
+    const now = new Date();
+    const primaryPanel = dbUser.panels[0];
+    
+    // Sort customSchedule by scheduledTime (or hour) to make sure events are ordered chronologically
+    const sortedSchedule = [...customSchedule].sort((a, b) => {
+      if (a.scheduledTime && b.scheduledTime) {
+        return new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime();
+      }
+      return a.hour - b.hour;
+    });
+    
+    const deliveryEventsData = sortedSchedule.map((batch, index) => {
+      let scheduledAt: Date;
+      if (batch.scheduledTime) {
+        scheduledAt = new Date(batch.scheduledTime);
+        if (isNaN(scheduledAt.getTime())) {
+          scheduledAt = new Date(now);
+        }
+      } else {
+        let delayMs = batch.hour * 60 * 60 * 1000;
+        if (index === 0) {
+          delayMs = 0; // First batch starts instantly
+        } else if (index < sortedSchedule.length - 1) {
+          // Add ±15 minutes of random time jitter (±900,000 ms)
+          const jitterMs = (Math.random() * 2 - 1) * 15 * 60 * 1000;
+          delayMs = Math.max(5 * 60 * 1000, delayMs + jitterMs);
+        }
+        scheduledAt = new Date(now.getTime() + delayMs);
+      }
+
+      // Clamp to current time if in the past
+      if (scheduledAt.getTime() < now.getTime()) {
+        scheduledAt = now;
+      }
+      
+      return {
+        orderId: order.id,
+        panelId: primaryPanel.id,
+        viewsBatch: batch.views,
+        scheduledAt,
+        status: "SCHEDULED" as const,
+        responseData: {
+          customEngagement: {
+            likes: batch.likes ?? 0,
+            saves: batch.saves ?? 0,
+            shares: batch.shares ?? 0,
+            comments: batch.comments ?? 0,
+          }
+        }
+      };
+    });
+
+    await prisma.deliveryEvent.createMany({
+      data: deliveryEventsData,
+    });
+  }
 
   // Trigger delivery scheduling (fire-and-forget)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;

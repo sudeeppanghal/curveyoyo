@@ -15,6 +15,47 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
   totalViews: number;
   error?: string;
 }> {
+  // Check if events are already created (custom schedule)
+  const existingEvents = await prisma.deliveryEvent.findMany({
+    where: { orderId },
+  });
+
+  if (existingEvents.length > 0) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: {
+          include: {
+            panels: {
+              where: { isActive: true },
+              orderBy: { priority: "asc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) return { ok: false, batchCount: 0, totalViews: 0, error: "Order not found" };
+    if (!order.user.panels.length) return { ok: false, batchCount: 0, totalViews: 0, error: "No active panels" };
+
+    const primaryPanel = order.user.panels[0];
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: "QUEUED",
+        startedAt: new Date(),
+        panelId: primaryPanel.id,
+      },
+    });
+
+    return {
+      ok: true,
+      batchCount: existingEvents.length,
+      totalViews: existingEvents.reduce((sum, e) => sum + e.viewsBatch, 0),
+    };
+  }
+
   // Load order + reel + first active panel
   const order = await prisma.order.findUnique({
     where: { id: orderId },

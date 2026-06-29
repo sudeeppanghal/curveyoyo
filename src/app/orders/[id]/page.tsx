@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 /* ── Types ── */
-interface ChartPoint { hour: number; planned: number; actual: number; status: string }
+interface ChartPoint { hour: number; planned: number; actual: number; status: string; scheduledAt?: string }
 interface OrderStatus {
   order: {
     id: string; status: string; viewsTarget: number; viewsDelivered: number;
@@ -132,7 +132,11 @@ function DeliveryChart({ data }: { data: ChartPoint[] }) {
         {[0, Math.floor(data.length/4), Math.floor(data.length/2), Math.floor(3*data.length/4), data.length-1]
           .filter((v, i, a) => a.indexOf(v) === i)
           .map((i) => (
-          <text key={i} x={toX(i)} y={H - 8} fill="#a78bfa" fontSize="9" textAnchor="middle" fontWeight="700">Hour {data[i]?.hour ?? i}h</text>
+          <text key={i} x={toX(i)} y={H - 8} fill="#a78bfa" fontSize="9" textAnchor="middle" fontWeight="700">
+            {data[i]?.scheduledAt 
+              ? new Date(data[i].scheduledAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }) 
+              : `Hour ${data[i]?.hour ?? i}h`}
+          </text>
         ))}
       </svg>
     </div>
@@ -384,7 +388,17 @@ export default function OrderDetailPage() {
                   SCHEDULED:"#718096", RETRYING:"#2563eb",
                 };
                 
-                const timeText = i === 0 ? "⚡ Instant" : `+${row.hour}h`;
+                const timeText = i === 0 && !row.scheduledAt
+                  ? "⚡ Instant" 
+                  : row.scheduledAt
+                    ? new Date(row.scheduledAt).toLocaleString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true
+                      })
+                    : `+${row.hour}h`;
 
                 // Calculate engagement values for this batch based on views proportion
                 const scale = order.viewsTarget > 0 ? row.planned / order.viewsTarget : 0;

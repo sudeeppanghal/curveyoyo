@@ -35,6 +35,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   if (claimed.count === 0) return { ok: false, error: "Already claimed by another worker" };
 
   const { order, panel } = event;
+  const resData = event.responseData as any;
   const platform = order.reel.platform?.toLowerCase() ?? "instagram";
   const svcIds = panel.serviceIds as ServiceIds | null;
   const viewsServiceId = getSvcId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
@@ -92,14 +93,24 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0 };
 
   if (order.engagementEnabled) {
-    const viewsDeliveredNow = order.viewsDelivered + jitteredViews;
-    const due = calculateEngagementDue(
-      order.viewsTarget,
-      viewsDeliveredNow,
-      { likes: order.likesTarget, saves: order.savesTarget, shares: order.sharesTarget, comments: order.commentsTarget },
-      { likes: order.likesDelivered, saves: order.savesDelivered, shares: order.sharesDelivered, comments: order.commentsDelivered },
-      MIN_ENGAGEMENT_BATCH,
-    );
+    let due;
+    if (resData && resData.customEngagement) {
+      due = {
+        likes: resData.customEngagement.likes ?? 0,
+        saves: resData.customEngagement.saves ?? 0,
+        shares: resData.customEngagement.shares ?? 0,
+        comments: resData.customEngagement.comments ?? 0,
+      };
+    } else {
+      const viewsDeliveredNow = order.viewsDelivered + jitteredViews;
+      due = calculateEngagementDue(
+        order.viewsTarget,
+        viewsDeliveredNow,
+        { likes: order.likesTarget, saves: order.savesTarget, shares: order.sharesTarget, comments: order.commentsTarget },
+        { likes: order.likesDelivered, saves: order.savesDelivered, shares: order.sharesDelivered, comments: order.commentsDelivered },
+        MIN_ENGAGEMENT_BATCH,
+      );
+    }
 
     const engIds = activePanel.serviceIds as ServiceIds | null;
     const tasks = (
@@ -133,6 +144,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
     data: {
       status: "DONE",
       responseData: {
+        customEngagement: resData?.customEngagement,
         panelOrderId: result.orderId,
         engagementFired: engagementDelivered,
         ...(result.rawResponse as object),

@@ -70,7 +70,7 @@ async function handler(request: NextRequest) {
   }
 
   // Mark event as EXECUTING
-  await prisma.deliveryEvent.update({
+  const event = await prisma.deliveryEvent.update({
     where: { id: eventId },
     data: { status: "EXECUTING", executedAt: new Date() },
   });
@@ -150,26 +150,37 @@ async function handler(request: NextRequest) {
   const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0 };
 
   if (order.engagementEnabled) {
-    // viewsDeliveredNow = current delivered + this batch (use actual jittered amount)
-    const viewsDeliveredNow = order.viewsDelivered + actualViewsDelivered;
+    const resData = event.responseData as any;
+    let due;
+    if (resData && resData.customEngagement) {
+      due = {
+        likes: resData.customEngagement.likes ?? 0,
+        saves: resData.customEngagement.saves ?? 0,
+        shares: resData.customEngagement.shares ?? 0,
+        comments: resData.customEngagement.comments ?? 0,
+      };
+    } else {
+      // viewsDeliveredNow = current delivered + this batch (use actual jittered amount)
+      const viewsDeliveredNow = order.viewsDelivered + actualViewsDelivered;
 
-    const due = calculateEngagementDue(
-      order.viewsTarget,
-      viewsDeliveredNow,
-      {
-        likes:    order.likesTarget,
-        saves:    order.savesTarget,
-        shares:   order.sharesTarget,
-        comments: order.commentsTarget,
-      },
-      {
-        likes:    order.likesDelivered,
-        saves:    order.savesDelivered,
-        shares:   order.sharesDelivered,
-        comments: order.commentsDelivered,
-      },
-      MIN_ENGAGEMENT_BATCH,
-    );
+      due = calculateEngagementDue(
+        order.viewsTarget,
+        viewsDeliveredNow,
+        {
+          likes:    order.likesTarget,
+          saves:    order.savesTarget,
+          shares:   order.sharesTarget,
+          comments: order.commentsTarget,
+        },
+        {
+          likes:    order.likesDelivered,
+          saves:    order.savesDelivered,
+          shares:   order.sharesDelivered,
+          comments: order.commentsDelivered,
+        },
+        MIN_ENGAGEMENT_BATCH,
+      );
+    }
 
     const engSvcIds = activePanel.serviceIds as ServiceIds | null;
     const engagementPanelOrderIds: Record<string, string> = {};
@@ -220,11 +231,13 @@ async function handler(request: NextRequest) {
     comments: engagementDelivered.comments,
   };
 
+  const resData = event.responseData as any;
   await prisma.deliveryEvent.update({
     where: { id: eventId },
     data: {
       status: "DONE",
       responseData: {
+        customEngagement: resData?.customEngagement,
         panelOrderId: result.orderId,
         engagementFired: cleanedEngagementFired,
         engagementPanelOrderIds: engPanelOrderIds,

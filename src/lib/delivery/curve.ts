@@ -32,6 +32,7 @@ export interface DeliveryBatch {
   saves: number;
   shares: number;
   comments: number;
+  scheduledTime?: string;
 }
 
 /**

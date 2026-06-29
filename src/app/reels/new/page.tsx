@@ -74,12 +74,20 @@ function CurvePreview({
   views, durationHours, style, warmup, peak,
   likesRatio, savesRatio, sharesRatio, commentsRatio,
   likesOn, savesOn, sharesOn, commentsOn, engEnabled,
-  schedule
+  schedule,
+  isCustomMode = false,
+  selectedBatchIndex = null,
+  onSelectBatch = null,
+  onChangeSchedule = null,
 }: {
   views: number; durationHours: number; style: CurveStyle; warmup: number; peak: number;
   likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number;
   likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean; engEnabled: boolean;
   schedule: any[];
+  isCustomMode?: boolean;
+  selectedBatchIndex?: number | null;
+  onSelectBatch?: ((idx: number) => void) | null;
+  onChangeSchedule?: ((newSchedule: any[]) => void) | null;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playHour, setPlayHour] = useState(0);
@@ -107,6 +115,9 @@ function CurvePreview({
     };
   }, [isPlaying, durationHours]);
 
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
   if (!batches.length) return null;
 
   // Calculate cumulative views for each batch
@@ -120,16 +131,18 @@ function CurvePreview({
   });
 
   const W = 550, H = 200, pad = 30;
-  const maxVal = Math.max(views, 1);
+  const maxVal = Math.max(views, runningViewsSum, 1);
 
   // Helper to map index & quantity to coordinates
-  const getCoords = (val: number, max: number, idx: number) => {
-    const x = pad + (idx / (cumulativeBatches.length - 1)) * (W - 2 * pad);
+  const getCoords = (val: number, max: number, idx: number, hour: number) => {
+    const x = isCustomMode
+      ? pad + (hour / durationHours) * (W - 2 * pad)
+      : pad + (idx / (cumulativeBatches.length - 1)) * (W - 2 * pad);
     const y = H - pad - (val / max) * (H - 2 * pad);
     return { x, y };
   };
 
-  const viewsPts = cumulativeBatches.map((b, i) => getCoords(b.cumulativeViews, maxVal, i));
+  const viewsPts = cumulativeBatches.map((b, i) => getCoords(b.cumulativeViews, maxVal, i, b.hour));
 
   const makePath = (pts: { x: number; y: number }[]) =>
     pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
@@ -147,6 +160,106 @@ function CurvePreview({
   const currentBatch = cumulativeBatches[currentBatchIdx];
   const currentPt = viewsPts[currentBatchIdx];
   const dispatchPct = Math.round((currentBatch.cumulativeViews / maxVal) * 100);
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (draggingIdx === null || !onChangeSchedule || !svgRef.current) return;
+    
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseY = e.clientY - rect.top;
+    const svgY = (mouseY / rect.height) * H;
+    
+    const heightPx = H - 2 * pad;
+    const relativeY = H - pad - svgY;
+    const fractionY = relativeY / heightPx;
+    let proposedCumulative = Math.round(fractionY * maxVal);
+    
+    const prevCumulative = draggingIdx > 0 ? cumulativeBatches[draggingIdx - 1].cumulativeViews : 0;
+    const nextCumulative = draggingIdx < cumulativeBatches.length - 1 ? cumulativeBatches[draggingIdx + 1].cumulativeViews : maxVal;
+    
+    proposedCumulative = Math.max(prevCumulative, Math.min(nextCumulative, proposedCumulative));
+    
+    let proposedHour = schedule[draggingIdx].hour;
+    if (isCustomMode && draggingIdx > 0) {
+      const mouseX = e.clientX - rect.left;
+      const svgX = (mouseX / rect.width) * W;
+      const widthPx = W - 2 * pad;
+      const relativeX = svgX - pad;
+      const fractionX = relativeX / widthPx;
+      proposedHour = fractionX * durationHours;
+      
+      const prevHour = schedule[draggingIdx - 1].hour;
+      const nextHour = draggingIdx < schedule.length - 1 ? schedule[draggingIdx + 1].hour : durationHours;
+      proposedHour = Math.max(prevHour + 0.05, Math.min(nextHour - 0.05, proposedHour));
+    }
+
+    const newSchedule = [...schedule];
+    newSchedule[draggingIdx] = {
+      ...newSchedule[draggingIdx],
+      views: proposedCumulative - prevCumulative,
+      hour: proposedHour,
+      scheduledTime: new Date(Date.now() + proposedHour * 60 * 60 * 1000).toISOString(),
+    };
+    if (draggingIdx < newSchedule.length - 1) {
+      newSchedule[draggingIdx + 1] = {
+        ...newSchedule[draggingIdx + 1],
+        views: nextCumulative - proposedCumulative,
+      };
+    }
+    
+    onChangeSchedule(newSchedule);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (draggingIdx === null || !onChangeSchedule || !svgRef.current) return;
+    const touch = e.touches[0];
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseY = touch.clientY - rect.top;
+    const svgY = (mouseY / rect.height) * H;
+    
+    const heightPx = H - 2 * pad;
+    const relativeY = H - pad - svgY;
+    const fractionY = relativeY / heightPx;
+    let proposedCumulative = Math.round(fractionY * maxVal);
+    
+    const prevCumulative = draggingIdx > 0 ? cumulativeBatches[draggingIdx - 1].cumulativeViews : 0;
+    const nextCumulative = draggingIdx < cumulativeBatches.length - 1 ? cumulativeBatches[draggingIdx + 1].cumulativeViews : maxVal;
+    
+    proposedCumulative = Math.max(prevCumulative, Math.min(nextCumulative, proposedCumulative));
+    
+    let proposedHour = schedule[draggingIdx].hour;
+    if (isCustomMode && draggingIdx > 0) {
+      const mouseX = touch.clientX - rect.left;
+      const svgX = (mouseX / rect.width) * W;
+      const widthPx = W - 2 * pad;
+      const relativeX = svgX - pad;
+      const fractionX = relativeX / widthPx;
+      proposedHour = fractionX * durationHours;
+      
+      const prevHour = schedule[draggingIdx - 1].hour;
+      const nextHour = draggingIdx < schedule.length - 1 ? schedule[draggingIdx + 1].hour : durationHours;
+      proposedHour = Math.max(prevHour + 0.05, Math.min(nextHour - 0.05, proposedHour));
+    }
+
+    const newSchedule = [...schedule];
+    newSchedule[draggingIdx] = {
+      ...newSchedule[draggingIdx],
+      views: proposedCumulative - prevCumulative,
+      hour: proposedHour,
+      scheduledTime: new Date(Date.now() + proposedHour * 60 * 60 * 1000).toISOString(),
+    };
+    if (draggingIdx < newSchedule.length - 1) {
+      newSchedule[draggingIdx + 1] = {
+        ...newSchedule[draggingIdx + 1],
+        views: nextCumulative - proposedCumulative,
+      };
+    }
+    
+    onChangeSchedule(newSchedule);
+  };
+
+  const handleMouseUp = () => {
+    setDraggingIdx(null);
+  };
 
   return (
     <div style={{
@@ -166,10 +279,14 @@ function CurvePreview({
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <span style={{ fontSize: 16, color: "#a855f7" }}>📈</span>
-            <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: 0 }}>Live Growth Plot</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: 0 }}>
+              {isCustomMode ? "✏️ Custom Graph Designer" : "Live Growth Plot"}
+            </h3>
           </div>
           <p style={{ fontSize: 12, color: "#c084fc", margin: 0, fontWeight: 550, maxWidth: 380, lineHeight: 1.4 }}>
-            {curveInfo.desc}
+            {isCustomMode 
+              ? "Drag the glowing dots up and down on the graph to adjust the batch view pacing."
+              : curveInfo.desc}
           </p>
         </div>
         <div style={{
@@ -182,13 +299,24 @@ function CurvePreview({
           border: "1px solid rgba(168, 85, 247, 0.3)",
           letterSpacing: "0.05em"
         }}>
-          Preset: {curveInfo.label}
+          {isCustomMode ? "Mode: Custom Graph" : `Preset: ${curveInfo.label}`}
         </div>
       </div>
 
       {/* SVG Neon Chart */}
       <div style={{ position: "relative", width: "100%", background: "#120324", borderRadius: 16, border: "1px solid #23083f", padding: "24px 8px 16px", overflow: "hidden" }}>
-        <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+        <svg
+          ref={svgRef}
+          width="100%"
+          height={H}
+          viewBox={`0 0 ${W} ${H}`}
+          style={{ overflow: "visible" }}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleMouseUp}
+        >
           <defs>
             <linearGradient id="neonGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#d946ef" stopOpacity="0.4" />
@@ -211,7 +339,7 @@ function CurvePreview({
               <g key={val}>
                 <line x1={pad} y1={y} x2={W - pad} y2={y} stroke="#230e3d" strokeWidth="1" strokeDasharray="3 3" />
                 <text x={pad - 8} y={y + 3} fill="#a78bfa" fontSize="9" fontWeight="700" textAnchor="end">
-                  {Math.round(val * 100)}
+                  {Math.round((val * maxVal) / views * 100)}%
                 </text>
               </g>
             );
@@ -233,12 +361,36 @@ function CurvePreview({
 
           {/* Curve Area & Line */}
           <g>
-            <path d={makeFill(viewsPts)} fill="url(#neonGrad)" style={{ transition: "all 0.5s ease" }} />
-            <path d={makePath(viewsPts)} fill="none" stroke="#d946ef" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonGlow)" style={{ transition: "all 0.5s ease" }} />
+            <path d={makeFill(viewsPts)} fill="url(#neonGrad)" style={{ transition: draggingIdx !== null ? "none" : "all 0.5s ease" }} />
+            <path d={makePath(viewsPts)} fill="none" stroke="#d946ef" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonGlow)" style={{ transition: draggingIdx !== null ? "none" : "all 0.5s ease" }} />
           </g>
 
+          {/* Interactive dots in custom mode */}
+          {isCustomMode && viewsPts.map((pt, idx) => (
+            <circle
+              key={idx}
+              cx={pt.x}
+              cy={pt.y}
+              r={selectedBatchIndex === idx ? 8 : 4.5}
+              fill={selectedBatchIndex === idx ? "#22c55e" : "#d946ef"}
+              stroke="#ffffff"
+              strokeWidth={selectedBatchIndex === idx ? 2.5 : 1.5}
+              style={{ cursor: "move", filter: selectedBatchIndex === idx ? "drop-shadow(0 0 6px #22c55e)" : "none" }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setDraggingIdx(idx);
+                if (onSelectBatch) onSelectBatch(idx);
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                setDraggingIdx(idx);
+                if (onSelectBatch) onSelectBatch(idx);
+              }}
+            />
+          ))}
+
           {/* Playhead vertical line & glowing node */}
-          {currentPt && (
+          {!isCustomMode && currentPt && (
             <g>
               <line x1={currentPt.x} y1={pad} x2={currentPt.x} y2={H - pad} stroke="#a78bfa" strokeWidth="1.5" strokeDasharray="2 2" opacity="0.6" />
               <circle cx={currentPt.x} cy={currentPt.y} r="14" fill="none" stroke="#d946ef" strokeWidth="1.5" opacity="0.8">
@@ -254,7 +406,7 @@ function CurvePreview({
         </svg>
 
         {/* Live playhead Tooltip box inside the SVG container */}
-        {currentPt && (
+        {!isCustomMode && currentPt && (
           <div style={{
             position: "absolute",
             left: `${((currentPt.x - pad) / (W - 2 * pad)) * 80 + 10}%`,
@@ -284,23 +436,29 @@ function CurvePreview({
 
       {/* Control bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #1c0a35", paddingTop: 14 }}>
-        <button onClick={() => setIsPlaying(!isPlaying)} className="neo-btn"
-          style={{
-            border: "none",
-            background: isPlaying ? "#ea580c" : "#a855f7",
-            color: "#ffffff",
-            padding: "8px 16px",
-            borderRadius: 12,
-            fontSize: 12,
-            fontWeight: 800,
-            cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(168, 85, 247, 0.3)",
-            display: "flex",
-            alignItems: "center",
-            gap: 6
-          }}>
-          <span>{isPlaying ? "⏸ Pause" : "▶️ Simulate"}</span>
-        </button>
+        {!isCustomMode ? (
+          <button onClick={() => setIsPlaying(!isPlaying)} className="neo-btn"
+            style={{
+              border: "none",
+              background: isPlaying ? "#ea580c" : "#a855f7",
+              color: "#ffffff",
+              padding: "8px 16px",
+              borderRadius: 12,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(168, 85, 247, 0.3)",
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}>
+            <span>{isPlaying ? "⏸ Pause" : "▶️ Simulate"}</span>
+          </button>
+        ) : (
+          <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 800, display: "flex", alignItems: "center", gap: 6 }}>
+            <span>💡 Click a dot to edit manually or drag it vertically</span>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#a78bfa", fontWeight: 700 }}>
           <span>Duration: <strong style={{ color: "#f3e8ff" }}>{durationHours}h</strong></span>
@@ -448,6 +606,158 @@ export default function NewReelPage() {
   const [error, setError] = useState("");
   const [schedule, setSchedule] = useState<DeliveryBatch[]>([]);
   const [expandedSchedule, setExpandedSchedule] = useState(false);
+
+  // Custom Mode state
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [customSchedule, setCustomSchedule] = useState<DeliveryBatch[]>([]);
+  const [selectedBatchIndex, setSelectedBatchIndex] = useState<number | null>(null);
+
+  const customSumViews = customSchedule.reduce((a, b) => a + b.views, 0);
+  const customSumLikes = customSchedule.reduce((a, b) => a + b.likes, 0);
+  const customSumSaves = customSchedule.reduce((a, b) => a + b.saves, 0);
+  const customSumShares = customSchedule.reduce((a, b) => a + b.shares, 0);
+  const customSumComments = customSchedule.reduce((a, b) => a + b.comments, 0);
+
+  const formatDateForInput = (date: Date) => {
+    const padZero = (n: number) => String(n).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    const mm = padZero(date.getMonth() + 1);
+    const dd = padZero(date.getDate());
+    const hh = padZero(date.getHours());
+    const min = padZero(date.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  };
+
+  const formatLocalTime = (date: Date) => {
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  };
+
+  const getMinLimit = (type: "views" | "likes" | "saves" | "shares" | "comments") => {
+    return smmLimits[type]?.min ?? {
+      views: 100,
+      likes: 10,
+      saves: 10,
+      shares: 10,
+      comments: 5
+    }[type];
+  };
+
+  const getCustomScheduleErrors = () => {
+    if (!isCustomMode) return [];
+    const errors: string[] = [];
+    customSchedule.forEach((batch, idx) => {
+      const batchNum = idx + 1;
+      const minV = getMinLimit("views");
+      const minL = getMinLimit("likes");
+      const minSa = getMinLimit("saves");
+      const minSh = getMinLimit("shares");
+      const minC = getMinLimit("comments");
+
+      if (batch.views > 0 && batch.views < minV) {
+        errors.push(`Batch #${batchNum}: Views (${batch.views}) is below SMM panel minimum (${minV})`);
+      }
+      if (batch.likes > 0 && batch.likes < minL) {
+        errors.push(`Batch #${batchNum}: Likes (${batch.likes}) is below SMM panel minimum (${minL})`);
+      }
+      if (batch.saves > 0 && batch.saves < minSa) {
+        errors.push(`Batch #${batchNum}: Saves (${batch.saves}) is below SMM panel minimum (${minSa})`);
+      }
+      if (batch.shares > 0 && batch.shares < minSh) {
+        errors.push(`Batch #${batchNum}: Shares (${batch.shares}) is below SMM panel minimum (${minSh})`);
+      }
+      if (batch.comments > 0 && batch.comments < minC) {
+        errors.push(`Batch #${batchNum}: Comments (${batch.comments}) is below SMM panel minimum (${minC})`);
+      }
+    });
+    return errors;
+  };
+
+  const customScheduleErrors = getCustomScheduleErrors();
+  const hasCustomScheduleErrors = customScheduleErrors.length > 0;
+
+  const updateSelectedBatchField = (field: keyof DeliveryBatch, val: number) => {
+    if (selectedBatchIndex === null) return;
+    const newSchedule = [...customSchedule];
+    newSchedule[selectedBatchIndex] = {
+      ...newSchedule[selectedBatchIndex],
+      [field]: val,
+    };
+    setCustomSchedule(newSchedule);
+  };
+
+  const scaleScheduleToTargets = () => {
+    if (customSchedule.length === 0) return;
+    
+    // Scale Views
+    const viewsSum = customSchedule.reduce((a, b) => a + b.views, 0);
+    const scaleViews = viewsSum > 0 ? (views / viewsSum) : 0;
+    
+    // If likes ratio etc are enabled, we can also scale engagements to match target targets
+    const targetLikes = engEnabled && likesOn ? eng.likesTarget : 0;
+    const targetSaves = engEnabled && savesOn ? eng.savesTarget : 0;
+    const targetShares = engEnabled && sharesOn ? eng.sharesTarget : 0;
+    const targetComments = engEnabled && commentsOn ? eng.commentsTarget : 0;
+    
+    const sumLikes = customSchedule.reduce((a, b) => a + b.likes, 0);
+    const sumSaves = customSchedule.reduce((a, b) => a + b.saves, 0);
+    const sumShares = customSchedule.reduce((a, b) => a + b.shares, 0);
+    const sumComments = customSchedule.reduce((a, b) => a + b.comments, 0);
+    
+    const scaleLikes = sumLikes > 0 ? (targetLikes / sumLikes) : 0;
+    const scaleSaves = sumSaves > 0 ? (targetSaves / sumSaves) : 0;
+    const scaleShares = sumShares > 0 ? (targetShares / sumShares) : 0;
+    const scaleComments = sumComments > 0 ? (targetComments / sumComments) : 0;
+    
+    let newSchedule = customSchedule.map((batch) => {
+      return {
+        ...batch,
+        views: Math.max(0, Math.round(batch.views * scaleViews)),
+        likes: Math.max(0, Math.round(batch.likes * scaleLikes)),
+        saves: Math.max(0, Math.round(batch.saves * scaleSaves)),
+        shares: Math.max(0, Math.round(batch.shares * scaleShares)),
+        comments: Math.max(0, Math.round(batch.comments * scaleComments)),
+      };
+    });
+    
+    // Fix rounding drift
+    const finalSumViews = newSchedule.reduce((a, b) => a + b.views, 0);
+    const diffViews = views - finalSumViews;
+    if (diffViews !== 0 && newSchedule.length > 0) {
+      newSchedule[newSchedule.length - 1].views = Math.max(0, newSchedule[newSchedule.length - 1].views + diffViews);
+    }
+    
+    const finalSumLikes = newSchedule.reduce((a, b) => a + b.likes, 0);
+    const diffLikes = targetLikes - finalSumLikes;
+    if (diffLikes !== 0 && newSchedule.length > 0) {
+      newSchedule[newSchedule.length - 1].likes = Math.max(0, newSchedule[newSchedule.length - 1].likes + diffLikes);
+    }
+
+    const finalSumSaves = newSchedule.reduce((a, b) => a + b.saves, 0);
+    const diffSaves = targetSaves - finalSumSaves;
+    if (diffSaves !== 0 && newSchedule.length > 0) {
+      newSchedule[newSchedule.length - 1].saves = Math.max(0, newSchedule[newSchedule.length - 1].saves + diffSaves);
+    }
+
+    const finalSumShares = newSchedule.reduce((a, b) => a + b.shares, 0);
+    const diffShares = targetShares - finalSumShares;
+    if (diffShares !== 0 && newSchedule.length > 0) {
+      newSchedule[newSchedule.length - 1].shares = Math.max(0, newSchedule[newSchedule.length - 1].shares + diffShares);
+    }
+
+    const finalSumComments = newSchedule.reduce((a, b) => a + b.comments, 0);
+    const diffComments = targetComments - finalSumComments;
+    if (diffComments !== 0 && newSchedule.length > 0) {
+      newSchedule[newSchedule.length - 1].comments = Math.max(0, newSchedule[newSchedule.length - 1].comments + diffComments);
+    }
+    
+    setCustomSchedule(newSchedule);
+  };
 
   // Bulk Mode state
   const [mode, setMode] = useState<"single" | "bulk">("single");
@@ -667,7 +977,7 @@ export default function NewReelPage() {
   const canProceed1 = reelUrl.trim().length > 10;
   const minViewsRequired = smmLimits.views?.min ?? 100;
   const maxViewsRequired = smmLimits.views?.max ?? 10000000;
-  const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1;
+  const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1 && (!isCustomMode || !hasCustomScheduleErrors);
 
   const submit = useCallback(async () => {
     setSubmitting(true); setError("");
@@ -693,6 +1003,7 @@ export default function NewReelPage() {
           engagementEnabled: engEnabled, likesTarget: eng.likesTarget, savesTarget: eng.savesTarget, sharesTarget: eng.sharesTarget, commentsTarget: eng.commentsTarget,
           likesRatioPct: engEnabled && likesOn ? likesRatio : 0, savesRatioPct: engEnabled && savesOn ? savesRatio : 0,
           sharesRatioPct: engEnabled && sharesOn ? sharesRatio : 0, commentsRatioPct: engEnabled && commentsOn ? commentsRatio : 0,
+          customSchedule: isCustomMode ? customSchedule : null,
         }),
       });
       const data = await res.json();
@@ -701,7 +1012,7 @@ export default function NewReelPage() {
     } catch (e) {
       setError(String(e)); setSubmitting(false);
     }
-  }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, eng, router, saveAsTemplate, templateName]);
+  }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, eng, router, saveAsTemplate, templateName, isCustomMode, customSchedule]);
 
   return (
     <div style={{ maxWidth: step === 2 ? 1100 : 640, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 24, transition: "max-width 0.3s ease-in-out" }}>
@@ -815,58 +1126,438 @@ export default function NewReelPage() {
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 32, alignItems: "start", marginTop: 8 }}>
-            {/* Left Column: Delivery Style Grid */}
-            <div style={{
-              background: "#08010f",
-              border: "1px solid #1c0a35",
-              borderRadius: 24,
-              padding: 24,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-              color: "#f3e8ff",
-              display: "flex",
-              flexDirection: "column",
-              gap: 16
-            }}>
-              <div>
-                <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0" }}>3. Drip Pacing & Flow Settings</h3>
-                <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select Organic Pacing Growth Graph</p>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {["Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized"].map((cat) => {
-                  const catStyles = (Object.keys(CURVE_DESCRIPTIONS) as CurveStyle[]).filter(s => CURVE_DESCRIPTIONS[s].category === cat);
-                  if (catStyles.length === 0) return null;
-                  return (
-                    <div key={cat}>
-                      <p style={{ fontSize: 10, fontWeight: 900, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{cat}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
-                        {catStyles.map((s) => (
-                          <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }}
-                            style={{
-                              padding: "14px 6px",
-                              borderRadius: 14,
-                              cursor: "pointer",
-                              transition: "all 0.25s ease",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              gap: 6,
-                              background: style === s ? "#1a0636" : "#0c0218",
-                              border: style === s ? "2.5px solid #d946ef" : "1.5px solid #1c0a35",
-                              boxShadow: style === s ? "0 0 15px rgba(217, 70, 239, 0.35)" : "none",
-                              color: style === s ? "#ffffff" : "#a78bfa",
-                            }}>
-                            <span style={{ fontSize: 11, fontWeight: 805, textAlign: "center" }}>{CURVE_DESCRIPTIONS[s].label}</span>
-                            <MiniCurveChart style={s} active={style === s} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          {/* Custom Mode Toggle Switch */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 20px",
+            borderRadius: 16,
+            background: isCustomMode ? "#1a0636" : N.bg,
+            border: isCustomMode ? "1.5px solid #d946ef" : `1.5px solid ${N.border}`,
+            boxShadow: isCustomMode ? "0 0 15px rgba(217, 70, 239, 0.15)" : N.inset,
+            transition: "all 0.25s ease",
+            marginTop: 8
+          }}>
+            <div>
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: isCustomMode ? "#f3e8ff" : N.text }}>
+                ✏️ Customize Pacing Graph Manually
+              </h4>
+              <p style={{ margin: "2px 0 0", fontSize: 11, color: isCustomMode ? "#c084fc" : N.muted, fontWeight: 600 }}>
+                Adjust views and engagement for each batch/dot individually.
+              </p>
             </div>
+            <button onClick={() => {
+              if (!isCustomMode) {
+                setCustomSchedule([...schedule]);
+                setSelectedBatchIndex(0);
+              }
+              setIsCustomMode(!isCustomMode);
+            }} className="neo-btn"
+              style={{
+                padding: "8px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 800,
+                fontSize: 12,
+                background: isCustomMode ? "#d946ef" : N.accent,
+                color: "#ffffff",
+                boxShadow: isCustomMode ? "0 4px 12px rgba(217, 70, 239, 0.3)" : "none"
+              }}>
+              {isCustomMode ? "✓ Custom Mode: ON" : "Turn ON Custom Graph"}
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: isCustomMode ? "1fr 1fr" : "1.2fr 1fr", gap: 32, alignItems: "start", marginTop: 8 }}>
+            {isCustomMode ? (
+              /* Custom Graph Designer Left Column */
+              <div style={{
+                background: "#08010f",
+                border: "1px solid #1c0a35",
+                borderRadius: 24,
+                padding: 24,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+                color: "#f3e8ff",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 2px 0" }}>Batch Customizer</h3>
+                    <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Configure selected dot value</p>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={scaleScheduleToTargets} className="neo-btn"
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        cursor: "pointer",
+                        background: "rgba(168, 85, 247, 0.2)",
+                        color: "#a855f7",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        border: "1px solid rgba(168, 85, 247, 0.4)"
+                      }}>
+                      ⚖️ Scale Targets
+                    </button>
+                    <button onClick={() => { setCustomSchedule([...schedule]); setSelectedBatchIndex(0); }} className="neo-btn"
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        cursor: "pointer",
+                        background: "rgba(220, 38, 38, 0.15)",
+                        color: "#dc2626",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        border: "1px solid rgba(220, 38, 38, 0.3)"
+                      }}>
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                {/* Selected Batch Details */}
+                {selectedBatchIndex !== null && customSchedule[selectedBatchIndex] ? (
+                  <div style={{
+                    background: "#120324",
+                    border: "1.5px solid #23083f",
+                    borderRadius: 16,
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1.5px solid #1c0a35", paddingBottom: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 850, color: "#f3e8ff" }}>
+                        Selected: Dot #{selectedBatchIndex + 1}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: "#a855f7" }}>
+                        {formatLocalTime(new Date(customSchedule[selectedBatchIndex].scheduledTime || (Date.now() + customSchedule[selectedBatchIndex].hour * 60 * 60 * 1000)))}
+                      </span>
+                    </div>
+
+                    {/* Date Time Picker (Only editable if index > 0) */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>📅 Schedule Time (Local)</span>
+                        <input 
+                          type="datetime-local" 
+                          disabled={selectedBatchIndex === 0}
+                          value={formatDateForInput(new Date(customSchedule[selectedBatchIndex].scheduledTime || (Date.now() + customSchedule[selectedBatchIndex].hour * 60 * 60 * 1000)))}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                              const newTime = new Date(val);
+                              const finalTime = newTime.getTime() < Date.now() ? new Date() : newTime;
+                              const diffHours = (finalTime.getTime() - Date.now()) / (1000 * 60 * 60);
+                              
+                              const updatedSchedule = [...customSchedule];
+                              updatedSchedule[selectedBatchIndex] = {
+                                ...updatedSchedule[selectedBatchIndex],
+                                scheduledTime: finalTime.toISOString(),
+                                hour: Math.max(0, diffHours)
+                              };
+                              
+                              updatedSchedule.sort((a, b) => {
+                                if (a.scheduledTime && b.scheduledTime) {
+                                  return new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime();
+                                }
+                                return a.hour - b.hour;
+                              });
+                              
+                              setCustomSchedule(updatedSchedule);
+                              
+                              const newIdx = updatedSchedule.findIndex(b => b.scheduledTime === finalTime.toISOString());
+                              if (newIdx !== -1) {
+                                setSelectedBatchIndex(newIdx);
+                              }
+                            }
+                          }}
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            background: "#08010f",
+                            border: "1px solid #1c0a35",
+                            color: "#f3e8ff",
+                            fontWeight: 800,
+                            outline: "none",
+                            opacity: selectedBatchIndex === 0 ? 0.5 : 1,
+                            cursor: selectedBatchIndex === 0 ? "not-allowed" : "default"
+                          }}
+                        />
+                      </div>
+                      {selectedBatchIndex === 0 && (
+                        <p style={{ fontSize: 10, color: "#a855f7", margin: "4px 0 0 0", fontWeight: 700 }}>
+                          ⚡ Instant delivery event (cannot change scheduled time)
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Views input */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>👁 Views Target</span>
+                        <input type="number" 
+                          value={customSchedule[selectedBatchIndex].views}
+                          min={0}
+                          onChange={(e) => updateSelectedBatchField("views", parseInt(e.target.value) || 0)}
+                          style={{
+                            width: 90,
+                            padding: "4px 8px",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            background: "#08010f",
+                            border: "1px solid #1c0a35",
+                            color: "#f3e8ff",
+                            fontWeight: 800,
+                            textAlign: "right"
+                          }}
+                        />
+                      </div>
+                      <input type="range" 
+                        min={0} 
+                        max={views} 
+                        step={10}
+                        value={customSchedule[selectedBatchIndex].views}
+                        onChange={(e) => updateSelectedBatchField("views", parseInt(e.target.value) || 0)}
+                        style={{ width: "100%", accentColor: "#d946ef", cursor: "pointer", display: "block" }}
+                      />
+                      {customSchedule[selectedBatchIndex].views > 0 && customSchedule[selectedBatchIndex].views < getMinLimit("views") && (
+                        <p style={{ fontSize: 10, color: "#dc2626", margin: "4px 0 0 0", fontWeight: 700 }}>
+                          ⚠️ Minimum views required per dot is {getMinLimit("views")} (or set to 0 to skip)
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Engagement Inputs if engagement is enabled */}
+                    {engEnabled ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4, borderTop: "1px solid #1c0a35", paddingTop: 10 }}>
+                        <p style={{ fontSize: 10, fontWeight: 900, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px 0" }}>
+                          Dot Engagement Targets
+                        </p>
+                        
+                        {/* Likes */}
+                        {likesOn && (
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>👍 Likes</span>
+                              <input type="number" 
+                                value={customSchedule[selectedBatchIndex].likes}
+                                min={0}
+                                onChange={(e) => updateSelectedBatchField("likes", parseInt(e.target.value) || 0)}
+                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
+                              />
+                            </div>
+                            {customSchedule[selectedBatchIndex].likes > 0 && customSchedule[selectedBatchIndex].likes < getMinLimit("likes") && (
+                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
+                                ⚠️ Minimum likes: {getMinLimit("likes")} (or 0)
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Saves */}
+                        {savesOn && (
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>🔖 Saves</span>
+                              <input type="number" 
+                                value={customSchedule[selectedBatchIndex].saves}
+                                min={0}
+                                onChange={(e) => updateSelectedBatchField("saves", parseInt(e.target.value) || 0)}
+                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
+                              />
+                            </div>
+                            {customSchedule[selectedBatchIndex].saves > 0 && customSchedule[selectedBatchIndex].saves < getMinLimit("saves") && (
+                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
+                                ⚠️ Minimum saves: {getMinLimit("saves")} (or 0)
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Shares */}
+                        {sharesOn && (
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>📤 Shares</span>
+                              <input type="number" 
+                                value={customSchedule[selectedBatchIndex].shares}
+                                min={0}
+                                onChange={(e) => updateSelectedBatchField("shares", parseInt(e.target.value) || 0)}
+                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
+                              />
+                            </div>
+                            {customSchedule[selectedBatchIndex].shares > 0 && customSchedule[selectedBatchIndex].shares < getMinLimit("shares") && (
+                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
+                                ⚠️ Minimum shares: {getMinLimit("shares")} (or 0)
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Comments */}
+                        {commentsOn && (
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>💬 Comments</span>
+                              <input type="number" 
+                                value={customSchedule[selectedBatchIndex].comments}
+                                min={0}
+                                onChange={(e) => updateSelectedBatchField("comments", parseInt(e.target.value) || 0)}
+                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
+                              />
+                            </div>
+                            {customSchedule[selectedBatchIndex].comments > 0 && customSchedule[selectedBatchIndex].comments < getMinLimit("comments") && (
+                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
+                                ⚠️ Minimum comments: {getMinLimit("comments")} (or 0)
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 12, color: "#a78bfa", margin: 0, textAlign: "center" }}>
+                    Select a dot on the right graph to customize its values.
+                  </p>
+                )}
+
+                {/* Validation Warnings Summary */}
+                {hasCustomScheduleErrors && (
+                  <div style={{
+                    padding: 12,
+                    borderRadius: 14,
+                    background: "rgba(220, 38, 38, 0.15)",
+                    border: "1px solid rgba(220, 38, 38, 0.3)",
+                    color: "#f87171",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    maxHeight: 120,
+                    overflowY: "auto"
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#ef4444" }}>⚠️ Custom Schedule Validation Errors:</span>
+                    {customScheduleErrors.slice(0, 3).map((err, i) => (
+                      <span key={i}>• {err}</span>
+                    ))}
+                    {customScheduleErrors.length > 3 && (
+                      <span>• and {customScheduleErrors.length - 3} more errors...</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Allocated Stats Summary */}
+                <div style={{
+                  background: "#120324",
+                  border: "1.5px solid #23083f",
+                  borderRadius: 16,
+                  padding: 14,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 8,
+                  fontSize: 11,
+                  fontWeight: 750
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#a78bfa" }}>Allocated Views:</span>
+                    <span style={{ color: customSumViews === views ? "#22c55e" : "#f59e0b" }}>
+                      {customSumViews.toLocaleString()} / {views.toLocaleString()}
+                    </span>
+                  </div>
+                  {likesOn && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#a78bfa" }}>Likes:</span>
+                      <span style={{ color: customSumLikes === eng.likesTarget ? "#22c55e" : "#f59e0b" }}>
+                        {customSumLikes.toLocaleString()} / {eng.likesTarget.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {savesOn && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#a78bfa" }}>Saves:</span>
+                      <span style={{ color: customSumSaves === eng.savesTarget ? "#22c55e" : "#f59e0b" }}>
+                        {customSumSaves.toLocaleString()} / {eng.savesTarget.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {sharesOn && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#a78bfa" }}>Shares:</span>
+                      <span style={{ color: customSumShares === eng.sharesTarget ? "#22c55e" : "#f59e0b" }}>
+                        {customSumShares.toLocaleString()} / {eng.sharesTarget.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {commentsOn && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#a78bfa" }}>Comments:</span>
+                      <span style={{ color: customSumComments === eng.commentsTarget ? "#22c55e" : "#f59e0b" }}>
+                        {customSumComments.toLocaleString()} / {eng.commentsTarget.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Preset Grid Left Column */
+              <div style={{
+                background: "#08010f",
+                border: "1px solid #1c0a35",
+                borderRadius: 24,
+                padding: 24,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+                color: "#f3e8ff",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16
+              }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0" }}>3. Drip Pacing & Flow Settings</h3>
+                  <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select Organic Pacing Growth Graph</p>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {["Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized"].map((cat) => {
+                    const catStyles = (Object.keys(CURVE_DESCRIPTIONS) as CurveStyle[]).filter(s => CURVE_DESCRIPTIONS[s].category === cat);
+                    if (catStyles.length === 0) return null;
+                    return (
+                      <div key={cat}>
+                        <p style={{ fontSize: 10, fontWeight: 900, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{cat}</p>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
+                          {catStyles.map((s) => (
+                            <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }}
+                              style={{
+                                padding: "14px 6px",
+                                borderRadius: 14,
+                                cursor: "pointer",
+                                transition: "all 0.25s ease",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 6,
+                                background: style === s ? "#1a0636" : "#0c0218",
+                                border: style === s ? "2.5px solid #d946ef" : "1.5px solid #1c0a35",
+                                boxShadow: style === s ? "0 0 15px rgba(217, 70, 239, 0.35)" : "none",
+                                color: style === s ? "#ffffff" : "#a78bfa",
+                              }}>
+                              <span style={{ fontSize: 11, fontWeight: 805, textAlign: "center" }}>{CURVE_DESCRIPTIONS[s].label}</span>
+                              <MiniCurveChart style={s} active={style === s} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Right Column: Live Growth Plot */}
             <CurvePreview
@@ -884,12 +1575,18 @@ export default function NewReelPage() {
               sharesOn={sharesOn}
               commentsOn={commentsOn}
               engEnabled={engEnabled}
-              schedule={schedule}
+              schedule={isCustomMode ? customSchedule : schedule}
+              isCustomMode={isCustomMode}
+              selectedBatchIndex={selectedBatchIndex}
+              onSelectBatch={setSelectedBatchIndex}
+              onChangeSchedule={setCustomSchedule}
             />
           </div>
 
           <div style={{ fontSize:12, color:N.muted, textAlign:"center", fontWeight:600 }}>
-            ≈ {Math.round(views / durationDays).toLocaleString()} views/day · {durationHours} hourly batches (with ±15m time jitter)
+            {isCustomMode 
+              ? `≈ ${Math.round(customSumViews / durationDays).toLocaleString()} views/day · Custom schedule with ${customSchedule.filter(b => b.views > 0).length} active batches`
+              : `≈ ${Math.round(views / durationDays).toLocaleString()} views/day · ${durationHours} hourly batches (with ±15m time jitter)`}
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
@@ -960,7 +1657,7 @@ export default function NewReelPage() {
           <h2 style={{ fontSize:14, fontWeight:800, color:N.text, margin:0 }}>4. Confirm Campaign</h2>
 
           <CurvePreview
-            views={views}
+            views={isCustomMode ? customSchedule.reduce((a, b) => a + b.views, 0) : views}
             durationHours={durationHours}
             style={style}
             warmup={curveInfo.warmup}
@@ -974,7 +1671,8 @@ export default function NewReelPage() {
             sharesOn={sharesOn}
             commentsOn={commentsOn}
             engEnabled={engEnabled}
-            schedule={schedule}
+            schedule={isCustomMode ? customSchedule : schedule}
+            isCustomMode={isCustomMode}
           />
 
           <div style={{ borderRadius: 16, background: N.bg, boxShadow: N.inset, padding: 12 }}>
@@ -992,7 +1690,7 @@ export default function NewReelPage() {
                 justifyContent: "space-between",
                 alignItems: "center"
               }}>
-              <span>📊 View Detailed Batch-by-Batch Timeline ({schedule.filter(b => b.views > 0).length} active batches)</span>
+              <span>📊 View Detailed Batch-by-Batch Timeline ({(isCustomMode ? customSchedule : schedule).filter(b => b.views > 0).length} active batches)</span>
               <span>{expandedSchedule ? "▲ Hide" : "▼ Show"}</span>
             </button>
             
@@ -1022,11 +1720,14 @@ export default function NewReelPage() {
                   <span style={{ textAlign: "right" }}>Views</span>
                   <span style={{ textAlign: "right" }}>Engagement</span>
                 </div>
-                {schedule.filter(b => b.views > 0).map((batch, idx) => {
-                  const totalMins = batch.hour * 60;
-                  const h = Math.floor(totalMins / 60);
-                  const m = Math.round(totalMins % 60);
-                  const timeText = idx === 0 ? "⚡ Instant" : `+${h > 0 ? `${h}h ` : ""}${m > 0 ? `${m}m` : ""}`;
+                {(isCustomMode ? customSchedule : schedule).filter(b => b.views > 0).map((batch, idx) => {
+                  const triggerDate = batch.scheduledTime 
+                    ? new Date(batch.scheduledTime)
+                    : new Date(Date.now() + batch.hour * 60 * 60 * 1000);
+                  
+                  const timeText = idx === 0 && !batch.scheduledTime
+                    ? "⚡ Instant" 
+                    : formatLocalTime(triggerDate);
                   
                   const engTexts = [];
                   if (batch.likes > 0) engTexts.push(`👍 ${batch.likes}`);
@@ -1060,16 +1761,16 @@ export default function NewReelPage() {
             {[
               ["Platform", `${PLATFORM_ICONS[platform]} ${platform.charAt(0) + platform.slice(1).toLowerCase()}`],
               ["URL", reelUrl.length > 40 ? reelUrl.slice(0, 40) + "…" : reelUrl],
-              ["Views Target", views.toLocaleString()],
+              ["Views Target", (isCustomMode ? customSchedule.reduce((a, b) => a + b.views, 0) : views).toLocaleString()],
               ["Duration", `${durationDays} day${durationDays === 1 ? "" : "s"} (${durationHours}h)`],
-              ["Delivery Style", `${curveInfo.icon} ${curveInfo.label}`],
-              ["Pacing Schedule", `${durationHours} hourly batches`],
+              ["Delivery Style", isCustomMode ? "✏️ Custom Graph Pacing" : `${curveInfo.icon} ${curveInfo.label}`],
+              ["Pacing Schedule", `${(isCustomMode ? customSchedule : schedule).filter(b => b.views > 0).length} active batches`],
               ...(engEnabled ? [
                 ["Engagement Mode", "✅ Paced concurrently"],
-                ...(likesOn && eng.likesTarget > 0 ? [["👍 Likes Target", `${eng.likesTarget.toLocaleString()} (${likesRatio}%)`]] : []),
-                ...(savesOn && eng.savesTarget > 0 ? [["🔖 Saves Target", `${eng.savesTarget.toLocaleString()} (${savesRatio}%)`]] : []),
-                ...(sharesOn && eng.sharesTarget > 0 ? [["📤 Shares Target", `${eng.sharesTarget.toLocaleString()} (${sharesRatio}%)`]] : []),
-                ...(commentsOn && eng.commentsTarget > 0 ? [["💬 Comments Target", `${eng.commentsTarget.toLocaleString()} (${commentsRatio}%)`]] : []),
+                ...(likesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget) > 0 ? [["👍 Likes Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget).toLocaleString()}`]] : []),
+                ...(savesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget) > 0 ? [["🔖 Saves Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget).toLocaleString()}`]] : []),
+                ...(sharesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) > 0 ? [["📤 Shares Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget).toLocaleString()}`]] : []),
+                ...(commentsOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) > 0 ? [["💬 Comments Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget).toLocaleString()}`]] : []),
               ] : [["Engagement Mode", "⬜ Views only"]]),
             ].map(([k, v]) => (
               <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
