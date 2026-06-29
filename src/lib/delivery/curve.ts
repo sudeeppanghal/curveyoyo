@@ -21,6 +21,7 @@ export interface CurveParams {
   commentsRatioPct?: number;
   // Timezone offset from UTC in hours (e.g. +5.5 for IST)
   tzOffsetHours?: number;
+  intervalMinutes?: number;
 }
 
 export interface DeliveryBatch {
@@ -92,13 +93,30 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     likesRatioPct = 4.0, savesRatioPct = 2.0,
     sharesRatioPct = 0.5, commentsRatioPct = 0.2,
     tzOffsetHours = 5.5,
+    intervalMinutes,
   } = params;
 
   const RATES_MAP: Record<string, number> = RATES;
   const nowUtcHour = new Date().getUTCHours();
 
-  const raw = Array.from({ length: durationHours }, (_, t) => {
-    const progress = t / durationHours;
+  let intervalMins = intervalMinutes;
+  if (!intervalMins) {
+    const avgViewsPerHour = totalViews / durationHours;
+    if (avgViewsPerHour >= 400) {
+      intervalMins = 15;
+    } else if (avgViewsPerHour >= 200) {
+      intervalMins = 30;
+    } else {
+      intervalMins = 60;
+    }
+  }
+
+  const stepsPerHour = 60 / intervalMins;
+  const totalSteps = Math.max(1, durationHours * stepsPerHour);
+
+  const raw = Array.from({ length: totalSteps }, (_, t) => {
+    const progress = t / totalSteps;
+    const hourTime = t / stepsPerHour;
     let val = 1.0;
 
     if (style === "LINEAR") {
@@ -120,8 +138,8 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     } else if (style === "COSINE_WAVE") {
       val = 1.0 + 0.5 * Math.cos(progress * 4 * Math.PI);
     } else if (style === "SAWTOOTH") {
-      const period = Math.max(1, Math.floor(durationHours / 4));
-      val = (t % period) / period + 0.1;
+      const periodSteps = Math.max(1, Math.floor(totalSteps / 4));
+      val = (t % periodSteps) / periodSteps + 0.1;
     } else if (style === "CHAOTIC") {
       val = 0.5 + 0.3 * Math.sin(progress * 6 * Math.PI) + 0.2 * Math.sin(progress * 14 * Math.PI + 1.0) + 0.1 * Math.cos(progress * 22 * Math.PI);
     } else if (style === "DOUBLE_BELL") {
@@ -147,12 +165,12 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     } else {
       const r = RATES_MAP[style] ?? 0.8;
       const t0 = warmupHours + peakHours / 2;
-      let logistic = 1 / (1 + Math.exp(-r * (t - t0)));
+      let logistic = 1 / (1 + Math.exp(-r * (hourTime - t0)));
 
       if (style === "CLIPSTAKE") {
         logistic = logistic * (progress < 0.35 ? 0.4 : progress < 0.7 ? 0.75 : 1.0);
       } else if (style === "CROSSWAVE") {
-        logistic = logistic * (1 + 0.3 * Math.sin((t * Math.PI) / 4));
+        logistic = logistic * (1 + 0.3 * Math.sin((hourTime * Math.PI) / 4));
       } else if (style === "WHOP") {
         logistic = Math.pow(logistic, 1.5);
       } else if (style === "CLIPSTAR") {
@@ -163,7 +181,7 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
       val = logistic;
     }
 
-    const utcHour = (nowUtcHour + t) % 24;
+    const utcHour = (nowUtcHour + hourTime) % 24;
     return val * peakHourMultiplier(utcHour, tzOffsetHours);
   });
 
@@ -209,11 +227,12 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     if (lastNonZero >= 0) distributed[lastNonZero] = Math.max(0, distributed[lastNonZero] + diff);
   }
 
-  return distributed.map((views, hour) => {
+  return distributed.map((views, stepIdx) => {
     const ratio = totalViews > 0 ? views / totalViews : 0;
+    const stepHourTime = stepIdx / stepsPerHour;
     return {
-      hour,
-      scheduledDelayMs: hour * 60 * 60 * 1000,
+      hour: stepHourTime,
+      scheduledDelayMs: stepIdx * intervalMins * 60 * 1000,
       views,
       likes:    engagementEnabled ? Math.round((likesRatioPct    / 100) * totalViews * ratio) : 0,
       saves:    engagementEnabled ? Math.round((savesRatioPct    / 100) * totalViews * ratio) : 0,
