@@ -19,6 +19,73 @@ const C = {
   grad: "linear-gradient(135deg, #d97706 0%, #ea580c 100%)",
 };
 
+const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFor: string; why: string; duration: string; details: string }> = {
+  ORGANIC: {
+    label: "Organic S-Curve",
+    icon: "🌅",
+    bestFor: "Standard viral reels & organic growth",
+    why: "Mimics a typical viral trajectory where views build up slowly, peak, and then decay naturally.",
+    duration: "24h - 168h (1-7 days)",
+    details: "Warmup: 4h · Peak: 8h. Ideal for natural algorithmic growth."
+  },
+  FAST: {
+    label: "Fast Burst",
+    icon: "⚡",
+    bestFor: "Instagram Clipper accounts",
+    why: "Paces views within a compressed timeframe to catch early interest and boost immediate feed placement.",
+    duration: "12h - 36h",
+    details: "Warmup: 2h · Peak: 4h. Designed for fast-paced content schedules."
+  },
+  AGGRESSIVE: {
+    label: "Aggressive Spike",
+    icon: "🔥",
+    bestFor: "Time-sensitive trends & announcements",
+    why: "Triggers a rapid surge of views within hours to maximize initial shock value on high-velocity campaigns.",
+    duration: "6h - 24h",
+    details: "Warmup: 1h · Peak: 2h. High initial velocity, higher visibility rate."
+  },
+  WHOP: {
+    label: "Whop commerce",
+    icon: "💳",
+    bestFor: "Whop Membership Drops & Product Launches",
+    why: "Optimized for midday commerce traffic. Provides a sustained high-volume plateau during active shopping hours.",
+    duration: "24h - 48h",
+    details: "Warmup: 5h · Peak: 10h. Sustained plateau to match drop events."
+  },
+  CLIPSTAKE: {
+    label: "Clipstake Wave",
+    icon: "🎲",
+    bestFor: "Clipstake engagement prompts & quizzes",
+    why: "Double-plateau step-wise curve simulating viral trigger prompts and repeat user checking cycles.",
+    duration: "24h - 72h",
+    details: "Warmup: 3h · Peak: 6h. Dual-step shape designed to trigger interactive prompts."
+  },
+  CLIPSTAR: {
+    label: "Clipstar Burst",
+    icon: "⭐",
+    bestFor: "Clipstar creators & long-tail campaigns",
+    why: "Delivers an immediate sustained burst followed by a very flat, high-retention tail for prolonged visibility.",
+    duration: "48h - 168h",
+    details: "Warmup: 2h · Peak: 12h. Long-tail decay to simulate high audience retention."
+  },
+  PICSART: {
+    label: "Picsart Creative",
+    icon: "🎨",
+    bestFor: "Picsart designers & creative portfolios",
+    why: "Tailored to creative traffic, peaking in the afternoon with custom engagement rates matching peak creative hours.",
+    duration: "24h - 72h",
+    details: "Warmup: 4h · Peak: 8h. Designed for designer portfolios."
+  },
+  CROSSWAVE: {
+    label: "Crosswave Multi",
+    icon: "🌊",
+    bestFor: "Cross-platform syndication",
+    why: "Oscillatory crests and troughs simulating multiple syndication shares across different networks.",
+    duration: "48h - 120h",
+    details: "Warmup: 4h · Peak: 8h. Periodic wave patterns mimicking platform sharing schedules."
+  }
+};
+
 const PANELS = [
   "SMMKings","Peakerr","JustAnotherPanel","SMMHeaven","NicePanel",
   "FollowersGain","Crescitaly","SmmFarm","SmmRaja","SmmPanel",
@@ -229,8 +296,10 @@ export default function Home() {
       <section id="features" style={{ maxWidth:1100, margin:"0 auto", padding:"60px 24px 80px" }}>
         {/* Section header */}
         <div style={{ textAlign:"center", marginBottom:60 }}>
-          <h2 style={{ fontSize:wide ? 40 : 28, fontWeight:900, letterSpacing:"-1px", color:C.text, marginBottom:16 }}>Every feature built for professionals</h2>
-          <p style={{ fontSize:15, color:C.textMuted, maxWidth:560, margin:"0 auto", lineHeight:1.7 }}>Toggle delivery styles or adjust duration to see how YoyoSMM paces campaigns dynamically.</p>
+          <h2 style={{ fontSize:wide ? 40 : 28, fontWeight:900, letterSpacing:"-1px", color:C.text, marginBottom:16 }}>Interactive Pacing Showcase</h2>
+          <p style={{ fontSize:15, color:C.textMuted, maxWidth:600, margin:"0 auto", lineHeight:1.7 }}>
+            We support custom delivery algorithms optimized for the major creator platforms. Click any style below to visualize how the campaign dispatches over time.
+          </p>
         </div>
 
         <div style={{ ...grid(wide ? "5fr 7fr" : "1fr", 32) }}>
@@ -260,6 +329,42 @@ export default function Home() {
                 <input type="range" min="6" max="72" step="6" value={duration} onChange={e=>setDuration(Number(e.target.value))}
                   style={{ width:"100%", accentColor:C.amber, display:"block", cursor:"pointer" }} />
               </div>
+
+              {/* Best Use Case Card */}
+              {(() => {
+                const info = HOMEPAGE_CURVES_INFO[curveStyle];
+                if (!info) return null;
+                return (
+                  <div style={{
+                    marginTop: 20,
+                    padding: 16,
+                    borderRadius: 16,
+                    background: C.bg,
+                    boxShadow: C.inset,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    border: "1px solid rgba(217, 119, 6, 0.12)",
+                    textAlign: "left"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>{info.icon}</span>
+                      <span style={{ fontSize: 13, fontWeight: 900, color: C.amber }}>{info.label}</span>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: C.text }}>
+                      🎯 Best For: <span style={{ color: C.amber }}>{info.bestFor}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5, fontWeight: 600 }}>
+                      {info.why}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingTop: 8, borderTop: `1px solid rgba(200, 208, 231, 0.3)`, fontSize: 10, color: C.textMuted, fontWeight: 700 }}>
+                      <span>⏱ Rec. Duration: {info.duration}</span>
+                      <span>{info.details}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div style={{ marginTop:24, paddingTop:24, borderTop:`1px solid #c8d0e7`, display:"flex", flexDirection:"column", gap:12 }}>
                 {["Smooth S-Curve delivery pacing","Dynamic batch calculations","No spikes — mimics actual viral traffic"].map(t => (
                   <div key={t} style={flex("center","flex-start",12)}>
