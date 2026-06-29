@@ -266,7 +266,7 @@ export default function BillingPage() {
         <div style={{ fontSize:48, marginBottom:16 }}>🔌</div>
         <h2 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 10px" }}>Independent SMM Panel Mode</h2>
         <p style={{ fontSize:14, color:N.muted, margin:"0 0 24px", fontWeight:600 }}>
-          You are operating in developer mode. Your campaigns route through SMM panels you connect, using your own API credentials.
+          You are operating in developer mode. Your account has free unlimited access to the automated timing layer API controls.
         </p>
         <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:20, fontSize:13, fontWeight:800, color:N.accent, background:N.bg, boxShadow:N.inset }}>
           💎 FREE UNLIMITED LIFETIME ACCESS

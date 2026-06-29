@@ -13,28 +13,28 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "YoyoSMM — Organic Delivery Engine for SMM Panels",
+  title: "YoyoSMM — Organic Pacing SMM Panel",
   description:
-    "Connect any SMM panel API. Organic growth with human-like timing across Instagram, YouTube, TikTok. Multi-panel failover, peak-hour scheduling, 1-day free trial.",
+    "Premium SMM panel with built-in organic timing schedules. Grow naturally on Instagram, YouTube, and TikTok with human-like pacing curves.",
   keywords: [
     "SMM panel", "organic delivery", "Instagram views", "TikTok views",
-    "YouTube views", "SMM automation", "panel failover", "yoyosmm"
+    "YouTube views", "SMM automation", "organic pacing", "yoyosmm"
   ],
   authors: [{ name: "YoyoSMM" }],
   metadataBase: new URL("https://www.yoyosmm.online"),
   openGraph: {
-    title: "YoyoSMM — Organic Delivery Engine for SMM Panels",
-    description: "Connect any SMM panel API. Organic growth with human-like timing.",
+    title: "YoyoSMM — Organic Pacing SMM Panel",
+    description: "Premium SMM panel with built-in organic timing schedules.",
     url: "https://www.yoyosmm.online",
     siteName: "YoyoSMM",
     locale: "en_US",
     type: "website",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "YoyoSMM - Organic Delivery Engine" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "YoyoSMM - Organic Pacing SMM Panel" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "YoyoSMM — Organic Delivery Engine for SMM Panels",
-    description: "Connect any SMM panel API. Organic growth with human-like timing.",
+    title: "YoyoSMM — Organic Pacing SMM Panel",
+    description: "Premium SMM panel with built-in organic timing schedules.",
     creator: "@YoyoSMM",
   },
   robots: {

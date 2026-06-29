@@ -83,8 +83,8 @@ export default function OrganicDeliveryPage() {
 
           <section className="p-8 rounded-2xl text-center" style={{ background: N.bg, boxShadow: N.raised }}>
             <h3 className="text-2xl font-black mb-4" style={{ color: N.text }}>Ready to Deliver Organic Growth?</h3>
-            <p className="text-lg mb-6 font-medium" style={{ color: N.muted }}>Connect your SMM panel and let organic curves spread SMM delivery across natural traffic windows.</p>
-            <Link href="/signup" className="inline-block px-8 py-3 rounded-xl font-bold text-white no-underline neo-btn" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Get started — $20 lifetime →</Link>
+            <p className="text-lg mb-6 font-medium" style={{ color: N.muted }}>Utilize our premium timing engine to pace your campaigns organically across active traffic windows.</p>
+            <Link href="/signup" className="inline-block px-8 py-3 rounded-xl font-bold text-white no-underline neo-btn" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Get started now →</Link>
           </section>
         </div>
       </div>

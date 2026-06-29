@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ padding:"4px 6px 8px", fontSize:10, fontWeight:800, color:N.faint, textTransform:"uppercase", letterSpacing:"0.1em" }}>
             Navigation
           </div>
-          {NAV.map(({ href, label, icon }) => {
+          {NAV.filter(item => !(walletMode && item.href === "/panels")).map(({ href, label, icon }) => {
             const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
             return (
               <Link key={href} href={href} onClick={() => setSidebarOpen(false)}

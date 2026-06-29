@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
   } else {
     if (dbUser.panels.length === 0) {
-      return NextResponse.json({ error: "Connect at least one SMM panel before placing an order." }, { status: 400 });
+      return NextResponse.json({ error: "Connect at least one active delivery provider on the Panels page before placing an order." }, { status: 400 });
     }
     primaryPanel = dbUser.panels[0];
   }

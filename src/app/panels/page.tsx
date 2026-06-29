@@ -101,6 +101,7 @@ function ServiceIdConfig({ svcIds, onChange }: { svcIds: ServiceIds; onChange:(s
 export default function PanelsPage() {
   const [panels, setPanels] = useState<Panel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [walletMode, setWalletMode] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editPanel, setEditPanel] = useState<Panel | null>(null);
   const [form, setForm] = useState<PanelFormData>(DEFAULT_FORM);
@@ -150,12 +151,27 @@ export default function PanelsPage() {
   };
 
   useEffect(() => {
-    fetchPanels().then((loaded) => {
-      if (loaded && loaded.length > 0) {
-        // Run health check in background after loading
-        setTimeout(checkHealth, 500);
-      }
-    });
+    fetch("/api/billing/status")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.walletMode) {
+          setWalletMode(true);
+          setLoading(false);
+        } else {
+          fetchPanels().then((loaded) => {
+            if (loaded && loaded.length > 0) {
+              setTimeout(checkHealth, 500);
+            }
+          });
+        }
+      })
+      .catch(() => {
+        fetchPanels().then((loaded) => {
+          if (loaded && loaded.length > 0) {
+            setTimeout(checkHealth, 500);
+          }
+        });
+      });
   }, []);
 
   const openAdd = () => { setEditPanel(null); setForm(DEFAULT_FORM); setTestResult(null); setError(""); setShowForm(true); };
@@ -186,6 +202,23 @@ export default function PanelsPage() {
     await fetch(`/api/panels/${id}`, { method:"DELETE" });
     fetchPanels();
   };
+
+  if (walletMode) {
+    return (
+      <div style={{ borderRadius:24, padding:40, background:N.bg, boxShadow:N.raised, textAlign:"center", maxWidth:640, margin:"40px auto", display:"flex", flexDirection:"column", alignItems:"center", gap:16, animation:"fadeUp 0.4s ease-out" }}>
+        <style>{`
+          @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        `}</style>
+        <span style={{ fontSize:48 }}>🛡️</span>
+        <h2 style={{ fontSize:20, fontWeight:900, color:N.text, margin:0, letterSpacing:"-0.5px" }}>Automated Pacing Infrastructure</h2>
+        <p style={{ fontSize:13, color:N.muted, fontWeight:600, lineHeight:1.5, margin:0 }}>
+          Your account is operating in Wallet Mode. You do not need to configure or connect SMM panels.
+          All orders are automatically pacing through our premium timing network and fail-safe delivery nodes.
+          Your charges are calculated per order and deducted directly from your wallet balance.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth:860, display:"flex", flexDirection:"column", gap:24 }}>
