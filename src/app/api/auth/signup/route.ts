@@ -48,8 +48,11 @@ export async function POST(request: NextRequest) {
         name,
         plan: "TRIAL",
         trialEndsAt,
+        walletMode: true,
+        balance: 0.0,
       },
     });
+
 
     return NextResponse.json({
       success: true,

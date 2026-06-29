@@ -68,8 +68,58 @@ export async function POST(request: NextRequest) {
     include: { panels: { where: { isActive: true }, orderBy: { priority: "asc" }, take: 1 } },
   });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (dbUser.panels.length === 0) {
-    return NextResponse.json({ error: "Connect at least one SMM panel before placing an order." }, { status: 400 });
+
+  let primaryPanel: any = null;
+  let totalPrice = 0.0;
+  const isWalletUser = dbUser.walletMode;
+
+  // Calculate engagement targets from ratios (or use submitted values)
+  const engTargets = engagementEnabled
+    ? (bodyLikes !== undefined
+        ? { likesTarget: bodyLikes, savesTarget: bodySaves, sharesTarget: bodyShares, commentsTarget: bodyComments }
+        : calculateEngagementTargets(views, likesRatioPct, savesRatioPct, sharesRatioPct, commentsRatioPct)
+      )
+    : { likesTarget: 0, savesTarget: 0, sharesTarget: 0, commentsTarget: 0 };
+
+  if (isWalletUser) {
+    // 1. Fetch active admin panel
+    const adminPanel = await prisma.panel.findFirst({
+      where: { userId: null, isActive: true },
+      orderBy: { priority: "asc" },
+    });
+    if (!adminPanel) {
+      return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
+    }
+    primaryPanel = adminPanel;
+
+    // 2. Fetch admin services custom rates
+    const adminServices = await prisma.adminService.findMany({
+      where: { panelId: adminPanel.id, platform: (platform as string).toUpperCase() as any },
+    });
+
+    const getRate = (type: string, fallback: number) => {
+      const s = adminServices.find(x => x.type === type);
+      return s ? s.customRate : fallback;
+    };
+
+    const viewsCost = (views / 1000) * getRate("views", 3.0);
+    const likesCost = (engTargets.likesTarget / 1000) * getRate("likes", 5.0);
+    const savesCost = (engTargets.savesTarget / 1000) * getRate("saves", 5.0);
+    const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
+    const commentsCost = (engTargets.commentsTarget / 1000) * getRate("comments", 15.0);
+
+    totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost).toFixed(2));
+
+    if (dbUser.balance < totalPrice) {
+      return NextResponse.json({
+        error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your balance is ₹${dbUser.balance.toFixed(2)}.`
+      }, { status: 400 });
+    }
+  } else {
+    if (dbUser.panels.length === 0) {
+      return NextResponse.json({ error: "Connect at least one SMM panel before placing an order." }, { status: 400 });
+    }
+    primaryPanel = dbUser.panels[0];
   }
 
   const allowed = await checkRateLimit(dbUser.id, 50);
@@ -104,14 +154,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Calculate engagement targets from ratios (or use submitted values)
-  const engTargets = engagementEnabled
-    ? (bodyLikes !== undefined
-        ? { likesTarget: bodyLikes, savesTarget: bodySaves, sharesTarget: bodyShares, commentsTarget: bodyComments }
-        : calculateEngagementTargets(views, likesRatioPct, savesRatioPct, sharesRatioPct, commentsRatioPct)
-      )
-    : { likesTarget: 0, savesTarget: 0, sharesTarget: 0, commentsTarget: 0 };
-
   // Upsert reel
   const reelId = `${dbUser.id}:${Buffer.from(reelUrl).toString("base64").slice(0, 20)}`;
   const reel = await prisma.reel.upsert({
@@ -126,33 +168,41 @@ export async function POST(request: NextRequest) {
   const curveStyle = ((styleRaw as string | undefined)?.toUpperCase() ?? "ORGANIC") as "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
   const defDuration = curveStyle === "AGGRESSIVE" ? 6 : curveStyle === "FAST" ? 12 : 24;
 
-  // Create order with full engagement config
-  const order = await prisma.order.create({
-    data: {
-      userId: dbUser.id,
-      reelId: reel.id,
-      panelId: dbUser.panels[0].id,
-      viewsTarget: views,
-      viewsRemaining: views,
-      curveStyle,
-      durationHours: durationHours ?? defDuration,
-      warmupHours: warmupHours ?? 4,
-      peakHours: peakHours ?? 8,
-      decayHours: decayHours ?? 12,
-      // Engagement
-      engagementEnabled,
-      likesRatioPct: engagementEnabled ? likesRatioPct : 0,
-      savesRatioPct: engagementEnabled ? savesRatioPct : 0,
-      sharesRatioPct: engagementEnabled ? sharesRatioPct : 0,
-      commentsRatioPct: engagementEnabled ? commentsRatioPct : 0,
-      ...engTargets,
-      status: "PENDING",
-    },
+  const order = await prisma.$transaction(async (tx) => {
+    if (isWalletUser) {
+      await tx.user.update({
+        where: { id: dbUser.id },
+        data: { balance: { decrement: totalPrice } },
+      });
+    }
+
+    return tx.order.create({
+      data: {
+        userId: dbUser.id,
+        reelId: reel.id,
+        panelId: primaryPanel.id,
+        viewsTarget: views,
+        viewsRemaining: views,
+        curveStyle,
+        durationHours: durationHours ?? defDuration,
+        warmupHours: warmupHours ?? 4,
+        peakHours: peakHours ?? 8,
+        decayHours: decayHours ?? 12,
+        // Engagement
+        engagementEnabled,
+        likesRatioPct: engagementEnabled ? likesRatioPct : 0,
+        savesRatioPct: engagementEnabled ? savesRatioPct : 0,
+        sharesRatioPct: engagementEnabled ? sharesRatioPct : 0,
+        commentsRatioPct: engagementEnabled ? commentsRatioPct : 0,
+        ...engTargets,
+        status: "PENDING",
+        priceCharged: totalPrice,
+      },
+    });
   });
 
   if (Array.isArray(customSchedule) && customSchedule.length > 0) {
     const now = new Date();
-    const primaryPanel = dbUser.panels[0];
     
     // Sort customSchedule by scheduledTime (or hour) to make sure events are ordered chronologically
     const sortedSchedule = [...customSchedule].sort((a, b) => {
@@ -218,3 +268,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ orderId: order.id, order, message: "Order created and delivery scheduled!" }, { status: 201 });
 }
+

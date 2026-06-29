@@ -13,14 +13,59 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { txHash, network } = await request.json() as { txHash: string; network: "TRC20" | "BEP20" };
+  const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
+  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const body = await request.json();
+
+  if (dbUser.walletMode) {
+    const { utr, amount } = body as { utr: string; amount: number };
+    if (!utr || !amount) {
+      return NextResponse.json({ error: "UTR and amount are required" }, { status: 400 });
+    }
+    const cleanUtr = utr.trim();
+    if (cleanUtr.length < 6) {
+      return NextResponse.json({ error: "Invalid UTR number" }, { status: 400 });
+    }
+    if (isNaN(amount) || amount <= 0) {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    }
+
+    const settings = await prisma.adminSettings.findUnique({ where: { id: "global" } });
+    const minDeposit = settings?.minDeposit ?? 500.0;
+    if (amount < minDeposit) {
+      return NextResponse.json({ error: `Minimum deposit is ₹${minDeposit}` }, { status: 400 });
+    }
+
+    // Check duplicate UTR
+    const existing = await prisma.upiPayment.findUnique({ where: { utr: cleanUtr } });
+    if (existing) {
+      return NextResponse.json({ error: "This UTR number has already been submitted" }, { status: 409 });
+    }
+
+    // Save pending UPI payment
+    const payment = await prisma.upiPayment.create({
+      data: {
+        userId: dbUser.id,
+        utr: cleanUtr,
+        amount: parseFloat(amount.toFixed(2)),
+        status: "PENDING",
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: "✅ UTR submitted successfully! Admin will verify and credit your balance within 10-15 minutes.",
+      payment,
+    });
+  }
+
+  // Legacy $20 Crypto Upgrade system for old users
+  const { txHash, network } = body as { txHash: string; network: "TRC20" | "BEP20" };
   if (!txHash || !network) return NextResponse.json({ error: "txHash and network required" }, { status: 400 });
   if (!["TRC20", "BEP20"].includes(network)) return NextResponse.json({ error: "network must be TRC20 or BEP20" }, { status: 400 });
 
   const cleanTxHash = txHash.trim();
-
-  const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
-  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   // Check if already paid
   if (dbUser.lifetimeUnlocked) {
@@ -33,6 +78,7 @@ export async function POST(request: NextRequest) {
 
   // Get admin wallet address
   const settings = await prisma.adminSettings.findUnique({ where: { id: "global" } });
+
   if (!settings) return NextResponse.json({ error: "Payment not configured. Contact support." }, { status: 503 });
 
   const walletAddress = network === "TRC20" ? settings.trc20Address : settings.bep20Address;

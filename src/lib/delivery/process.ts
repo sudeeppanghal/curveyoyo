@@ -17,7 +17,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   const event = await prisma.deliveryEvent.findUnique({
     where: { id: eventId },
     include: {
-      order: { include: { reel: true } },
+      order: { include: { reel: true, user: true } },
       panel: true,
     },
   });
@@ -61,8 +61,14 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
     });
 
+    const isWallet = order.user.walletMode;
     const failover = await prisma.panel.findFirst({
-      where: { userId: order.userId, isActive: true, id: { not: panel.id }, status: { not: "OFFLINE" } },
+      where: {
+        userId: isWallet ? null : order.userId,
+        isActive: true,
+        id: { not: panel.id },
+        status: { not: "OFFLINE" }
+      },
       orderBy: { priority: "asc" },
     });
 

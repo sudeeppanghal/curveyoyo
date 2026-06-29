@@ -8,19 +8,32 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [dbUser, settings] = await Promise.all([
-    prisma.user.findUnique({ where: { supabaseId: user.id }, include: { cryptoPayments: { orderBy: { createdAt: "desc" }, take: 5 } } }),
+  const dbUser = await prisma.user.findUnique({
+    where: { supabaseId: user.id },
+  });
+  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const [settings, payments] = await Promise.all([
     prisma.adminSettings.findUnique({ where: { id: "global" } }),
+    dbUser.walletMode
+      ? prisma.upiPayment.findMany({ where: { userId: dbUser.id }, orderBy: { createdAt: "desc" }, take: 10 })
+      : prisma.cryptoPayment.findMany({ where: { userId: dbUser.id }, orderBy: { createdAt: "desc" }, take: 5 }),
   ]);
 
   return NextResponse.json({
-    plan: dbUser?.plan ?? "FREE",
-    lifetimeUnlocked: dbUser?.lifetimeUnlocked ?? false,
-    payments: dbUser?.cryptoPayments ?? [],
+    plan: dbUser.plan,
+    lifetimeUnlocked: dbUser.lifetimeUnlocked,
+    walletMode: dbUser.walletMode,
+    balance: dbUser.balance,
+    payments,
     wallet: {
       trc20: settings?.trc20Address ?? null,
       bep20: settings?.bep20Address ?? null,
       priceUsdt: settings?.priceUsdt ?? 20,
+      upiId: settings?.upiId ?? null,
+      upiQrCode: settings?.upiQrCode ?? null,
+      minDeposit: settings?.minDeposit ?? 500.0,
     },
   });
 }
+

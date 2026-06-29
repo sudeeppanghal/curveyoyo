@@ -124,3 +124,44 @@ export async function getPanelBalance(
     return { ok: false };
   }
 }
+
+export interface PanelServiceItem {
+  service: string;
+  name: string;
+  type: string;
+  category: string;
+  rate: string; // Rate per 1000
+  min: string;
+  max: string;
+}
+
+/**
+ * Fetch list of services from SMM panel.
+ */
+export async function getPanelServices(
+  apiUrl: string,
+  apiKeyEncrypted: string
+): Promise<{ ok: boolean; services?: PanelServiceItem[]; error?: string }> {
+  const apiKey = decrypt(apiKeyEncrypted);
+  try {
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ key: apiKey, action: "services" }).toString(),
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const text = await res.text();
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) {
+      return { ok: true, services: data as PanelServiceItem[] };
+    }
+    if (data && typeof data === "object" && data.error) {
+      return { ok: false, error: String(data.error) };
+    }
+    return { ok: false, error: "Invalid response format" };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+

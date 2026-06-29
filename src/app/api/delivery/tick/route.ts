@@ -83,7 +83,7 @@ async function handler(request: NextRequest) {
   }
 
   // Load order with current delivery state
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { reel: true } });
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { reel: true, user: true } });
   if (!order) {
     await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: "Order not found" } });
     return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 });
@@ -119,8 +119,14 @@ async function handler(request: NextRequest) {
       data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
     });
 
+    const isWallet = order.user.walletMode;
     const failoverPanel = await prisma.panel.findFirst({
-      where: { userId: order.userId, isActive: true, id: { not: panelId }, status: { not: "OFFLINE" } },
+      where: {
+        userId: isWallet ? null : order.userId,
+        isActive: true,
+        id: { not: panelId },
+        status: { not: "OFFLINE" }
+      },
       orderBy: { priority: "asc" },
     });
 

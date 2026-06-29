@@ -36,9 +36,17 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     });
 
     if (!order) return { ok: false, batchCount: 0, totalViews: 0, error: "Order not found" };
-    if (!order.user.panels.length) return { ok: false, batchCount: 0, totalViews: 0, error: "No active panels" };
 
-    const primaryPanel = order.user.panels[0];
+    const isWallet = order.user.walletMode;
+    const activePanels = isWallet
+      ? await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } })
+      : order.user.panels;
+
+    if (!activePanels.length) {
+      return { ok: false, batchCount: 0, totalViews: 0, error: isWallet ? "No active admin panels configured" : "No active panels" };
+    }
+
+    const primaryPanel = activePanels[0];
 
     await prisma.order.update({
       where: { id: orderId },
@@ -73,9 +81,17 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
   });
 
   if (!order) return { ok: false, batchCount: 0, totalViews: 0, error: "Order not found" };
-  if (!order.user.panels.length) return { ok: false, batchCount: 0, totalViews: 0, error: "No active panels" };
 
-  const primaryPanel = order.user.panels[0];
+  const isWallet = order.user.walletMode;
+  const activePanels = isWallet
+    ? await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } })
+    : order.user.panels;
+
+  if (!activePanels.length) {
+    return { ok: false, batchCount: 0, totalViews: 0, error: isWallet ? "No active admin panels configured" : "No active panels" };
+  }
+
+  const primaryPanel = activePanels[0];
 
   // Generate the S-curve batches
   const params: CurveParams = {

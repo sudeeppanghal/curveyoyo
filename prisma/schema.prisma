@@ -23,6 +23,8 @@ model User {
   trialEndsAt     DateTime? @map("trial_ends_at")
   lifetimeUnlocked Boolean @default(false) @map("lifetime_unlocked")
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  walletMode       Boolean  @default(false) @map("wallet_mode")
+  balance          Float    @default(0.0)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -34,6 +36,7 @@ model User {
   cryptoPayments  CryptoPayment[]
   serviceConfigs  ServiceConfig[]
   curveTemplates  CurveTemplate[]
+  upiPayments     UpiPayment[]
 
   @@map("users")
 }
@@ -48,8 +51,8 @@ enum Plan {
 // ─────────────── SMM PANEL ───────────────────────────────────
 model Panel {
   id              String   @id @default(cuid())
-  userId          String   @map("user_id")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String?  @map("user_id")
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name            String
   apiUrl          String   @map("api_url")
@@ -74,6 +77,7 @@ model Panel {
   orders          Order[]
   deliveryEvents  DeliveryEvent[]
   serviceConfigs  ServiceConfig[]
+  adminServices   AdminService[]
 
   @@map("panels")
 }
@@ -164,6 +168,7 @@ model Order {
   completedAt     DateTime? @map("completed_at")
   failReason      String?  @map("fail_reason")
 
+  priceCharged      Float    @default(0.0) @map("price_charged")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -268,6 +273,9 @@ model AdminSettings {
   maintenanceMode Boolean  @default(false) @map("maintenance_mode")
   freeTrialHours  Int      @default(24) @map("free_trial_hours")
   supportEmail    String?  @map("support_email")
+  upiId           String?  @map("upi_id")
+  upiQrCode       String?  @map("upi_qr_code")
+  minDeposit      Float    @default(500.0) @map("min_deposit")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("admin_settings")
@@ -343,6 +351,39 @@ model CurveTemplate {
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
   @@map("curve_templates")
+}
+
+// ─────────────── UPI PAYMENT ─────────────────────────────────
+model UpiPayment {
+  id             String        @id @default(cuid())
+  userId         String        @map("user_id")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  utr            String        @unique
+  amount         Float
+  status         PaymentStatus @default(PENDING)
+  rejectedReason String?       @map("rejected_reason")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@map("upi_payments")
+}
+
+// ─────────────── ADMIN SERVICE ───────────────────────────────
+model AdminService {
+  id           String   @id @default(cuid())
+  panelId      String   @map("panel_id")
+  panel        Panel    @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  platform     Platform
+  type         String   // "views", "likes", "saves", "shares", "comments"
+  serviceId    String   @map("service_id") // SMM service ID
+  originalRate Float    @map("original_rate") // rate per 1000 from SMM API
+  customRate   Float    @map("custom_rate") // custom rate per 1000 charged to user
+  name         String?  // name of service from SMM API for reference
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([panelId, platform, type])
+  @@map("admin_services")
 }
 
 

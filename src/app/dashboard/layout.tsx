@@ -43,6 +43,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [loggingOut, setLoggingOut]   = useState(false);
   const [isMobile, setIsMobile]       = useState(false);
   const [userName, setUserName]       = useState("U");
+  const [walletMode, setWalletMode]   = useState(false);
+  const [balance, setBalance]         = useState(0.0);
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 1024);
@@ -54,7 +56,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     createClient().auth.getUser().then(({ data: { user } }) => {
       if (user) setUserName((user.user_metadata?.name || user.email || "U")[0].toUpperCase());
     });
+
+    // Fetch wallet info
+    fetch("/api/billing/status")
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setWalletMode(!!data.walletMode);
+          setBalance(data.balance ?? 0.0);
+        }
+      })
+      .catch(() => {});
   }, []);
+
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -166,12 +180,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             boxShadow: N.inset,
             display:"flex", alignItems:"center", gap:8,
           }}>
-            <div style={{ width:28, height:28, borderRadius:8, background: "rgba(217, 119, 6, 0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, boxShadow:N.raisedSm }}>⚡</div>
+            <div style={{ width:28, height:28, borderRadius:8, background: walletMode ? "rgba(22, 163, 74, 0.12)" : "rgba(217, 119, 6, 0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, boxShadow:N.raisedSm }}>
+              {walletMode ? "₹" : "⚡"}
+            </div>
             <div>
-              <div style={{ fontSize:11, fontWeight:800, color:N.accent }}>Free Trial Active</div>
-              <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:700 }}>Upgrade → $20 lifetime</div>
+              <div style={{ fontSize:11, fontWeight:800, color: walletMode ? "#16a34a" : N.accent }}>
+                {walletMode ? `₹ ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "Free Trial Active"}
+              </div>
+              <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:700 }}>
+                {walletMode ? "Wallet Balance" : "Upgrade → $20 lifetime"}
+              </div>
             </div>
           </Link>
+
           <button onClick={handleLogout} disabled={loggingOut} className="neo-btn"
             style={{
               display:"flex", alignItems:"center", gap:10, width:"100%", padding:"9px 12px", borderRadius:12,

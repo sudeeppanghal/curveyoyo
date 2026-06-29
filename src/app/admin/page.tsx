@@ -11,6 +11,9 @@ interface AdminSettings {
   freeTrialHours: number;
   maintenanceMode: boolean;
   supportEmail: string | null;
+  upiId: string | null;
+  upiQrCode: string | null;
+  minDeposit: number;
 }
 
 interface User {
@@ -34,7 +37,7 @@ interface Payment {
   user: { email: string; name: string | null };
 }
 
-type AdminTab = "settings" | "users" | "payments" | "campaigns" | "system";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system";
 
 const N = {
   bg:       "#eef2f7",
@@ -68,6 +71,9 @@ export default function AdminPage() {
     freeTrialHours: 24,
     maintenanceMode: false,
     supportEmail: "",
+    upiId: "",
+    upiQrCode: "",
+    minDeposit: 500,
   });
   const [users, setUsers] = useState<User[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -83,6 +89,30 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [orderQuery, setOrderQuery] = useState("");
   const [orderFilter, setOrderFilter] = useState("All");
+
+  // New UPI Payments & Admin Panels States
+  const [upiPayments, setUpiPayments] = useState<any[]>([]);
+  const [adminPanels, setAdminPanels] = useState<any[]>([]);
+  const [selectedPanelId, setSelectedPanelId] = useState("");
+  const [liveServices, setLiveServices] = useState<any[]>([]);
+  const [savedServices, setSavedServices] = useState<any[]>([]);
+  const [fetchingServices, setFetchingServices] = useState(false);
+  const [savingService, setSavingService] = useState(false);
+
+  // New Panel fields
+  const [newPanelName, setNewPanelName] = useState("");
+  const [newPanelApiUrl, setNewPanelApiUrl] = useState("");
+  const [newPanelApiKey, setNewPanelApiKey] = useState("");
+  const [newPanelPriority, setNewPanelPriority] = useState("1");
+  const [newPanelLoadPercentage, setNewPanelLoadPercentage] = useState("100");
+
+  // Service Pricing fields
+  const [pricingPlatform, setPricingPlatform] = useState("INSTAGRAM");
+  const [pricingType, setPricingType] = useState("views");
+  const [pricingServiceId, setPricingServiceId] = useState("");
+  const [pricingOriginalRate, setPricingOriginalRate] = useState("");
+  const [pricingCustomRate, setPricingCustomRate] = useState("");
+  const [pricingName, setPricingName] = useState("");
 
   const headers = { "Content-Type": "application/json", "x-admin-secret": secret };
 
@@ -106,16 +136,30 @@ export default function AdminPage() {
       if (s.settings) setSettings(s.settings);
       setAuthed(true);
 
-      const [uRes, pRes, oRes, sysRes] = await Promise.all([
+      const [uRes, pRes, oRes, sysRes, upiRes, apRes] = await Promise.all([
         fetch("/api/admin/users",    { headers }),
         fetch("/api/admin/payments", { headers }),
         fetch("/api/admin/orders",   { headers }),
         fetch("/api/admin/system",   { headers }),
+        fetch("/api/admin/payments", { headers }), // will fetch UPI payments if we routing correctly, wait we create /api/admin/payments as GET
+        fetch("/api/admin/panels",   { headers }),
       ]);
       if (uRes.ok)   { const u = await uRes.json();   setUsers(u.users ?? []); }
       if (pRes.ok)   { const p = await pRes.json();   setPayments(p.payments ?? []); }
       if (oRes.ok)   { const o = await oRes.json();   setOrders(o.orders ?? []); }
       if (sysRes.ok) { const sys = await sysRes.json(); setSystemData(sys ?? { events: [], panels: [], orderStats: [], eventStats: [] }); }
+      
+      // Load UPI Payments
+      try {
+        const upiData = await upiRes.json();
+        if (upiData.payments) setUpiPayments(upiData.payments);
+      } catch (err) {}
+
+      // Load Admin Panels
+      try {
+        const apData = await apRes.json();
+        if (apData.panels) setAdminPanels(apData.panels);
+      } catch (err) {}
     } catch (e) {
       setError(`Network error: ${String(e)}`);
     }
@@ -152,6 +196,175 @@ export default function AdminPage() {
       setTimeout(() => setSaved(""), 2000);
     } else {
       setError("Save failed");
+    }
+  };
+
+  // UPI Deposits Tab Actions
+  const handleUpiAction = async (paymentId: string, action: "approve" | "reject", rejectedReason?: string) => {
+    setSaved("Processing…");
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ paymentId, action, rejectedReason }),
+      });
+      if (res.ok) {
+        setSaved(`Payment ${action === "approve" ? "Approved" : "Rejected"}!`);
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+      } else {
+        const errJson = await res.json();
+        setError(errJson.error ?? "Payment action failed");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  // Admin Panels Tab Actions
+  const handleAddPanel = async () => {
+    if (!newPanelName.trim() || !newPanelApiUrl.trim() || !newPanelApiKey.trim()) {
+      setError("Name, API URL, and API Key are required");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    setSaved("Adding panel…");
+    try {
+      const res = await fetch("/api/admin/panels", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: newPanelName.trim(),
+          apiUrl: newPanelApiUrl.trim(),
+          apiKey: newPanelApiKey.trim(),
+          priority: parseInt(newPanelPriority) || 1,
+          loadPercentage: parseInt(newPanelLoadPercentage) || 100,
+        }),
+      });
+      if (res.ok) {
+        setSaved("Admin SMM Panel added!");
+        setNewPanelName("");
+        setNewPanelApiUrl("");
+        setNewPanelApiKey("");
+        setNewPanelPriority("1");
+        setNewPanelLoadPercentage("100");
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+      } else {
+        const errJson = await res.json();
+        setError(errJson.error ?? "Failed to add panel");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  const handleDeletePanel = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this admin SMM panel?")) return;
+    setSaved("Deleting panel…");
+    try {
+      const res = await fetch(`/api/admin/panels?id=${id}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (res.ok) {
+        setSaved("Panel deleted!");
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+        if (selectedPanelId === id) {
+          setSelectedPanelId("");
+          setLiveServices([]);
+          setSavedServices([]);
+        }
+      } else {
+        setError("Failed to delete panel");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  const handleLoadServices = async (panelId: string) => {
+    setSelectedPanelId(panelId);
+    setFetchingServices(true);
+    setLiveServices([]);
+    setSavedServices([]);
+    try {
+      // Fetch live services from SMM API
+      const liveRes = await fetch(`/api/admin/services?action=fetch&panelId=${panelId}`, { headers });
+      if (liveRes.ok) {
+        const liveJson = await liveRes.json();
+        setLiveServices(liveJson.services ?? []);
+      } else {
+        const errJson = await liveRes.json();
+        setError(errJson.error ?? "Failed to load live services from SMM API");
+        setTimeout(() => setError(""), 4000);
+      }
+
+      // Fetch saved services config
+      const savedRes = await fetch(`/api/admin/services?panelId=${panelId}`, { headers });
+      if (savedRes.ok) {
+        const savedJson = await savedRes.json();
+        setSavedServices(savedJson.services ?? []);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setFetchingServices(false);
+    }
+  };
+
+  const handleSaveServicePrice = async () => {
+    if (!selectedPanelId || !pricingServiceId || !pricingCustomRate) {
+      setError("Please select a service and input custom price");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    setSavingService(true);
+    try {
+      const res = await fetch("/api/admin/services", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          panelId: selectedPanelId,
+          platform: pricingPlatform,
+          type: pricingType,
+          serviceId: pricingServiceId,
+          originalRate: parseFloat(pricingOriginalRate) || 0,
+          customRate: parseFloat(pricingCustomRate),
+          name: pricingName,
+        }),
+      });
+      if (res.ok) {
+        setSaved("Pricing configured successfully!");
+        setPricingServiceId("");
+        setPricingOriginalRate("");
+        setPricingCustomRate("");
+        setPricingName("");
+        setTimeout(() => setSaved(""), 2000);
+        // Refresh saved services config
+        const savedRes = await fetch(`/api/admin/services?panelId=${selectedPanelId}`, { headers });
+        if (savedRes.ok) {
+          const savedJson = await savedRes.json();
+          setSavedServices(savedJson.services ?? []);
+        }
+      } else {
+        const errJson = await res.json();
+        setError(errJson.error ?? "Failed to save pricing");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setSavingService(false);
     }
   };
 
@@ -392,11 +605,13 @@ export default function AdminPage() {
 
         {/* Tab switch bar */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
-          {(["settings", "users", "payments", "campaigns", "system"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system"] as AdminTab[]).map((t) => {
             const iconMap: Record<AdminTab, string> = {
               settings: "⚙️ ",
               users: "👥 ",
               payments: "💰 ",
+              upi_payments: "🇮🇳 ",
+              admin_panels: "🚀 ",
               campaigns: "📦 ",
               system: "⚡ "
             };
@@ -417,7 +632,7 @@ export default function AdminPage() {
                   gap: 6
                 }}>
                 <span>{iconMap[t]}</span>
-                <span style={{ textTransform: "capitalize" }}>{t}</span>
+                <span style={{ textTransform: "capitalize" }}>{t.replace("_", " ")}</span>
               </button>
             );
           })}
@@ -502,6 +717,69 @@ export default function AdminPage() {
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>📧 Support Email</label>
                   <input value={settings.supportEmail ?? ""} onChange={(e) => setSettings((p) => ({ ...p, supportEmail: e.target.value }))}
                     placeholder="support@yoyosmm.online"
+                    className="neo-input"
+                    style={{
+                      width: "100%",
+                      padding: "14px 18px",
+                      borderRadius: 12,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: N.text,
+                      background: N.bg,
+                      border: "none",
+                      boxShadow: N.inset,
+                      outline: "none",
+                      boxSizing: "border-box"
+                    }} />
+                </div>
+                <div style={{ borderTop: `1.5px solid ${N.border}`, paddingTop: 20 }}>
+                  <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>🇮🇳 UPI Wallet Settings</h2>
+                  <p style={{ color: N.muted, fontSize: 12, margin: "0 0 16px", fontWeight: 600 }}>Configuration for the manual UPI Deposit wallet system</p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>UPI ID / VPA</label>
+                    <input value={settings.upiId ?? ""} onChange={(e) => setSettings((p) => ({ ...p, upiId: e.target.value }))}
+                      placeholder="merchant@upi"
+                      className="neo-input"
+                      style={{
+                        width: "100%",
+                        padding: "14px 18px",
+                        borderRadius: 12,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: N.text,
+                        background: N.bg,
+                        border: "none",
+                        boxShadow: N.inset,
+                        outline: "none",
+                        boxSizing: "border-box"
+                      }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>UPI QR Code Image URL</label>
+                    <input value={settings.upiQrCode ?? ""} onChange={(e) => setSettings((p) => ({ ...p, upiQrCode: e.target.value }))}
+                      placeholder="https://imgur.com/myqrcode.png"
+                      className="neo-input"
+                      style={{
+                        width: "100%",
+                        padding: "14px 18px",
+                        borderRadius: 12,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: N.text,
+                        background: N.bg,
+                        border: "none",
+                        boxShadow: N.inset,
+                        outline: "none",
+                        boxSizing: "border-box"
+                      }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🪙 Minimum Deposit Amount (INR)</label>
+                  <input type="number" value={settings.minDeposit ?? 500} onChange={(e) => setSettings((p) => ({ ...p, minDeposit: parseFloat(e.target.value) || 0 }))}
+                    placeholder="500"
                     className="neo-input"
                     style={{
                       width: "100%",
@@ -660,6 +938,291 @@ export default function AdminPage() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── UPI PAYMENTS TAB ─── */}
+          {tab === "upi_payments" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>UPI Deposit Requests</h2>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Verify manual UPI payment deposits via UTR numbers submitted by users</p>
+              </div>
+              {upiPayments.length === 0 ? (
+                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No UPI deposit requests found</div>
+              ) : (
+                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                        {["User Email", "Amount (₹)", "UTR Number", "Status", "Date", "Actions"].map((h) => (
+                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {upiPayments.map((p) => {
+                        const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", REJECTED: "#dc2626" };
+                        return (
+                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: "#16a34a" }}>₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: N.accent }}>{p.utr}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <span style={{
+                                fontSize: 10,
+                                fontWeight: 850,
+                                padding: "4px 8px",
+                                borderRadius: 6,
+                                background: statusColors[p.status] + "1A",
+                                color: statusColors[p.status]
+                              }}>{p.status}</span>
+                            </td>
+                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleString()}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              {p.status === "PENDING" ? (
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button onClick={() => handleUpiAction(p.id, "approve")} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 850, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                    ✓ Approve
+                                  </button>
+                                  <button onClick={() => {
+                                    const reason = prompt("Enter rejection reason:", "Invalid UTR number");
+                                    if (reason !== null) handleUpiAction(p.id, "reject", reason);
+                                  }} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 850, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                    ✗ Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>No actions</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── ADMIN SMM PANELS TAB ─── */}
+          {tab === "admin_panels" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+              
+              {/* Section 1: Admin panels CRUD */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                  <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>🚀 SMM API Integrations (Admin-owned)</h2>
+                  <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>These panels process campaigns automatically for wallet-mode users</p>
+                </div>
+                
+                {/* Form to add admin panel */}
+                <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>➕ Add New SMM Panel API</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Panel Name</label>
+                      <input value={newPanelName} onChange={e => setNewPanelName(e.target.value)} placeholder="e.g. BulkSMM"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API URL</label>
+                      <input value={newPanelApiUrl} onChange={e => setNewPanelApiUrl(e.target.value)} placeholder="e.g. https://bulksmm.com/api/v2"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.4fr 0.4fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API Key / Token</label>
+                      <input type="password" value={newPanelApiKey} onChange={e => setNewPanelApiKey(e.target.value)} placeholder="Enter API Key"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Priority (1-10)</label>
+                      <input type="number" value={newPanelPriority} onChange={e => setNewPanelPriority(e.target.value)} placeholder="1"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Load %</label>
+                      <input type="number" value={newPanelLoadPercentage} onChange={e => setNewPanelLoadPercentage(e.target.value)} placeholder="100"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                  </div>
+                  <button onClick={handleAddPanel} className="neo-btn"
+                    style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer" }}>
+                    Connect SMM Panel
+                  </button>
+                </div>
+
+                {/* SMM Panels List */}
+                {adminPanels.length === 0 ? (
+                  <div style={{ padding: "20px 0", textAlign: "center", color: N.muted, fontSize: 12, fontWeight: 700 }}>No admin SMM panels connected yet</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                          {["Name", "API URL", "Priority", "Load %", "Status", "Actions"].map((h) => (
+                            <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminPanels.map((p) => (
+                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.name}</td>
+                            <td style={{ padding: "12px 16px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.priority}</td>
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.loadPercentage}%</td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: p.status === "ONLINE" ? "rgba(22,163,74,0.08)" : "rgba(113,128,150,0.08)", color: p.status === "ONLINE" ? "#16a34a" : N.muted }}>
+                                {p.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <div style={{ display: "flex", gap: 10 }}>
+                                <button onClick={() => handleLoadServices(p.id)} className="neo-btn"
+                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                  ⚙️ Configure Pricing
+                                </button>
+                                <button onClick={() => handleDeletePanel(p.id)} className="neo-btn"
+                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                  ✗ Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 2: Services configurations */}
+              {selectedPanelId && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20, borderTop: `1.5px solid ${N.border}`, paddingTop: 24 }}>
+                  <div>
+                    <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>
+                      Configure Custom Pricing for: <strong style={{ color: N.accent }}>{adminPanels.find(p => p.id === selectedPanelId)?.name}</strong>
+                    </h2>
+                    <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Map SMM Panel service IDs to user delivery types and define markup rates</p>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
+                    
+                    {/* Left Panel: Pricing configuration form */}
+                    <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>⚙️ Set Service Price</p>
+                      
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>1. Select Platform</label>
+                        <select value={pricingPlatform} onChange={e => setPricingPlatform(e.target.value)}
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}>
+                          <option value="INSTAGRAM">Instagram</option>
+                          <option value="TIKTOK">TikTok</option>
+                          <option value="YOUTUBE">YouTube</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>2. Select Action Type</label>
+                        <select value={pricingType} onChange={e => setPricingType(e.target.value)}
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}>
+                          <option value="views">Views</option>
+                          <option value="likes">Likes</option>
+                          <option value="saves">Saves</option>
+                          <option value="shares">Shares</option>
+                          <option value="comments">Comments</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>3. Choose SMM Service ID &amp; Original Rate (from SMM API)</label>
+                        {fetchingServices ? (
+                          <p style={{ fontSize:12, color:N.muted, margin: "6px 0", fontWeight:600 }}>Loading services list from API…</p>
+                        ) : liveServices.length === 0 ? (
+                          <div style={{ display: "flex", gap: 10 }}>
+                            <input value={pricingServiceId} onChange={e => setPricingServiceId(e.target.value)} placeholder="e.g. 1042"
+                              style={{ flex:1, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                            <input type="number" step="0.01" value={pricingOriginalRate} onChange={e => setPricingOriginalRate(e.target.value)} placeholder="Rate per 1k"
+                              style={{ width: 110, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                          </div>
+                        ) : (
+                          <select value={pricingServiceId} onChange={e => {
+                            const val = e.target.value;
+                            setPricingServiceId(val);
+                            const selected = liveServices.find(s => String(s.service) === val);
+                            if (selected) {
+                              setPricingOriginalRate(selected.rate);
+                              setPricingName(selected.name ?? "");
+                            }
+                          }}
+                            style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                            <option value="">-- Select Service from API --</option>
+                            {liveServices.map(s => (
+                              <option key={s.service} value={s.service}>
+                                #{s.service} - {s.name?.slice(0, 50)} (Cost: ${s.rate}/1k)
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      {pricingOriginalRate && (
+                        <p style={{ fontSize: 11, color: N.muted, margin: 0, fontWeight: 700 }}>
+                          SMM Base Rate: <strong style={{ color: N.text }}>${pricingOriginalRate} per 1,000</strong>
+                          <span style={{ marginLeft: 8, color: "#16a34a" }}>
+                            (~ ₹{(parseFloat(pricingOriginalRate) * 83).toFixed(2)} per 1,000)
+                          </span>
+                        </p>
+                      )}
+
+
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>4. Set Custom Markup Rate Charged to Users (INR per 1,000)</label>
+                        <input type="number" step="0.1" placeholder="e.g. 2.0" value={pricingCustomRate} onChange={e => setPricingCustomRate(e.target.value)}
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, fontWeight: 800 }} />
+                      </div>
+
+                      <button onClick={handleSaveServicePrice} disabled={savingService} className="neo-btn"
+                        style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer", opacity: savingService ? 0.5 : 1 }}>
+                        {savingService ? "Saving configuration…" : "Save Custom Pricing"}
+                      </button>
+                    </div>
+
+                    {/* Right Panel: Currently saved pricing list */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.muted }}>Currently Configured Markup Prices</p>
+                      
+                      {savedServices.length === 0 ? (
+                        <div style={{ padding: "32px", textAlign: "center", border: `1.5px dashed ${N.border}`, borderRadius: 16, color: N.muted, fontSize: 12, fontWeight: 700 }}>
+                          No custom pricing configured for this panel yet.<br/><span style={{ fontSize: 11 }}>Setup pricing to let wallet users order.</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 420, overflowY: "auto" }}>
+                          {savedServices.map(s => (
+                            <div key={s.id} style={{ padding: 12, borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div>
+                                <span style={{ fontSize: 10, fontWeight: 850, padding: "2px 6px", borderRadius: 4, background: "rgba(168,85,247,0.08)", color: "#a855f7", textTransform: "uppercase" }}>{s.platform}</span>
+                                <span style={{ fontSize: 10, fontWeight: 850, padding: "2px 6px", borderRadius: 4, background: "rgba(217,70,239,0.08)", color: "#d946ef", textTransform: "uppercase", marginLeft: 6 }}>{s.type}</span>
+                                <p style={{ fontSize: 11, color: N.muted, margin: "4px 0 0" }}>Service ID: #{s.serviceId} {s.name ? `(${s.name.slice(0, 25)}…)` : ""}</p>
+                                <p style={{ fontSize: 10, color: N.muted, margin: "2px 0 0" }}>Base Cost: ${s.originalRate}/1k</p>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <span style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>₹ {s.customRate}/1k</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

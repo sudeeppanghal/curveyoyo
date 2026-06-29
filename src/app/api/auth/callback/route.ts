@@ -32,8 +32,11 @@ export async function GET(request: Request) {
               name: user.user_metadata?.name || user.email?.split("@")[0] || "User",
               plan: "TRIAL",
               trialEndsAt,
+              walletMode: true,
+              balance: 0.0,
             }
           });
+
         }
       }
 
