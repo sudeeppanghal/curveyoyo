@@ -1,1434 +1,1495 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-
-interface AdminSettings {
-  trc20Address: string | null;
-  bep20Address: string | null;
-  priceUsdt: number;
-  siteName: string;
-  freeTrialHours: number;
-  maintenanceMode: boolean;
-  supportEmail: string | null;
-  upiId: string | null;
-  upiQrCode: string | null;
-  minDeposit: number;
-}
-
-interface User {
-  id: string;
-  email: string;
-  name: string | null;
-  plan: string;
-  createdAt: string;
-  lifetimeUnlocked: boolean;
-  _count: { orders: number; panels: number };
-  subscription: { status: string; paidAt: string } | null;
-}
-
-interface Payment {
-  id: string;
-  txHash: string;
-  network: string;
-  status: string;
-  amountUsdt: number | null;
-  createdAt: string;
-  user: { email: string; name: string | null };
-}
-
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system";
-
-const N = {
-  bg:       "#eef2f7",
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  accent:   "#d97706",
-  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
-  text:     "#2d3748",
-  muted:    "#718096",
-  border:   "rgba(200, 208, 231, 0.4)",
-};
-
-const PLAN_COLORS: Record<string, string> = {
-  FREE: "#718096",
-  TRIAL: "#4f46e5",
-  LIFETIME: "#16a34a",
-  SUSPENDED: "#dc2626",
-};
-
-export default function AdminPage() {
-  const router = useRouter();
-  const [secret, setSecret] = useState("");
-  const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<AdminTab>("settings");
-  const [settings, setSettings] = useState<AdminSettings>({
-    trc20Address: "",
-    bep20Address: "",
-    priceUsdt: 20,
-    siteName: "YoyoSMM",
-    freeTrialHours: 24,
-    maintenanceMode: false,
-    supportEmail: "",
-    upiId: "",
-    upiQrCode: "",
-    minDeposit: 500,
-  });
-  const [users, setUsers] = useState<User[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [systemData, setSystemData] = useState<{
-    events: any[];
-    panels: any[];
-    orderStats: { status: string; count: number }[];
-    eventStats: { status: string; count: number }[];
-  }>({ events: [], panels: [], orderStats: [], eventStats: [] });
-  const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState("");
-  const [error, setError] = useState("");
-  const [orderQuery, setOrderQuery] = useState("");
-  const [orderFilter, setOrderFilter] = useState("All");
-
-  // New UPI Payments & Admin Panels States
-  const [upiPayments, setUpiPayments] = useState<any[]>([]);
-  const [adminPanels, setAdminPanels] = useState<any[]>([]);
-  const [selectedPanelId, setSelectedPanelId] = useState("");
-  const [liveServices, setLiveServices] = useState<any[]>([]);
-  const [savedServices, setSavedServices] = useState<any[]>([]);
-  const [fetchingServices, setFetchingServices] = useState(false);
-  const [savingService, setSavingService] = useState(false);
-
-  // New Panel fields
-  const [newPanelName, setNewPanelName] = useState("");
-  const [newPanelApiUrl, setNewPanelApiUrl] = useState("");
-  const [newPanelApiKey, setNewPanelApiKey] = useState("");
-  const [newPanelPriority, setNewPanelPriority] = useState("1");
-  const [newPanelLoadPercentage, setNewPanelLoadPercentage] = useState("100");
-
-  // Service Pricing fields
-  const [pricingPlatform, setPricingPlatform] = useState("INSTAGRAM");
-  const [pricingType, setPricingType] = useState("views");
-  const [pricingServiceId, setPricingServiceId] = useState("");
-  const [pricingOriginalRate, setPricingOriginalRate] = useState("");
-  const [pricingCustomRate, setPricingCustomRate] = useState("");
-  const [pricingName, setPricingName] = useState("");
-
-  const headers = { "Content-Type": "application/json", "x-admin-secret": secret };
-
-  const loadAll = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const sRes = await fetch("/api/admin/settings", { headers });
-      if (sRes.status === 403) {
-        setError("Wrong admin secret");
-        setAuthed(false);
-        setLoading(false);
-        return;
-      }
-      if (!sRes.ok) {
-        setError(`Server error ${sRes.status} — check DATABASE_URL in Vercel env vars`);
-        setLoading(false);
-        return;
-      }
-      const s = await sRes.json();
-      if (s.settings) setSettings(s.settings);
-      setAuthed(true);
-
-      const [uRes, pRes, oRes, sysRes, upiRes, apRes] = await Promise.all([
-        fetch("/api/admin/users",    { headers }),
-        fetch("/api/admin/payments", { headers }),
-        fetch("/api/admin/orders",   { headers }),
-        fetch("/api/admin/system",   { headers }),
-        fetch("/api/admin/payments", { headers }), // will fetch UPI payments if we routing correctly, wait we create /api/admin/payments as GET
-        fetch("/api/admin/panels",   { headers }),
-      ]);
-      if (uRes.ok)   { const u = await uRes.json();   setUsers(u.users ?? []); }
-      if (pRes.ok)   { const p = await pRes.json();   setPayments(p.payments ?? []); }
-      if (oRes.ok)   { const o = await oRes.json();   setOrders(o.orders ?? []); }
-      if (sysRes.ok) { const sys = await sysRes.json(); setSystemData(sys ?? { events: [], panels: [], orderStats: [], eventStats: [] }); }
-      
-      // Load UPI Payments
-      try {
-        const upiData = await upiRes.json();
-        if (upiData.payments) setUpiPayments(upiData.payments);
-      } catch (err) {}
-
-      // Load Admin Panels
-      try {
-        const apData = await apRes.json();
-        if (apData.panels) setAdminPanels(apData.panels);
-      } catch (err) {}
-    } catch (e) {
-      setError(`Network error: ${String(e)}`);
-    }
-    setLoading(false);
-  };
-
-  const handleCampaignAction = async (orderId: string, action: "pause" | "resume" | "cancel" | "refill") => {
-    setSaved("Processing…");
-    try {
-      const res = await fetch("/api/admin/orders", {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ orderId, action }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSaved(action === "refill" ? "Refill triggered!" : "Campaign updated!");
-        setTimeout(() => setSaved(""), 2000);
-        loadAll();
-      } else {
-        setError(data.error ?? "Action failed");
-        setTimeout(() => setError(""), 3000);
-      }
-    } catch (e) {
-      setError(String(e));
-      setTimeout(() => setError(""), 3000);
-    }
-  };
-
-  const saveSettings = async () => {
-    const res = await fetch("/api/admin/settings", { method: "PATCH", headers, body: JSON.stringify(settings) });
-    if (res.ok) {
-      setSaved("Saved!");
-      setTimeout(() => setSaved(""), 2000);
-    } else {
-      setError("Save failed");
-    }
-  };
-
-  // UPI Deposits Tab Actions
-  const handleUpiAction = async (paymentId: string, action: "approve" | "reject", rejectedReason?: string) => {
-    setSaved("Processing…");
-    try {
-      const res = await fetch("/api/admin/payments", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ paymentId, action, rejectedReason }),
-      });
-      if (res.ok) {
-        setSaved(`Payment ${action === "approve" ? "Approved" : "Rejected"}!`);
-        setTimeout(() => setSaved(""), 2000);
-        loadAll();
-      } else {
-        const errJson = await res.json();
-        setError(errJson.error ?? "Payment action failed");
-        setTimeout(() => setError(""), 3000);
-      }
-    } catch (e) {
-      setError(String(e));
-      setTimeout(() => setError(""), 3000);
-    }
-  };
-
-  // Admin Panels Tab Actions
-  const handleAddPanel = async () => {
-    if (!newPanelName.trim() || !newPanelApiUrl.trim() || !newPanelApiKey.trim()) {
-      setError("Name, API URL, and API Key are required");
-      setTimeout(() => setError(""), 3000);
-      return;
-    }
-    setSaved("Adding panel…");
-    try {
-      const res = await fetch("/api/admin/panels", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          name: newPanelName.trim(),
-          apiUrl: newPanelApiUrl.trim(),
-          apiKey: newPanelApiKey.trim(),
-          priority: parseInt(newPanelPriority) || 1,
-          loadPercentage: parseInt(newPanelLoadPercentage) || 100,
-        }),
-      });
-      if (res.ok) {
-        setSaved("Admin SMM Panel added!");
-        setNewPanelName("");
-        setNewPanelApiUrl("");
-        setNewPanelApiKey("");
-        setNewPanelPriority("1");
-        setNewPanelLoadPercentage("100");
-        setTimeout(() => setSaved(""), 2000);
-        loadAll();
-      } else {
-        const errJson = await res.json();
-        setError(errJson.error ?? "Failed to add panel");
-        setTimeout(() => setError(""), 3000);
-      }
-    } catch (e) {
-      setError(String(e));
-      setTimeout(() => setError(""), 3000);
-    }
-  };
-
-  const handleDeletePanel = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this admin SMM panel?")) return;
-    setSaved("Deleting panel…");
-    try {
-      const res = await fetch(`/api/admin/panels?id=${id}`, {
-        method: "DELETE",
-        headers,
-      });
-      if (res.ok) {
-        setSaved("Panel deleted!");
-        setTimeout(() => setSaved(""), 2000);
-        loadAll();
-        if (selectedPanelId === id) {
-          setSelectedPanelId("");
-          setLiveServices([]);
-          setSavedServices([]);
-        }
-      } else {
-        setError("Failed to delete panel");
-        setTimeout(() => setError(""), 3000);
-      }
-    } catch (e) {
-      setError(String(e));
-      setTimeout(() => setError(""), 3000);
-    }
-  };
-
-  const handleLoadServices = async (panelId: string) => {
-    setSelectedPanelId(panelId);
-    setFetchingServices(true);
-    setLiveServices([]);
-    setSavedServices([]);
-    try {
-      // Fetch live services from SMM API
-      const liveRes = await fetch(`/api/admin/services?action=fetch&panelId=${panelId}`, { headers });
-      if (liveRes.ok) {
-        const liveJson = await liveRes.json();
-        setLiveServices(liveJson.services ?? []);
-      } else {
-        const errJson = await liveRes.json();
-        setError(errJson.error ?? "Failed to load live services from SMM API");
-        setTimeout(() => setError(""), 4000);
-      }
-
-      // Fetch saved services config
-      const savedRes = await fetch(`/api/admin/services?panelId=${panelId}`, { headers });
-      if (savedRes.ok) {
-        const savedJson = await savedRes.json();
-        setSavedServices(savedJson.services ?? []);
-      }
-    } catch (e) {
-      setError(String(e));
-      setTimeout(() => setError(""), 3000);
-    } finally {
-      setFetchingServices(false);
-    }
-  };
-
-  const handleSaveServicePrice = async () => {
-    if (!selectedPanelId || !pricingServiceId || !pricingCustomRate) {
-      setError("Please select a service and input custom price");
-      setTimeout(() => setError(""), 3000);
-      return;
-    }
-    setSavingService(true);
-    try {
-      const res = await fetch("/api/admin/services", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          panelId: selectedPanelId,
-          platform: pricingPlatform,
-          type: pricingType,
-          serviceId: pricingServiceId,
-          originalRate: parseFloat(pricingOriginalRate) || 0,
-          customRate: parseFloat(pricingCustomRate),
-          name: pricingName,
-        }),
-      });
-      if (res.ok) {
-        setSaved("Pricing configured successfully!");
-        setPricingServiceId("");
-        setPricingOriginalRate("");
-        setPricingCustomRate("");
-        setPricingName("");
-        setTimeout(() => setSaved(""), 2000);
-        // Refresh saved services config
-        const savedRes = await fetch(`/api/admin/services?panelId=${selectedPanelId}`, { headers });
-        if (savedRes.ok) {
-          const savedJson = await savedRes.json();
-          setSavedServices(savedJson.services ?? []);
-        }
-      } else {
-        const errJson = await res.json();
-        setError(errJson.error ?? "Failed to save pricing");
-        setTimeout(() => setError(""), 3000);
-      }
-    } catch (e) {
-      setError(String(e));
-      setTimeout(() => setError(""), 3000);
-    } finally {
-      setSavingService(false);
-    }
-  };
-
-  const userAction = async (userId: string, action: "upgrade" | "suspend" | "unsuspend") => {
-    await fetch("/api/admin/users", { method: "PATCH", headers, body: JSON.stringify({ userId, action }) });
-    loadAll();
-  };
-
-  const impersonateUser = async (userId: string) => {
-    setSaved("Authenticating as user…");
-    try {
-      const res = await fetch("/api/admin/impersonate", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ userId }),
-      });
-      const data = await res.json();
-      if (res.ok && data.redirectTo) {
-        setSaved("Redirecting…");
-        window.location.href = data.redirectTo;
-      } else {
-        setError(data.error ?? "Failed to impersonate");
-        setTimeout(() => setError(""), 3000);
-      }
-    } catch (e) {
-      setError(String(e));
-      setTimeout(() => setError(""), 3000);
-    }
-  };
-
-  // Auth Screen REDESIGNED
-  if (!authed) return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: N.bg,
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      padding: "16px",
-    }}>
-      <style>{`
-        .neo-input:focus {
-          box-shadow: inset 6px 6px 12px #c8d0e7, inset -6px -6px 12px #ffffff, 0 0 0 2px rgba(217, 119, 6, 0.25) !important;
-        }
-        .neo-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 8px 8px 22px #c8d0e7, -8px -8px 22px #ffffff !important;
-        }
-        .neo-btn:active {
-          transform: none;
-          box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important;
-        }
-      `}</style>
-      <div style={{
-        width: "100%",
-        maxWidth: 380,
-        borderRadius: 24,
-        padding: 36,
-        background: N.bg,
-        boxShadow: N.raised,
-        display: "flex",
-        flexDirection: "column",
-        gap: 24,
-        textAlign: "center"
-      }}>
-        <div>
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-            fontSize: 22,
-            fontWeight: 900,
-            color: "#ffffff",
-            background: N.accentBg,
-            boxShadow: N.raisedSm,
-          }}>Y</div>
-          <h1 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>Admin Panel</h1>
-          <p style={{ color: N.muted, fontSize: 13, fontWeight: 600, marginTop: 6, margin: 0 }}>Enter admin secret key to continue</p>
-        </div>
-        <input type="password" value={secret} onChange={(e) => setSecret(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && loadAll()}
-          placeholder="Admin secret key…"
-          className="neo-input"
-          style={{
-            width: "100%",
-            padding: "14px 18px",
-            borderRadius: 12,
-            fontSize: 13,
-            fontWeight: 600,
-            color: N.text,
-            background: N.bg,
-            border: "none",
-            boxShadow: N.inset,
-            outline: "none",
-            boxSizing: "border-box"
-          }} />
-        {error && <p style={{ color: "#dc2626", fontSize: 12, fontWeight: 700, margin: 0 }}>⚠️ {error}</p>}
-        <button onClick={loadAll} className="neo-btn"
-          style={{
-            width: "100%",
-            padding: "14px",
-            borderRadius: 12,
-            fontSize: 13,
-            fontWeight: 850,
-            border: "none",
-            color: "#ffffff",
-            background: N.accentBg,
-            boxShadow: N.raisedSm,
-            cursor: "pointer",
-          }}>
-          {loading ? "Verifying..." : "Enter Admin Panel →"}
-        </button>
-      </div>
-    </div>
-  );
-
-  // Main Dashboard REDESIGNED
-  return (
-    <div style={{
-      minHeight: "100vh",
-      background: N.bg,
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      padding: "40px 16px",
-      boxSizing: "border-box"
-    }}>
-      <style>{`
-        .neo-input:focus {
-          box-shadow: inset 6px 6px 12px #c8d0e7, inset -6px -6px 12px #ffffff, 0 0 0 2px rgba(217, 119, 6, 0.25) !important;
-        }
-        .neo-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 8px 8px 22px #c8d0e7, -8px -8px 22px #ffffff !important;
-        }
-        .neo-btn:active {
-          transform: none;
-          box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important;
-        }
-        .hover-row:hover {
-          background: rgba(200, 208, 231, 0.15) !important;
-        }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
-      <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{
-              width: 42,
-              height: 42,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 20,
-              fontWeight: 900,
-              color: "#ffffff",
-              background: N.accentBg,
-              boxShadow: N.raisedSm,
-            }}>Y</div>
-            <div>
-              <h1 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>YoyoSMM Admin</h1>
-              <p style={{ color: N.muted, fontSize: 13, fontWeight: 600, margin: 0, marginTop: 2 }}>Manage platform configurations and global statistics</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {saved && (
-              <span style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                fontSize: 12,
-                color: "#16a34a",
-                fontWeight: 800,
-                background: "rgba(22, 163, 74, 0.08)",
-                boxShadow: N.inset,
-              }}>✓ {saved}</span>
-            )}
-            <button onClick={() => router.push("/dashboard")} className="neo-btn"
-              style={{
-                padding: "10px 18px",
-                borderRadius: 12,
-                fontSize: 12,
-                fontWeight: 850,
-                border: "none",
-                background: N.bg,
-                color: N.muted,
-                boxShadow: N.raisedSm,
-                cursor: "pointer",
-              }}>
-              ← Dashboard
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24 }}>
-          {[
-            ["👥", "Total Users", users.length],
-            ["💎", "Lifetime Users", users.filter((u) => u.plan === "LIFETIME").length],
-            ["🔄", "Free Trial Users", users.filter((u) => u.plan === "FREE" || u.plan === "TRIAL").length],
-            ["💰", "Platform Revenue", `$${payments.filter((p) => p.status === "CONFIRMED").reduce((a, p) => a + (p.amountUsdt ?? 0), 0).toFixed(0)} USDT`],
-          ].map(([icon, label, val]) => (
-            <div key={label} style={{
-              borderRadius: 20,
-              padding: "24px 20px",
-              background: N.bg,
-              boxShadow: N.raised,
-              display: "flex",
-              alignItems: "center",
-              gap: 16
-            }}>
-              <div style={{
-                width: 46,
-                height: 46,
-                borderRadius: 14,
-                background: N.bg,
-                boxShadow: N.inset,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22
-              }}>{icon}</div>
-              <div>
-                <p style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>{val}</p>
-                <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Tab switch bar */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system"] as AdminTab[]).map((t) => {
-            const iconMap: Record<AdminTab, string> = {
-              settings: "⚙️ ",
-              users: "👥 ",
-              payments: "💰 ",
-              upi_payments: "🇮🇳 ",
-              admin_panels: "🚀 ",
-              campaigns: "📦 ",
-              system: "⚡ "
-            };
-            return (
-              <button key={t} onClick={() => setTab(t)} className="neo-btn"
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: 12,
-                  fontSize: 13,
-                  fontWeight: 800,
-                  border: "none",
-                  cursor: "pointer",
-                  background: N.bg,
-                  color: tab === t ? N.accent : N.muted,
-                  boxShadow: tab === t ? N.inset : N.raisedSm,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}>
-                <span>{iconMap[t]}</span>
-                <span style={{ textTransform: "capitalize" }}>{t.replace("_", " ")}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab Contents wrapper */}
-        <div style={{ borderRadius: 24, padding: 32, background: N.bg, boxShadow: N.raised, minHeight: 280, display: "flex", flexDirection: "column", gap: 24 }}>
-
-          {/* ── SETTINGS TAB ─── */}
-          {tab === "settings" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-               <div>
-                 <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>⚙️ Global System Settings</h2>
-                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Configure active brand names and client support channels</p>
-               </div>
-               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                 <div>
-                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🏷️ Brand Site Name</label>
-                   <input value={settings.siteName ?? "YoyoSMM"}
-                     onChange={(e) => setSettings((p) => ({ ...p, siteName: e.target.value }))}
-                     placeholder="YoyoSMM"
-                     className="neo-input"
-                     style={{
-                       width: "100%",
-                       padding: "14px 18px",
-                       borderRadius: 12,
-                       fontSize: 13,
-                       fontWeight: 600,
-                       color: N.text,
-                       background: N.bg,
-                       border: "none",
-                       boxShadow: N.inset,
-                       outline: "none",
-                       boxSizing: "border-box"
-                     }} />
-                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>📧 Support Email</label>
-                  <input value={settings.supportEmail ?? ""} onChange={(e) => setSettings((p) => ({ ...p, supportEmail: e.target.value }))}
-                    placeholder="support@yoyosmm.online"
-                    className="neo-input"
-                    style={{
-                      width: "100%",
-                      padding: "14px 18px",
-                      borderRadius: 12,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: N.text,
-                      background: N.bg,
-                      border: "none",
-                      boxShadow: N.inset,
-                      outline: "none",
-                      boxSizing: "border-box"
-                    }} />
-                </div>
-                <div style={{ borderTop: `1.5px solid ${N.border}`, paddingTop: 20 }}>
-                  <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>🇮🇳 UPI Wallet Settings</h2>
-                  <p style={{ color: N.muted, fontSize: 12, margin: "0 0 16px", fontWeight: 600 }}>Configuration for the manual UPI Deposit wallet system</p>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>UPI ID / VPA</label>
-                    <input value={settings.upiId ?? ""} onChange={(e) => setSettings((p) => ({ ...p, upiId: e.target.value }))}
-                      placeholder="merchant@upi"
-                      className="neo-input"
-                      style={{
-                        width: "100%",
-                        padding: "14px 18px",
-                        borderRadius: 12,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: N.text,
-                        background: N.bg,
-                        border: "none",
-                        boxShadow: N.inset,
-                        outline: "none",
-                        boxSizing: "border-box"
-                      }} />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>UPI QR Code Image URL</label>
-                    <input value={settings.upiQrCode ?? ""} onChange={(e) => setSettings((p) => ({ ...p, upiQrCode: e.target.value }))}
-                      placeholder="https://imgur.com/myqrcode.png"
-                      className="neo-input"
-                      style={{
-                        width: "100%",
-                        padding: "14px 18px",
-                        borderRadius: 12,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: N.text,
-                        background: N.bg,
-                        border: "none",
-                        boxShadow: N.inset,
-                        outline: "none",
-                        boxSizing: "border-box"
-                      }} />
-                  </div>
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🪙 Minimum Deposit Amount (INR)</label>
-                  <input type="number" value={settings.minDeposit ?? 500} onChange={(e) => setSettings((p) => ({ ...p, minDeposit: parseFloat(e.target.value) || 0 }))}
-                    placeholder="500"
-                    className="neo-input"
-                    style={{
-                      width: "100%",
-                      padding: "14px 18px",
-                      borderRadius: 12,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: N.text,
-                      background: N.bg,
-                      border: "none",
-                      boxShadow: N.inset,
-                      outline: "none",
-                      boxSizing: "border-box"
-                    }} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 18, borderRadius: 12, background: N.bg, boxShadow: N.inset }}>
-                  <input type="checkbox" id="maintenance" checked={settings.maintenanceMode}
-                    onChange={(e) => setSettings((p) => ({ ...p, maintenanceMode: e.target.checked }))}
-                    style={{ width: 18, height: 18, accentColor: N.accent, cursor: "pointer" }} />
-                  <label htmlFor="maintenance" style={{ fontSize: 13, color: N.text, fontWeight: 700, cursor: "pointer" }}>🔧 Maintenance Mode (shows maintenance page to users)</label>
-                </div>
-              </div>
-              <button onClick={saveSettings} className="neo-btn"
-                style={{
-                  alignSelf: "flex-start",
-                  padding: "12px 28px",
-                  borderRadius: 12,
-                  fontSize: 13,
-                  fontWeight: 850,
-                  border: "none",
-                  color: "#ffffff",
-                  background: N.accentBg,
-                  boxShadow: N.raisedSm,
-                  cursor: "pointer"
-                }}>
-                Save Settings
-              </button>
-            </div>
-          )}
-
-          {/* ── USERS TAB ─── */}
-          {tab === "users" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Platform Registered Users</h2>
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Active registered operators and accounts: {users.length}</p>
-              </div>
-              {users.length === 0 ? (
-                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No users found</div>
-              ) : (
-                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-                    <thead>
-                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                        {["Email", "Created At", "Plan Status", "Connected Panels", "Campaigns Count", "Actions"].map((h) => (
-                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((u) => (
-                        <tr key={u.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u.email}</td>
-                          <td style={{ padding: "14px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                          <td style={{ padding: "14px 24px" }}>
-                            <span style={{
-                              fontSize: 10,
-                              fontWeight: 850,
-                              padding: "4px 8px",
-                              borderRadius: 6,
-                              background: PLAN_COLORS[u.plan] + "1A",
-                              color: PLAN_COLORS[u.plan]
-                            }}>{u.plan}</span>
-                          </td>
-                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u._count?.panels ?? 0} connected</td>
-                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u._count?.orders ?? 0} campaigns</td>
-                          <td style={{ padding: "14px 24px" }}>
-                            <div style={{ display: "flex", gap: 10 }}>
-                              {u.plan !== "LIFETIME" && (
-                                <button onClick={() => userAction(u.id, "upgrade")} className="neo-btn"
-                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}>
-                                  Upgrade Lifetime
-                                </button>
-                              )}
-                              {u.plan !== "SUSPENDED" ? (
-                                <button onClick={() => userAction(u.id, "suspend")} className="neo-btn"
-                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm }}>
-                                  Suspend
-                                </button>
-                              ) : (
-                                <button onClick={() => userAction(u.id, "unsuspend")} className="neo-btn"
-                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm }}>
-                                  Unsuspend
-                                </button>
-                              )}
-                              <button onClick={() => impersonateUser(u.id)} className="neo-btn"
-                                style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#2563eb", boxShadow: N.raisedSm }}>
-                                Login As
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── PAYMENTS TAB ─── */}
-          {tab === "payments" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Crypto Payments Log</h2>
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Lifetime subscription deposits on USDT-TRC20 & BEP20 networks</p>
-              </div>
-              {payments.length === 0 ? (
-                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No payments found</div>
-              ) : (
-                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-                    <thead>
-                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                        {["User", "Network", "Transaction Hash / TXID", "Amount", "Status", "Date"].map((h) => (
-                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payments.map((p) => {
-                        const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", FAILED: "#dc2626", VERIFYING: "#2563eb" };
-                        return (
-                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <span style={{
-                                fontSize: 11,
-                                fontWeight: 800,
-                                padding: "4px 8px",
-                                borderRadius: 6,
-                                background: p.network === "TRC20" ? "rgba(37,99,235,0.08)" : "rgba(217,119,6,0.08)",
-                                color: p.network === "TRC20" ? "#2563eb" : "#d97706"
-                              }}>{p.network}</span>
-                            </td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <code style={{ fontSize: 12, fontWeight: 700, color: N.accent }}>{p.txHash.slice(0, 20)}…</code>
-                            </td>
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 900, color: N.text }}>{p.amountUsdt ? `$${p.amountUsdt} USDT` : "—"}</td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <strong style={{ fontSize: 12, color: statusColors[p.status] ?? N.muted }}>{p.status}</strong>
-                            </td>
-                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── UPI PAYMENTS TAB ─── */}
-          {tab === "upi_payments" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>UPI Deposit Requests</h2>
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Verify manual UPI payment deposits via UTR numbers submitted by users</p>
-              </div>
-              {upiPayments.length === 0 ? (
-                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No UPI deposit requests found</div>
-              ) : (
-                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-                    <thead>
-                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                        {["User Email", "Amount (₹)", "UTR Number", "Status", "Date", "Actions"].map((h) => (
-                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {upiPayments.map((p) => {
-                        const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", REJECTED: "#dc2626" };
-                        return (
-                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: "#16a34a" }}>₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                            <td style={{ padding: "14px 24px", fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: N.accent }}>{p.utr}</td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <span style={{
-                                fontSize: 10,
-                                fontWeight: 850,
-                                padding: "4px 8px",
-                                borderRadius: 6,
-                                background: statusColors[p.status] + "1A",
-                                color: statusColors[p.status]
-                              }}>{p.status}</span>
-                            </td>
-                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleString()}</td>
-                            <td style={{ padding: "14px 24px" }}>
-                              {p.status === "PENDING" ? (
-                                <div style={{ display: "flex", gap: 8 }}>
-                                  <button onClick={() => handleUpiAction(p.id, "approve")} className="neo-btn"
-                                    style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 850, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer" }}>
-                                    ✓ Approve
-                                  </button>
-                                  <button onClick={() => {
-                                    const reason = prompt("Enter rejection reason:", "Invalid UTR number");
-                                    if (reason !== null) handleUpiAction(p.id, "reject", reason);
-                                  }} className="neo-btn"
-                                    style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 850, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
-                                    ✗ Reject
-                                  </button>
-                                </div>
-                              ) : (
-                                <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>No actions</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── ADMIN SMM PANELS TAB ─── */}
-          {tab === "admin_panels" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-              
-              {/* Section 1: Admin panels CRUD */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>🚀 SMM API Integrations (Admin-owned)</h2>
-                  <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>These panels process campaigns automatically for wallet-mode users</p>
-                </div>
-                
-                {/* Form to add admin panel */}
-                <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
-                  <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>➕ Add New SMM Panel API</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Panel Name</label>
-                      <input value={newPanelName} onChange={e => setNewPanelName(e.target.value)} placeholder="e.g. BulkSMM"
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API URL</label>
-                      <input value={newPanelApiUrl} onChange={e => setNewPanelApiUrl(e.target.value)} placeholder="e.g. https://bulksmm.com/api/v2"
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.4fr 0.4fr", gap: 16 }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API Key / Token</label>
-                      <input type="password" value={newPanelApiKey} onChange={e => setNewPanelApiKey(e.target.value)} placeholder="Enter API Key"
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Priority (1-10)</label>
-                      <input type="number" value={newPanelPriority} onChange={e => setNewPanelPriority(e.target.value)} placeholder="1"
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Load %</label>
-                      <input type="number" value={newPanelLoadPercentage} onChange={e => setNewPanelLoadPercentage(e.target.value)} placeholder="100"
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-                    </div>
-                  </div>
-                  <button onClick={handleAddPanel} className="neo-btn"
-                    style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer" }}>
-                    Connect SMM Panel
-                  </button>
-                </div>
-
-                {/* SMM Panels List */}
-                {adminPanels.length === 0 ? (
-                  <div style={{ padding: "20px 0", textAlign: "center", color: N.muted, fontSize: 12, fontWeight: 700 }}>No admin SMM panels connected yet</div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                          {["Name", "API URL", "Priority", "Load %", "Status", "Actions"].map((h) => (
-                            <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {adminPanels.map((p) => (
-                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
-                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.name}</td>
-                            <td style={{ padding: "12px 16px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
-                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.priority}</td>
-                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.loadPercentage}%</td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: p.status === "ONLINE" ? "rgba(22,163,74,0.08)" : "rgba(113,128,150,0.08)", color: p.status === "ONLINE" ? "#16a34a" : N.muted }}>
-                                {p.status}
-                              </span>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <div style={{ display: "flex", gap: 10 }}>
-                                <button onClick={() => handleLoadServices(p.id)} className="neo-btn"
-                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
-                                  ⚙️ Configure Pricing
-                                </button>
-                                <button onClick={() => handleDeletePanel(p.id)} className="neo-btn"
-                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
-                                  ✗ Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Section 2: Services configurations */}
-              {selectedPanelId && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 20, borderTop: `1.5px solid ${N.border}`, paddingTop: 24 }}>
-                  <div>
-                    <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>
-                      Configure Custom Pricing for: <strong style={{ color: N.accent }}>{adminPanels.find(p => p.id === selectedPanelId)?.name}</strong>
-                    </h2>
-                    <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Map SMM Panel service IDs to user delivery types and define markup rates</p>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
-                    
-                    {/* Left Panel: Pricing configuration form */}
-                    <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
-                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>⚙️ Set Service Price</p>
-                      
-                      <div>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>1. Select Platform</label>
-                        <select value={pricingPlatform} onChange={e => setPricingPlatform(e.target.value)}
-                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}>
-                          <option value="INSTAGRAM">Instagram</option>
-                          <option value="TIKTOK">TikTok</option>
-                          <option value="YOUTUBE">YouTube</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>2. Select Action Type</label>
-                        <select value={pricingType} onChange={e => setPricingType(e.target.value)}
-                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}>
-                          <option value="views">Views</option>
-                          <option value="likes">Likes</option>
-                          <option value="saves">Saves</option>
-                          <option value="shares">Shares</option>
-                          <option value="comments">Comments</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>3. Choose SMM Service ID &amp; Original Rate (from SMM API)</label>
-                        {fetchingServices ? (
-                          <p style={{ fontSize:12, color:N.muted, margin: "6px 0", fontWeight:600 }}>Loading services list from API…</p>
-                        ) : liveServices.length === 0 ? (
-                          <div style={{ display: "flex", gap: 10 }}>
-                            <input value={pricingServiceId} onChange={e => setPricingServiceId(e.target.value)} placeholder="e.g. 1042"
-                              style={{ flex:1, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-                            <input type="number" step="0.01" value={pricingOriginalRate} onChange={e => setPricingOriginalRate(e.target.value)} placeholder="Rate per 1k"
-                              style={{ width: 110, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-                          </div>
-                        ) : (
-                          <select value={pricingServiceId} onChange={e => {
-                            const val = e.target.value;
-                            setPricingServiceId(val);
-                            const selected = liveServices.find(s => String(s.service) === val);
-                            if (selected) {
-                              setPricingOriginalRate(selected.rate);
-                              setPricingName(selected.name ?? "");
-                            }
-                          }}
-                            style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer" }}>
-                            <option value="">-- Select Service from API --</option>
-                            {liveServices.map(s => (
-                              <option key={s.service} value={s.service}>
-                                #{s.service} - {s.name?.slice(0, 50)} (Cost: ${s.rate}/1k)
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-
-                      {pricingOriginalRate && (
-                        <p style={{ fontSize: 11, color: N.muted, margin: 0, fontWeight: 700 }}>
-                          SMM Base Rate: <strong style={{ color: N.text }}>${pricingOriginalRate} per 1,000</strong>
-                          <span style={{ marginLeft: 8, color: "#16a34a" }}>
-                            (~ ₹{(parseFloat(pricingOriginalRate) * 83).toFixed(2)} per 1,000)
-                          </span>
-                        </p>
-                      )}
-
-
-                      <div>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>4. Set Custom Markup Rate Charged to Users (INR per 1,000)</label>
-                        <input type="number" step="0.1" placeholder="e.g. 2.0" value={pricingCustomRate} onChange={e => setPricingCustomRate(e.target.value)}
-                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, fontWeight: 800 }} />
-                      </div>
-
-                      <button onClick={handleSaveServicePrice} disabled={savingService} className="neo-btn"
-                        style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer", opacity: savingService ? 0.5 : 1 }}>
-                        {savingService ? "Saving configuration…" : "Save Custom Pricing"}
-                      </button>
-                    </div>
-
-                    {/* Right Panel: Currently saved pricing list */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.muted }}>Currently Configured Markup Prices</p>
-                      
-                      {savedServices.length === 0 ? (
-                        <div style={{ padding: "32px", textAlign: "center", border: `1.5px dashed ${N.border}`, borderRadius: 16, color: N.muted, fontSize: 12, fontWeight: 700 }}>
-                          No custom pricing configured for this panel yet.<br/><span style={{ fontSize: 11 }}>Setup pricing to let wallet users order.</span>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 420, overflowY: "auto" }}>
-                          {savedServices.map(s => (
-                            <div key={s.id} style={{ padding: 12, borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <div>
-                                <span style={{ fontSize: 10, fontWeight: 850, padding: "2px 6px", borderRadius: 4, background: "rgba(168,85,247,0.08)", color: "#a855f7", textTransform: "uppercase" }}>{s.platform}</span>
-                                <span style={{ fontSize: 10, fontWeight: 850, padding: "2px 6px", borderRadius: 4, background: "rgba(217,70,239,0.08)", color: "#d946ef", textTransform: "uppercase", marginLeft: 6 }}>{s.type}</span>
-                                <p style={{ fontSize: 11, color: N.muted, margin: "4px 0 0" }}>Service ID: #{s.serviceId} {s.name ? `(${s.name.slice(0, 25)}…)` : ""}</p>
-                                <p style={{ fontSize: 10, color: N.muted, margin: "2px 0 0" }}>Base Cost: ${s.originalRate}/1k</p>
-                              </div>
-                              <div style={{ textAlign: "right" }}>
-                                <span style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>₹ {s.customRate}/1k</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── CAMPAIGNS TAB ─── */}
-          {tab === "campaigns" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Global SMM Campaigns Override</h2>
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Monitor and force actions on active or queued pacing schedules</p>
-              </div>
-
-              {/* Filters */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                <input type="text" placeholder="Search by user email, reel URL, or order ID…" value={orderQuery} onChange={(e) => setOrderQuery(e.target.value)}
-                  className="neo-input"
-                  style={{
-                    flex: 1,
-                    minWidth: 280,
-                    padding: "12px 16px",
-                    borderRadius: 12,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: N.text,
-                    background: N.bg,
-                    border: "none",
-                    boxShadow: N.inset,
-                    outline: "none"
-                  }} />
-                <select value={orderFilter} onChange={(e) => setOrderFilter(e.target.value)}
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: 12,
-                    fontSize: 13,
-                    fontWeight: 800,
-                    background: N.bg,
-                    color: N.text,
-                    border: "none",
-                    boxShadow: N.raisedSm,
-                    cursor: "pointer",
-                    outline: "none"
-                  }}>
-                  <option value="All">All Statuses</option>
-                  <option value="DELIVERING">Delivering</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="PAUSED">Paused</option>
-                  <option value="CANCELLED">Cancelled</option>
-                  <option value="FAILED">Failed</option>
-                  <option value="QUEUED">Queued</option>
-                </select>
-              </div>
-
-              {/* Table */}
-              <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
-                  <thead>
-                    <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                      {["User & Target Reel", "Speed & Curve", "Targets Overview", "Status", "Manual Overrides"].map((h) => (
-                        <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders
-                      .filter((o) => {
-                        const matchesQuery =
-                          o.user.email.toLowerCase().includes(orderQuery.toLowerCase()) ||
-                          o.reel.url.toLowerCase().includes(orderQuery.toLowerCase()) ||
-                          o.id.toLowerCase().includes(orderQuery.toLowerCase());
-                        const matchesFilter = orderFilter === "All" || o.status === orderFilter;
-                        return matchesQuery && matchesFilter;
-                      })
-                      .map((o) => {
-                        const statusColors: Record<string, string> = { DELIVERING: "#d97706", COMPLETED: "#16a34a", PAUSED: "#718096", CANCELLED: "#dc2626", FAILED: "#dc2626", QUEUED: "#2563eb" };
-                        return (
-                          <tr key={o.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                            <td style={{ padding: "14px 24px" }}>
-                              <p style={{ fontSize: 13, fontWeight: 700, color: N.text, margin: 0 }}>{o.user?.email}</p>
-                              <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
-                                {o.reel?.url?.length > 42 ? `${o.reel.url.slice(0, 42)}…` : o.reel?.url}
-                              </a>
-                            </td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <span style={{
-                                fontSize: 11,
-                                fontWeight: 800,
-                                padding: "4px 8px",
-                                borderRadius: 6,
-                                background: "rgba(217,119,6,0.08)",
-                                color: N.accent
-                              }}>{o.curveStyle}</span>
-                              <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0", fontWeight: 600 }}>{o.durationHours}h schedule</p>
-                            </td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <p style={{ color: N.text, margin: 0, fontWeight: 700, fontSize: 13 }}>👁 {o.viewsTarget.toLocaleString()} views</p>
-                              <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0", fontWeight: 600 }}>
-                                {o.likesTarget > 0 && `👍 ${o.likesTarget.toLocaleString()} `}
-                                {o.savesTarget > 0 && `🔖 ${o.savesTarget.toLocaleString()} `}
-                                {o.commentsTarget > 0 && `💬 ${o.commentsTarget.toLocaleString()}`}
-                              </p>
-                            </td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <strong style={{ fontSize: 12, color: statusColors[o.status] ?? N.muted }}>{o.status}</strong>
-                            </td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <div style={{ display: "flex", gap: 8 }}>
-                                {o.status === "DELIVERING" && (
-                                  <button onClick={() => handleCampaignAction(o.id, "pause")} className="neo-btn"
-                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm }}>
-                                    Pause
-                                  </button>
-                                )}
-                                {o.status === "PAUSED" && (
-                                  <button onClick={() => handleCampaignAction(o.id, "resume")} className="neo-btn"
-                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}>
-                                    Resume
-                                  </button>
-                                )}
-                                {["DELIVERING", "PAUSED", "QUEUED"].includes(o.status) && (
-                                  <button onClick={() => handleCampaignAction(o.id, "cancel")} className="neo-btn"
-                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm }}>
-                                    Cancel
-                                  </button>
-                                )}
-                                {["DELIVERING", "COMPLETED"].includes(o.status) && (
-                                  <button onClick={() => handleCampaignAction(o.id, "refill")} className="neo-btn"
-                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}
-                                    title="Query status & place refill if partial">
-                                    Refill
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ── SYSTEM HEALTH TAB ─── */}
-          {tab === "system" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <div>
-                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>System Diagnostic Logs</h2>
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Real-time execution tick states and user panel statuses</p>
-              </div>
-
-              {/* Status counts grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20 }}>
-                {[
-                  ["Active Campaigns", orders.filter((o) => ["DELIVERING", "QUEUED"].includes(o.status)).length, N.accent],
-                  ["Completed Campaigns", orders.filter((o) => o.status === "COMPLETED").length, "#16a34a"],
-                  ["Scheduled Ticks", systemData.eventStats.find((s) => s.status === "SCHEDULED")?.count ?? 0, N.text],
-                  ["Failed Ticks", systemData.eventStats.find((s) => s.status === "FAILED")?.count ?? 0, "#dc2626"],
-                ].map(([label, val, color]) => (
-                  <div key={label} style={{ padding: 18, borderRadius: 14, background: N.bg, boxShadow: N.raisedSm }}>
-                    <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</p>
-                    <p style={{ fontSize: 22, fontWeight: 900, color: color as string, margin: 0, marginTop: 4 }}>{val}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Panels Diagnostics */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <h3 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Global User SMM Panels ({systemData.panels.length})</h3>
-                {systemData.panels.length === 0 ? (
-                  <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No panel APIs connected yet</div>
-                ) : (
-                  <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-                      <thead>
-                        <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
-                          {["User", "Panel Name", "API URL", "Status", "Latency", "Success Rate"].map((h) => (
-                            <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {systemData.panels.map((p) => {
-                          const statusColor = p.status === "ONLINE" ? "#16a34a" : p.status === "OFFLINE" ? "#dc2626" : p.status === "SLOW" ? "#d97706" : N.muted;
-                          return (
-                            <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                              <td style={{ padding: "12px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{p.user?.email}</td>
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.name}</td>
-                              <td style={{ padding: "12px 24px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
-                              <td style={{ padding: "12px 24px" }}>
-                                <strong style={{ fontSize: 12, color: statusColor }}>{p.status}</strong>
-                              </td>
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.lastResponseMs ? `${p.lastResponseMs}ms` : "—"}</td>
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.successRate.toFixed(1)}%</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Queue Events Ticks */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <h3 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Recent Webhook ticks log ({systemData.events.length})</h3>
-                {systemData.events.length === 0 ? (
-                  <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No queue events logged</div>
-                ) : (
-                  <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-                      <thead>
-                        <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
-                          {["Campaign User / Reel", "Batch Size", "Panel Provider", "Scheduled", "Status", "Diagnostics"].map((h) => (
-                            <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {systemData.events.map((e) => {
-                          const statusColors: Record<string, string> = { DONE: "#16a34a", FAILED: "#dc2626", SCHEDULED: "#718096", EXECUTING: "#d97706", RETRYING: "#4f46e5" };
-                          return (
-                            <tr key={e.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                              <td style={{ padding: "12px 24px" }}>
-                                <p style={{ fontSize: 13, fontWeight: 700, color: N.text, margin: 0 }}>{e.order?.user?.email}</p>
-                                <p style={{ fontSize: 11, color: N.muted, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>{e.order?.reel?.url}</p>
-                              </td>
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 750, color: N.text }}>{(e.viewsBatch ?? 0).toLocaleString()} views</td>
-                              <td style={{ padding: "12px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{e.panel?.name}</td>
-                              <td style={{ padding: "12px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(e.scheduledAt).toLocaleTimeString()}</td>
-                              <td style={{ padding: "12px 24px" }}>
-                                <strong style={{ fontSize: 12, color: statusColors[e.status] ?? N.muted }}>{e.status}</strong>
-                              </td>
-                              <td style={{ padding: "12px 24px", fontSize: 12, color: "#dc2626", fontWeight: 700, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.errorMessage ?? ""}>
-                                {e.errorMessage ?? "—"}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
-
-        </div>
-      </div>
-    </div>
-  );
-}
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+interface AdminSettings {
+  trc20Address: string | null;
+  bep20Address: string | null;
+  priceUsdt: number;
+  siteName: string;
+  freeTrialHours: number;
+  maintenanceMode: boolean;
+  supportEmail: string | null;
+  upiId: string | null;
+  upiQrCode: string | null;
+  minDeposit: number;
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  plan: string;
+  createdAt: string;
+  lifetimeUnlocked: boolean;
+  _count: { orders: number; panels: number };
+  subscription: { status: string; paidAt: string } | null;
+}
+
+interface Payment {
+  id: string;
+  txHash: string;
+  network: string;
+  status: string;
+  amountUsdt: number | null;
+  createdAt: string;
+  user: { email: string; name: string | null };
+}
+
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system";
+
+const N = {
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
+};
+
+const PLAN_COLORS: Record<string, string> = {
+  FREE: "#718096",
+  TRIAL: "#4f46e5",
+  LIFETIME: "#16a34a",
+  SUSPENDED: "#dc2626",
+};
+
+export default function AdminPage() {
+  const router = useRouter();
+  const [secret, setSecret] = useState("");
+  const [authed, setAuthed] = useState(false);
+  const [tab, setTab] = useState<AdminTab>("settings");
+  const [settings, setSettings] = useState<AdminSettings>({
+    trc20Address: "",
+    bep20Address: "",
+    priceUsdt: 20,
+    siteName: "YoyoSMM",
+    freeTrialHours: 24,
+    maintenanceMode: false,
+    supportEmail: "",
+    upiId: "",
+    upiQrCode: "",
+    minDeposit: 500,
+  });
+  const [users, setUsers] = useState<User[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [systemData, setSystemData] = useState<{
+    events: any[];
+    panels: any[];
+    orderStats: { status: string; count: number }[];
+    eventStats: { status: string; count: number }[];
+  }>({ events: [], panels: [], orderStats: [], eventStats: [] });
+  const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState("");
+  const [error, setError] = useState("");
+  const [orderQuery, setOrderQuery] = useState("");
+  const [orderFilter, setOrderFilter] = useState("All");
+
+  // New UPI Payments & Admin Panels States
+  const [upiPayments, setUpiPayments] = useState<any[]>([]);
+  const [adminPanels, setAdminPanels] = useState<any[]>([]);
+  const [selectedPanelId, setSelectedPanelId] = useState("");
+  const [liveServices, setLiveServices] = useState<any[]>([]);
+  const [savedServices, setSavedServices] = useState<any[]>([]);
+  const [fetchingServices, setFetchingServices] = useState(false);
+  const [savingService, setSavingService] = useState(false);
+
+  // New Panel fields
+  const [newPanelName, setNewPanelName] = useState("");
+  const [newPanelApiUrl, setNewPanelApiUrl] = useState("");
+  const [newPanelApiKey, setNewPanelApiKey] = useState("");
+  const [newPanelPriority, setNewPanelPriority] = useState("1");
+  const [newPanelLoadPercentage, setNewPanelLoadPercentage] = useState("100");
+
+  // Service Pricing fields
+  const [pricingPlatform, setPricingPlatform] = useState("INSTAGRAM");
+  const [pricingType, setPricingType] = useState("views");
+  const [pricingServiceId, setPricingServiceId] = useState("");
+  const [pricingOriginalRate, setPricingOriginalRate] = useState("");
+  const [pricingCustomRate, setPricingCustomRate] = useState("");
+  const [pricingName, setPricingName] = useState("");
+  const [pricingMultiplier, setPricingMultiplier] = useState("");
+
+  const handleMultiplierChange = (multValue: string, customOriginalRate?: string) => {
+    setPricingMultiplier(multValue);
+    const m = parseFloat(multValue);
+    const orig = parseFloat(customOriginalRate ?? pricingOriginalRate);
+    if (!isNaN(m) && !isNaN(orig)) {
+      const customVal = (orig * 83 * m).toFixed(2);
+      setPricingCustomRate(customVal);
+    } else {
+      setPricingCustomRate("");
+    }
+  };
+
+  const headers = { "Content-Type": "application/json", "x-admin-secret": secret };
+
+  const loadAll = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const sRes = await fetch("/api/admin/settings", { headers });
+      if (sRes.status === 403) {
+        setError("Wrong admin secret");
+        setAuthed(false);
+        setLoading(false);
+        return;
+      }
+      if (!sRes.ok) {
+        setError(`Server error ${sRes.status} — check DATABASE_URL in Vercel env vars`);
+        setLoading(false);
+        return;
+      }
+      const s = await sRes.json();
+      if (s.settings) setSettings(s.settings);
+      setAuthed(true);
+
+      const [uRes, pRes, oRes, sysRes, upiRes, apRes] = await Promise.all([
+        fetch("/api/admin/users",    { headers }),
+        fetch("/api/admin/payments", { headers }),
+        fetch("/api/admin/orders",   { headers }),
+        fetch("/api/admin/system",   { headers }),
+        fetch("/api/admin/payments", { headers }), // will fetch UPI payments if we routing correctly, wait we create /api/admin/payments as GET
+        fetch("/api/admin/panels",   { headers }),
+      ]);
+      if (uRes.ok)   { const u = await uRes.json();   setUsers(u.users ?? []); }
+      if (pRes.ok)   { const p = await pRes.json();   setPayments(p.payments ?? []); }
+      if (oRes.ok)   { const o = await oRes.json();   setOrders(o.orders ?? []); }
+      if (sysRes.ok) { const sys = await sysRes.json(); setSystemData(sys ?? { events: [], panels: [], orderStats: [], eventStats: [] }); }
+      
+      // Load UPI Payments
+      try {
+        const upiData = await upiRes.json();
+        if (upiData.payments) setUpiPayments(upiData.payments);
+      } catch (err) {}
+
+      // Load Admin Panels
+      try {
+        const apData = await apRes.json();
+        if (apData.panels) setAdminPanels(apData.panels);
+      } catch (err) {}
+    } catch (e) {
+      setError(`Network error: ${String(e)}`);
+    }
+    setLoading(false);
+  };
+
+  const handleCampaignAction = async (orderId: string, action: "pause" | "resume" | "cancel" | "refill") => {
+    setSaved("Processing…");
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ orderId, action }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSaved(action === "refill" ? "Refill triggered!" : "Campaign updated!");
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+      } else {
+        setError(data.error ?? "Action failed");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  const saveSettings = async () => {
+    const res = await fetch("/api/admin/settings", { method: "PATCH", headers, body: JSON.stringify(settings) });
+    if (res.ok) {
+      setSaved("Saved!");
+      setTimeout(() => setSaved(""), 2000);
+    } else {
+      setError("Save failed");
+    }
+  };
+
+  // UPI Deposits Tab Actions
+  const handleUpiAction = async (paymentId: string, action: "approve" | "reject", rejectedReason?: string) => {
+    setSaved("Processing…");
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ paymentId, action, rejectedReason }),
+      });
+      if (res.ok) {
+        setSaved(`Payment ${action === "approve" ? "Approved" : "Rejected"}!`);
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+      } else {
+        const errJson = await res.json();
+        setError(errJson.error ?? "Payment action failed");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  // Admin Panels Tab Actions
+  const handleAddPanel = async () => {
+    if (!newPanelName.trim() || !newPanelApiUrl.trim() || !newPanelApiKey.trim()) {
+      setError("Name, API URL, and API Key are required");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    setSaved("Adding panel…");
+    try {
+      const res = await fetch("/api/admin/panels", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: newPanelName.trim(),
+          apiUrl: newPanelApiUrl.trim(),
+          apiKey: newPanelApiKey.trim(),
+          priority: parseInt(newPanelPriority) || 1,
+          loadPercentage: parseInt(newPanelLoadPercentage) || 100,
+        }),
+      });
+      if (res.ok) {
+        setSaved("Admin SMM Panel added!");
+        setNewPanelName("");
+        setNewPanelApiUrl("");
+        setNewPanelApiKey("");
+        setNewPanelPriority("1");
+        setNewPanelLoadPercentage("100");
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+      } else {
+        const errJson = await res.json();
+        setError(errJson.error ?? "Failed to add panel");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  const handleDeletePanel = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this admin SMM panel?")) return;
+    setSaved("Deleting panel…");
+    try {
+      const res = await fetch(`/api/admin/panels?id=${id}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (res.ok) {
+        setSaved("Panel deleted!");
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+        if (selectedPanelId === id) {
+          setSelectedPanelId("");
+          setLiveServices([]);
+          setSavedServices([]);
+        }
+      } else {
+        setError("Failed to delete panel");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  const handleLoadServices = async (panelId: string) => {
+    setSelectedPanelId(panelId);
+    setFetchingServices(true);
+    setLiveServices([]);
+    setSavedServices([]);
+    try {
+      // Fetch live services from SMM API
+      const liveRes = await fetch(`/api/admin/services?action=fetch&panelId=${panelId}`, { headers });
+      if (liveRes.ok) {
+        const liveJson = await liveRes.json();
+        setLiveServices(liveJson.services ?? []);
+      } else {
+        const errJson = await liveRes.json();
+        setError(errJson.error ?? "Failed to load live services from SMM API");
+        setTimeout(() => setError(""), 4000);
+      }
+
+      // Fetch saved services config
+      const savedRes = await fetch(`/api/admin/services?panelId=${panelId}`, { headers });
+      if (savedRes.ok) {
+        const savedJson = await savedRes.json();
+        setSavedServices(savedJson.services ?? []);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setFetchingServices(false);
+    }
+  };
+
+  const handleSaveServicePrice = async () => {
+    if (!selectedPanelId || !pricingServiceId || !pricingCustomRate) {
+      setError("Please select a service and input custom price");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    setSavingService(true);
+    try {
+      const res = await fetch("/api/admin/services", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          panelId: selectedPanelId,
+          platform: pricingPlatform,
+          type: pricingType,
+          serviceId: pricingServiceId,
+          originalRate: parseFloat(pricingOriginalRate) || 0,
+          customRate: parseFloat(pricingCustomRate),
+          name: pricingName,
+        }),
+      });
+      if (res.ok) {
+        setSaved("Pricing configured successfully!");
+        setPricingServiceId("");
+        setPricingOriginalRate("");
+        setPricingCustomRate("");
+        setPricingName("");
+        setTimeout(() => setSaved(""), 2000);
+        // Refresh saved services config
+        const savedRes = await fetch(`/api/admin/services?panelId=${selectedPanelId}`, { headers });
+        if (savedRes.ok) {
+          const savedJson = await savedRes.json();
+          setSavedServices(savedJson.services ?? []);
+        }
+      } else {
+        const errJson = await res.json();
+        setError(errJson.error ?? "Failed to save pricing");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setSavingService(false);
+    }
+  };
+
+  const userAction = async (userId: string, action: "upgrade" | "suspend" | "unsuspend") => {
+    await fetch("/api/admin/users", { method: "PATCH", headers, body: JSON.stringify({ userId, action }) });
+    loadAll();
+  };
+
+  const impersonateUser = async (userId: string) => {
+    setSaved("Authenticating as user…");
+    try {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.redirectTo) {
+        setSaved("Redirecting…");
+        window.location.href = data.redirectTo;
+      } else {
+        setError(data.error ?? "Failed to impersonate");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  // Auth Screen REDESIGNED
+  if (!authed) return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: N.bg,
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      padding: "16px",
+    }}>
+      <style>{`
+        .neo-input:focus {
+          box-shadow: inset 6px 6px 12px #c8d0e7, inset -6px -6px 12px #ffffff, 0 0 0 2px rgba(217, 119, 6, 0.25) !important;
+        }
+        .neo-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 8px 8px 22px #c8d0e7, -8px -8px 22px #ffffff !important;
+        }
+        .neo-btn:active {
+          transform: none;
+          box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important;
+        }
+      `}</style>
+      <div style={{
+        width: "100%",
+        maxWidth: 380,
+        borderRadius: 24,
+        padding: 36,
+        background: N.bg,
+        boxShadow: N.raised,
+        display: "flex",
+        flexDirection: "column",
+        gap: 24,
+        textAlign: "center"
+      }}>
+        <div>
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+            fontSize: 22,
+            fontWeight: 900,
+            color: "#ffffff",
+            background: N.accentBg,
+            boxShadow: N.raisedSm,
+          }}>Y</div>
+          <h1 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>Admin Panel</h1>
+          <p style={{ color: N.muted, fontSize: 13, fontWeight: 600, marginTop: 6, margin: 0 }}>Enter admin secret key to continue</p>
+        </div>
+        <input type="password" value={secret} onChange={(e) => setSecret(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && loadAll()}
+          placeholder="Admin secret key…"
+          className="neo-input"
+          style={{
+            width: "100%",
+            padding: "14px 18px",
+            borderRadius: 12,
+            fontSize: 13,
+            fontWeight: 600,
+            color: N.text,
+            background: N.bg,
+            border: "none",
+            boxShadow: N.inset,
+            outline: "none",
+            boxSizing: "border-box"
+          }} />
+        {error && <p style={{ color: "#dc2626", fontSize: 12, fontWeight: 700, margin: 0 }}>⚠️ {error}</p>}
+        <button onClick={loadAll} className="neo-btn"
+          style={{
+            width: "100%",
+            padding: "14px",
+            borderRadius: 12,
+            fontSize: 13,
+            fontWeight: 850,
+            border: "none",
+            color: "#ffffff",
+            background: N.accentBg,
+            boxShadow: N.raisedSm,
+            cursor: "pointer",
+          }}>
+          {loading ? "Verifying..." : "Enter Admin Panel →"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Main Dashboard REDESIGNED
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: N.bg,
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      padding: "40px 16px",
+      boxSizing: "border-box"
+    }}>
+      <style>{`
+        .neo-input:focus {
+          box-shadow: inset 6px 6px 12px #c8d0e7, inset -6px -6px 12px #ffffff, 0 0 0 2px rgba(217, 119, 6, 0.25) !important;
+        }
+        .neo-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 8px 8px 22px #c8d0e7, -8px -8px 22px #ffffff !important;
+        }
+        .neo-btn:active {
+          transform: none;
+          box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important;
+        }
+        .hover-row:hover {
+          background: rgba(200, 208, 231, 0.15) !important;
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 20,
+              fontWeight: 900,
+              color: "#ffffff",
+              background: N.accentBg,
+              boxShadow: N.raisedSm,
+            }}>Y</div>
+            <div>
+              <h1 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>YoyoSMM Admin</h1>
+              <p style={{ color: N.muted, fontSize: 13, fontWeight: 600, margin: 0, marginTop: 2 }}>Manage platform configurations and global statistics</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {saved && (
+              <span style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                fontSize: 12,
+                color: "#16a34a",
+                fontWeight: 800,
+                background: "rgba(22, 163, 74, 0.08)",
+                boxShadow: N.inset,
+              }}>✓ {saved}</span>
+            )}
+            <button onClick={() => router.push("/dashboard")} className="neo-btn"
+              style={{
+                padding: "10px 18px",
+                borderRadius: 12,
+                fontSize: 12,
+                fontWeight: 850,
+                border: "none",
+                background: N.bg,
+                color: N.muted,
+                boxShadow: N.raisedSm,
+                cursor: "pointer",
+              }}>
+              ← Dashboard
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24 }}>
+          {[
+            ["👥", "Total Users", users.length],
+            ["💎", "Lifetime Users", users.filter((u) => u.plan === "LIFETIME").length],
+            ["🔄", "Free Trial Users", users.filter((u) => u.plan === "FREE" || u.plan === "TRIAL").length],
+            ["💰", "Platform Revenue", `$${payments.filter((p) => p.status === "CONFIRMED").reduce((a, p) => a + (p.amountUsdt ?? 0), 0).toFixed(0)} USDT`],
+          ].map(([icon, label, val]) => (
+            <div key={label} style={{
+              borderRadius: 20,
+              padding: "24px 20px",
+              background: N.bg,
+              boxShadow: N.raised,
+              display: "flex",
+              alignItems: "center",
+              gap: 16
+            }}>
+              <div style={{
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                background: N.bg,
+                boxShadow: N.inset,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 22
+              }}>{icon}</div>
+              <div>
+                <p style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>{val}</p>
+                <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tab switch bar */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system"] as AdminTab[]).map((t) => {
+            const iconMap: Record<AdminTab, string> = {
+              settings: "⚙️ ",
+              users: "👥 ",
+              payments: "💰 ",
+              upi_payments: "🇮🇳 ",
+              admin_panels: "🚀 ",
+              campaigns: "📦 ",
+              system: "⚡ "
+            };
+            return (
+              <button key={t} onClick={() => setTab(t)} className="neo-btn"
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 12,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  background: N.bg,
+                  color: tab === t ? N.accent : N.muted,
+                  boxShadow: tab === t ? N.inset : N.raisedSm,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}>
+                <span>{iconMap[t]}</span>
+                <span style={{ textTransform: "capitalize" }}>{t.replace("_", " ")}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab Contents wrapper */}
+        <div style={{ borderRadius: 24, padding: 32, background: N.bg, boxShadow: N.raised, minHeight: 280, display: "flex", flexDirection: "column", gap: 24 }}>
+
+          {/* ── SETTINGS TAB ─── */}
+          {tab === "settings" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+               <div>
+                 <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>⚙️ Global System Settings</h2>
+                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Configure active brand names and client support channels</p>
+               </div>
+               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                 <div>
+                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🏷️ Brand Site Name</label>
+                   <input value={settings.siteName ?? "YoyoSMM"}
+                     onChange={(e) => setSettings((p) => ({ ...p, siteName: e.target.value }))}
+                     placeholder="YoyoSMM"
+                     className="neo-input"
+                     style={{
+                       width: "100%",
+                       padding: "14px 18px",
+                       borderRadius: 12,
+                       fontSize: 13,
+                       fontWeight: 600,
+                       color: N.text,
+                       background: N.bg,
+                       border: "none",
+                       boxShadow: N.inset,
+                       outline: "none",
+                       boxSizing: "border-box"
+                     }} />
+                 </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>📧 Support Email</label>
+                  <input value={settings.supportEmail ?? ""} onChange={(e) => setSettings((p) => ({ ...p, supportEmail: e.target.value }))}
+                    placeholder="support@yoyosmm.online"
+                    className="neo-input"
+                    style={{
+                      width: "100%",
+                      padding: "14px 18px",
+                      borderRadius: 12,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: N.text,
+                      background: N.bg,
+                      border: "none",
+                      boxShadow: N.inset,
+                      outline: "none",
+                      boxSizing: "border-box"
+                    }} />
+                </div>
+                <div style={{ borderTop: `1.5px solid ${N.border}`, paddingTop: 20 }}>
+                  <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>🇮🇳 UPI Wallet Settings</h2>
+                  <p style={{ color: N.muted, fontSize: 12, margin: "0 0 16px", fontWeight: 600 }}>Configuration for the manual UPI Deposit wallet system</p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>UPI ID / VPA</label>
+                    <input value={settings.upiId ?? ""} onChange={(e) => setSettings((p) => ({ ...p, upiId: e.target.value }))}
+                      placeholder="merchant@upi"
+                      className="neo-input"
+                      style={{
+                        width: "100%",
+                        padding: "14px 18px",
+                        borderRadius: 12,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: N.text,
+                        background: N.bg,
+                        border: "none",
+                        boxShadow: N.inset,
+                        outline: "none",
+                        boxSizing: "border-box"
+                      }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>UPI QR Code Image URL</label>
+                    <input value={settings.upiQrCode ?? ""} onChange={(e) => setSettings((p) => ({ ...p, upiQrCode: e.target.value }))}
+                      placeholder="https://imgur.com/myqrcode.png"
+                      className="neo-input"
+                      style={{
+                        width: "100%",
+                        padding: "14px 18px",
+                        borderRadius: 12,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: N.text,
+                        background: N.bg,
+                        border: "none",
+                        boxShadow: N.inset,
+                        outline: "none",
+                        boxSizing: "border-box"
+                      }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🪙 Minimum Deposit Amount (INR)</label>
+                  <input type="number" value={settings.minDeposit ?? 500} onChange={(e) => setSettings((p) => ({ ...p, minDeposit: parseFloat(e.target.value) || 0 }))}
+                    placeholder="500"
+                    className="neo-input"
+                    style={{
+                      width: "100%",
+                      padding: "14px 18px",
+                      borderRadius: 12,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: N.text,
+                      background: N.bg,
+                      border: "none",
+                      boxShadow: N.inset,
+                      outline: "none",
+                      boxSizing: "border-box"
+                    }} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 18, borderRadius: 12, background: N.bg, boxShadow: N.inset }}>
+                  <input type="checkbox" id="maintenance" checked={settings.maintenanceMode}
+                    onChange={(e) => setSettings((p) => ({ ...p, maintenanceMode: e.target.checked }))}
+                    style={{ width: 18, height: 18, accentColor: N.accent, cursor: "pointer" }} />
+                  <label htmlFor="maintenance" style={{ fontSize: 13, color: N.text, fontWeight: 700, cursor: "pointer" }}>🔧 Maintenance Mode (shows maintenance page to users)</label>
+                </div>
+              </div>
+              <button onClick={saveSettings} className="neo-btn"
+                style={{
+                  alignSelf: "flex-start",
+                  padding: "12px 28px",
+                  borderRadius: 12,
+                  fontSize: 13,
+                  fontWeight: 850,
+                  border: "none",
+                  color: "#ffffff",
+                  background: N.accentBg,
+                  boxShadow: N.raisedSm,
+                  cursor: "pointer"
+                }}>
+                Save Settings
+              </button>
+            </div>
+          )}
+
+          {/* ── USERS TAB ─── */}
+          {tab === "users" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Platform Registered Users</h2>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Active registered operators and accounts: {users.length}</p>
+              </div>
+              {users.length === 0 ? (
+                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No users found</div>
+              ) : (
+                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                        {["Email", "Created At", "Plan Status", "Connected Panels", "Campaigns Count", "Actions"].map((h) => (
+                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u.email}</td>
+                          <td style={{ padding: "14px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                          <td style={{ padding: "14px 24px" }}>
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 850,
+                              padding: "4px 8px",
+                              borderRadius: 6,
+                              background: PLAN_COLORS[u.plan] + "1A",
+                              color: PLAN_COLORS[u.plan]
+                            }}>{u.plan}</span>
+                          </td>
+                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u._count?.panels ?? 0} connected</td>
+                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u._count?.orders ?? 0} campaigns</td>
+                          <td style={{ padding: "14px 24px" }}>
+                            <div style={{ display: "flex", gap: 10 }}>
+                              {u.plan !== "LIFETIME" && (
+                                <button onClick={() => userAction(u.id, "upgrade")} className="neo-btn"
+                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}>
+                                  Upgrade Lifetime
+                                </button>
+                              )}
+                              {u.plan !== "SUSPENDED" ? (
+                                <button onClick={() => userAction(u.id, "suspend")} className="neo-btn"
+                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm }}>
+                                  Suspend
+                                </button>
+                              ) : (
+                                <button onClick={() => userAction(u.id, "unsuspend")} className="neo-btn"
+                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm }}>
+                                  Unsuspend
+                                </button>
+                              )}
+                              <button onClick={() => impersonateUser(u.id)} className="neo-btn"
+                                style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#2563eb", boxShadow: N.raisedSm }}>
+                                Login As
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── PAYMENTS TAB ─── */}
+          {tab === "payments" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Crypto Payments Log</h2>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Lifetime subscription deposits on USDT-TRC20 & BEP20 networks</p>
+              </div>
+              {payments.length === 0 ? (
+                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No payments found</div>
+              ) : (
+                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                        {["User", "Network", "Transaction Hash / TXID", "Amount", "Status", "Date"].map((h) => (
+                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((p) => {
+                        const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", FAILED: "#dc2626", VERIFYING: "#2563eb" };
+                        return (
+                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                padding: "4px 8px",
+                                borderRadius: 6,
+                                background: p.network === "TRC20" ? "rgba(37,99,235,0.08)" : "rgba(217,119,6,0.08)",
+                                color: p.network === "TRC20" ? "#2563eb" : "#d97706"
+                              }}>{p.network}</span>
+                            </td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <code style={{ fontSize: 12, fontWeight: 700, color: N.accent }}>{p.txHash.slice(0, 20)}…</code>
+                            </td>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 900, color: N.text }}>{p.amountUsdt ? `$${p.amountUsdt} USDT` : "—"}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <strong style={{ fontSize: 12, color: statusColors[p.status] ?? N.muted }}>{p.status}</strong>
+                            </td>
+                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── UPI PAYMENTS TAB ─── */}
+          {tab === "upi_payments" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>UPI Deposit Requests</h2>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Verify manual UPI payment deposits via UTR numbers submitted by users</p>
+              </div>
+              {upiPayments.length === 0 ? (
+                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No UPI deposit requests found</div>
+              ) : (
+                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                        {["User Email", "Amount (₹)", "UTR Number", "Status", "Date", "Actions"].map((h) => (
+                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {upiPayments.map((p) => {
+                        const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", REJECTED: "#dc2626" };
+                        return (
+                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: "#16a34a" }}>₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: N.accent }}>{p.utr}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <span style={{
+                                fontSize: 10,
+                                fontWeight: 850,
+                                padding: "4px 8px",
+                                borderRadius: 6,
+                                background: statusColors[p.status] + "1A",
+                                color: statusColors[p.status]
+                              }}>{p.status}</span>
+                            </td>
+                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleString()}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              {p.status === "PENDING" ? (
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button onClick={() => handleUpiAction(p.id, "approve")} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 850, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                    ✓ Approve
+                                  </button>
+                                  <button onClick={() => {
+                                    const reason = prompt("Enter rejection reason:", "Invalid UTR number");
+                                    if (reason !== null) handleUpiAction(p.id, "reject", reason);
+                                  }} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 850, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                    ✗ Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>No actions</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── ADMIN SMM PANELS TAB ─── */}
+          {tab === "admin_panels" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+              
+              {/* Section 1: Admin panels CRUD */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div>
+                  <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>🚀 SMM API Integrations (Admin-owned)</h2>
+                  <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>These panels process campaigns automatically for wallet-mode users</p>
+                </div>
+                
+                {/* Form to add admin panel */}
+                <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>➕ Add New SMM Panel API</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Panel Name</label>
+                      <input value={newPanelName} onChange={e => setNewPanelName(e.target.value)} placeholder="e.g. BulkSMM"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API URL</label>
+                      <input value={newPanelApiUrl} onChange={e => setNewPanelApiUrl(e.target.value)} placeholder="e.g. https://bulksmm.com/api/v2"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.4fr 0.4fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API Key / Token</label>
+                      <input type="password" value={newPanelApiKey} onChange={e => setNewPanelApiKey(e.target.value)} placeholder="Enter API Key"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Priority (1-10)</label>
+                      <input type="number" value={newPanelPriority} onChange={e => setNewPanelPriority(e.target.value)} placeholder="1"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Load %</label>
+                      <input type="number" value={newPanelLoadPercentage} onChange={e => setNewPanelLoadPercentage(e.target.value)} placeholder="100"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                    </div>
+                  </div>
+                  <button onClick={handleAddPanel} className="neo-btn"
+                    style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer" }}>
+                    Connect SMM Panel
+                  </button>
+                </div>
+
+                {/* SMM Panels List */}
+                {adminPanels.length === 0 ? (
+                  <div style={{ padding: "20px 0", textAlign: "center", color: N.muted, fontSize: 12, fontWeight: 700 }}>No admin SMM panels connected yet</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                          {["Name", "API URL", "Priority", "Load %", "Status", "Actions"].map((h) => (
+                            <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminPanels.map((p) => (
+                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.name}</td>
+                            <td style={{ padding: "12px 16px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.priority}</td>
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.loadPercentage}%</td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: p.status === "ONLINE" ? "rgba(22,163,74,0.08)" : "rgba(113,128,150,0.08)", color: p.status === "ONLINE" ? "#16a34a" : N.muted }}>
+                                {p.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <div style={{ display: "flex", gap: 10 }}>
+                                <button onClick={() => handleLoadServices(p.id)} className="neo-btn"
+                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                  ⚙️ Configure Pricing
+                                </button>
+                                <button onClick={() => handleDeletePanel(p.id)} className="neo-btn"
+                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                  ✗ Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 2: Services configurations */}
+              {selectedPanelId && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20, borderTop: `1.5px solid ${N.border}`, paddingTop: 24 }}>
+                  <div>
+                    <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>
+                      Configure Custom Pricing for: <strong style={{ color: N.accent }}>{adminPanels.find(p => p.id === selectedPanelId)?.name}</strong>
+                    </h2>
+                    <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Map SMM Panel service IDs to user delivery types and define markup rates</p>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
+                    
+                    {/* Left Panel: Pricing configuration form */}
+                    <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>⚙️ Set Service Price</p>
+                      
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>1. Select Platform</label>
+                        <select value={pricingPlatform} onChange={e => setPricingPlatform(e.target.value)}
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}>
+                          <option value="INSTAGRAM">Instagram</option>
+                          <option value="TIKTOK">TikTok</option>
+                          <option value="YOUTUBE">YouTube</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>2. Select Action Type</label>
+                        <select value={pricingType} onChange={e => setPricingType(e.target.value)}
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}>
+                          <option value="views">Views</option>
+                          <option value="likes">Likes</option>
+                          <option value="saves">Saves</option>
+                          <option value="shares">Shares</option>
+                          <option value="comments">Comments</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>3. Choose SMM Service ID &amp; Original Rate (from SMM API)</label>
+                        {fetchingServices ? (
+                          <p style={{ fontSize:12, color:N.muted, margin: "6px 0", fontWeight:600 }}>Loading services list from API…</p>
+                        ) : liveServices.length === 0 ? (
+                          <div style={{ display: "flex", gap: 10 }}>
+                            <input value={pricingServiceId} onChange={e => setPricingServiceId(e.target.value)} placeholder="e.g. 1042"
+                              style={{ flex:1, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                            <input type="number" step="0.01" value={pricingOriginalRate} onChange={e => setPricingOriginalRate(e.target.value)} placeholder="Rate per 1k"
+                              style={{ width: 110, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+                          </div>
+                        ) : (
+                          <select value={pricingServiceId} onChange={e => {
+                            const val = e.target.value;
+                            setPricingServiceId(val);
+                            const selected = liveServices.find(s => String(s.service) === val);
+                            if (selected) {
+                              setPricingOriginalRate(selected.rate);
+                              setPricingName(selected.name ?? "");
+                              if (pricingMultiplier) {
+                                handleMultiplierChange(pricingMultiplier, selected.rate);
+                              }
+                            }
+                          }}
+                            style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer" }}>
+                            <option value="">-- Select Service from API --</option>
+                            {liveServices.map(s => (
+                              <option key={s.service} value={s.service}>
+                                #{s.service} - {s.name?.slice(0, 50)} (Cost: ${s.rate}/1k)
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      {pricingOriginalRate && (
+                        <div style={{ padding: 14, borderRadius: 12, background: "rgba(168, 85, 247, 0.04)", border: `1.5px solid ${N.border}`, display: "flex", flexDirection: "column", gap: 12 }}>
+                          <p style={{ fontSize: 11, color: N.muted, margin: 0, fontWeight: 700 }}>
+                            💵 Original Cost: <strong style={{ color: N.text }}>${pricingOriginalRate} per 1k</strong>
+                            <span style={{ marginLeft: 8, color: "#16a34a" }}>
+                              (~ ₹{(parseFloat(pricingOriginalRate) * 83).toFixed(2)} per 1k)
+                            </span>
+                          </p>
+                          
+                          <div>
+                            <label style={{ display: "block", fontSize: 10, fontWeight: 900, color: N.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>⚡ Apply Multiplier Markup</label>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                              {[2, 3, 5, 10].map(factor => (
+                                <button key={factor} type="button" onClick={() => handleMultiplierChange(String(factor))}
+                                  style={{
+                                    padding: "6px 12px",
+                                    borderRadius: 6,
+                                    border: pricingMultiplier === String(factor) ? "1.5px solid #a855f7" : `1px solid ${N.border}`,
+                                    background: pricingMultiplier === String(factor) ? "rgba(168, 85, 247, 0.15)" : N.bg,
+                                    color: pricingMultiplier === String(factor) ? "#a855f7" : N.text,
+                                    fontSize: 10,
+                                    fontWeight: 900,
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease"
+                                  }}>
+                                  {factor}x Markup
+                                </button>
+                              ))}
+                              <button type="button" onClick={() => { setPricingMultiplier(""); setPricingCustomRate(""); }}
+                                style={{
+                                  padding: "6px 12px",
+                                  borderRadius: 6,
+                                  border: `1px solid ${N.border}`,
+                                  background: N.bg,
+                                  color: N.muted,
+                                  fontSize: 10,
+                                  fontWeight: 900,
+                                  cursor: "pointer"
+                                }}>
+                                Clear
+                              </button>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>Custom Factor:</span>
+                              <input type="number" step="0.5" placeholder="e.g. 3.5" value={pricingMultiplier} onChange={e => handleMultiplierChange(e.target.value)}
+                                style={{ width: 80, padding: "6px 10px", borderRadius: 8, fontSize: 11, background: N.bg, border: "none", color: N.text, outline: "none", boxShadow: N.raisedSm, fontWeight: 700 }} />
+                              <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>x base cost</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>4. Final Custom Rate Charged to Users (INR per 1,000)</label>
+                        <input type="number" step="0.1" placeholder="e.g. 20.0" value={pricingCustomRate} onChange={e => {
+                          setPricingCustomRate(e.target.value);
+                          setPricingMultiplier("");
+                        }}
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", outline:"none", boxShadow: N.raisedSm, fontWeight: 800, color: "#16a34a" }} />
+                      </div>
+
+                      <button onClick={handleSaveServicePrice} disabled={savingService} className="neo-btn"
+                        style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer", opacity: savingService ? 0.5 : 1 }}>
+                        {savingService ? "Saving configuration…" : "Save Custom Pricing"}
+                      </button>
+                    </div>
+
+                    {/* Right Panel: Currently saved pricing list */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.muted }}>Currently Configured Markup Prices</p>
+                      
+                      {savedServices.length === 0 ? (
+                        <div style={{ padding: "32px", textAlign: "center", border: `1.5px dashed ${N.border}`, borderRadius: 16, color: N.muted, fontSize: 12, fontWeight: 700 }}>
+                          No custom pricing configured for this panel yet.<br/><span style={{ fontSize: 11 }}>Setup pricing to let wallet users order.</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 420, overflowY: "auto" }}>
+                          {savedServices.map(s => (
+                            <div key={s.id} style={{ padding: 12, borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div>
+                                <span style={{ fontSize: 10, fontWeight: 850, padding: "2px 6px", borderRadius: 4, background: "rgba(168,85,247,0.08)", color: "#a855f7", textTransform: "uppercase" }}>{s.platform}</span>
+                                <span style={{ fontSize: 10, fontWeight: 850, padding: "2px 6px", borderRadius: 4, background: "rgba(217,70,239,0.08)", color: "#d946ef", textTransform: "uppercase", marginLeft: 6 }}>{s.type}</span>
+                                <p style={{ fontSize: 11, color: N.muted, margin: "4px 0 0" }}>Service ID: #{s.serviceId} {s.name ? `(${s.name.slice(0, 25)}…)` : ""}</p>
+                                <p style={{ fontSize: 10, color: N.muted, margin: "2px 0 0" }}>Base Cost: ${s.originalRate}/1k</p>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <span style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>₹ {s.customRate}/1k</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── CAMPAIGNS TAB ─── */}
+          {tab === "campaigns" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Global SMM Campaigns Override</h2>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Monitor and force actions on active or queued pacing schedules</p>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                <input type="text" placeholder="Search by user email, reel URL, or order ID…" value={orderQuery} onChange={(e) => setOrderQuery(e.target.value)}
+                  className="neo-input"
+                  style={{
+                    flex: 1,
+                    minWidth: 280,
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: N.text,
+                    background: N.bg,
+                    border: "none",
+                    boxShadow: N.inset,
+                    outline: "none"
+                  }} />
+                <select value={orderFilter} onChange={(e) => setOrderFilter(e.target.value)}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    background: N.bg,
+                    color: N.text,
+                    border: "none",
+                    boxShadow: N.raisedSm,
+                    cursor: "pointer",
+                    outline: "none"
+                  }}>
+                  <option value="All">All Statuses</option>
+                  <option value="DELIVERING">Delivering</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="PAUSED">Paused</option>
+                  <option value="CANCELLED">Cancelled</option>
+                  <option value="FAILED">Failed</option>
+                  <option value="QUEUED">Queued</option>
+                </select>
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                      {["User & Target Reel", "Speed & Curve", "Targets Overview", "Status", "Manual Overrides"].map((h) => (
+                        <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders
+                      .filter((o) => {
+                        const matchesQuery =
+                          o.user.email.toLowerCase().includes(orderQuery.toLowerCase()) ||
+                          o.reel.url.toLowerCase().includes(orderQuery.toLowerCase()) ||
+                          o.id.toLowerCase().includes(orderQuery.toLowerCase());
+                        const matchesFilter = orderFilter === "All" || o.status === orderFilter;
+                        return matchesQuery && matchesFilter;
+                      })
+                      .map((o) => {
+                        const statusColors: Record<string, string> = { DELIVERING: "#d97706", COMPLETED: "#16a34a", PAUSED: "#718096", CANCELLED: "#dc2626", FAILED: "#dc2626", QUEUED: "#2563eb" };
+                        return (
+                          <tr key={o.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                            <td style={{ padding: "14px 24px" }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: N.text, margin: 0 }}>{o.user?.email}</p>
+                              <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
+                                {o.reel?.url?.length > 42 ? `${o.reel.url.slice(0, 42)}…` : o.reel?.url}
+                              </a>
+                            </td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                padding: "4px 8px",
+                                borderRadius: 6,
+                                background: "rgba(217,119,6,0.08)",
+                                color: N.accent
+                              }}>{o.curveStyle}</span>
+                              <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0", fontWeight: 600 }}>{o.durationHours}h schedule</p>
+                            </td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <p style={{ color: N.text, margin: 0, fontWeight: 700, fontSize: 13 }}>👁 {o.viewsTarget.toLocaleString()} views</p>
+                              <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0", fontWeight: 600 }}>
+                                {o.likesTarget > 0 && `👍 ${o.likesTarget.toLocaleString()} `}
+                                {o.savesTarget > 0 && `🔖 ${o.savesTarget.toLocaleString()} `}
+                                {o.commentsTarget > 0 && `💬 ${o.commentsTarget.toLocaleString()}`}
+                              </p>
+                            </td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <strong style={{ fontSize: 12, color: statusColors[o.status] ?? N.muted }}>{o.status}</strong>
+                            </td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                {o.status === "DELIVERING" && (
+                                  <button onClick={() => handleCampaignAction(o.id, "pause")} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm }}>
+                                    Pause
+                                  </button>
+                                )}
+                                {o.status === "PAUSED" && (
+                                  <button onClick={() => handleCampaignAction(o.id, "resume")} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}>
+                                    Resume
+                                  </button>
+                                )}
+                                {["DELIVERING", "PAUSED", "QUEUED"].includes(o.status) && (
+                                  <button onClick={() => handleCampaignAction(o.id, "cancel")} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm }}>
+                                    Cancel
+                                  </button>
+                                )}
+                                {["DELIVERING", "COMPLETED"].includes(o.status) && (
+                                  <button onClick={() => handleCampaignAction(o.id, "refill")} className="neo-btn"
+                                    style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}
+                                    title="Query status & place refill if partial">
+                                    Refill
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── SYSTEM HEALTH TAB ─── */}
+          {tab === "system" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <div>
+                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>System Diagnostic Logs</h2>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Real-time execution tick states and user panel statuses</p>
+              </div>
+
+              {/* Status counts grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20 }}>
+                {[
+                  ["Active Campaigns", orders.filter((o) => ["DELIVERING", "QUEUED"].includes(o.status)).length, N.accent],
+                  ["Completed Campaigns", orders.filter((o) => o.status === "COMPLETED").length, "#16a34a"],
+                  ["Scheduled Ticks", systemData.eventStats.find((s) => s.status === "SCHEDULED")?.count ?? 0, N.text],
+                  ["Failed Ticks", systemData.eventStats.find((s) => s.status === "FAILED")?.count ?? 0, "#dc2626"],
+                ].map(([label, val, color]) => (
+                  <div key={label} style={{ padding: 18, borderRadius: 14, background: N.bg, boxShadow: N.raisedSm }}>
+                    <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</p>
+                    <p style={{ fontSize: 22, fontWeight: 900, color: color as string, margin: 0, marginTop: 4 }}>{val}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Panels Diagnostics */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <h3 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Global User SMM Panels ({systemData.panels.length})</h3>
+                {systemData.panels.length === 0 ? (
+                  <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No panel APIs connected yet</div>
+                ) : (
+                  <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
+                          {["User", "Panel Name", "API URL", "Status", "Latency", "Success Rate"].map((h) => (
+                            <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {systemData.panels.map((p) => {
+                          const statusColor = p.status === "ONLINE" ? "#16a34a" : p.status === "OFFLINE" ? "#dc2626" : p.status === "SLOW" ? "#d97706" : N.muted;
+                          return (
+                            <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                              <td style={{ padding: "12px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{p.user?.email}</td>
+                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.name}</td>
+                              <td style={{ padding: "12px 24px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
+                              <td style={{ padding: "12px 24px" }}>
+                                <strong style={{ fontSize: 12, color: statusColor }}>{p.status}</strong>
+                              </td>
+                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.lastResponseMs ? `${p.lastResponseMs}ms` : "—"}</td>
+                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.successRate.toFixed(1)}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Queue Events Ticks */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <h3 style={{ color: N.text, fontSize: 14, fontWeight: 900, margin: 0 }}>Recent Webhook ticks log ({systemData.events.length})</h3>
+                {systemData.events.length === 0 ? (
+                  <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No queue events logged</div>
+                ) : (
+                  <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
+                          {["Campaign User / Reel", "Batch Size", "Panel Provider", "Scheduled", "Status", "Diagnostics"].map((h) => (
+                            <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {systemData.events.map((e) => {
+                          const statusColors: Record<string, string> = { DONE: "#16a34a", FAILED: "#dc2626", SCHEDULED: "#718096", EXECUTING: "#d97706", RETRYING: "#4f46e5" };
+                          return (
+                            <tr key={e.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                              <td style={{ padding: "12px 24px" }}>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: N.text, margin: 0 }}>{e.order?.user?.email}</p>
+                                <p style={{ fontSize: 11, color: N.muted, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>{e.order?.reel?.url}</p>
+                              </td>
+                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 750, color: N.text }}>{(e.viewsBatch ?? 0).toLocaleString()} views</td>
+                              <td style={{ padding: "12px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{e.panel?.name}</td>
+                              <td style={{ padding: "12px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(e.scheduledAt).toLocaleTimeString()}</td>
+                              <td style={{ padding: "12px 24px" }}>
+                                <strong style={{ fontSize: 12, color: statusColors[e.status] ?? N.muted }}>{e.status}</strong>
+                              </td>
+                              <td style={{ padding: "12px 24px", fontSize: 12, color: "#dc2626", fontWeight: 700, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.errorMessage ?? ""}>
+                                {e.errorMessage ?? "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
