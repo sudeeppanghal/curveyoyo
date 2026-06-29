@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { panelId, platform, type, serviceId, originalRate, customRate, name } = body;
+  const { panelId, platform, type, serviceId, originalRate, customRate, name, minQuantity } = body;
 
   if (!panelId || !platform || !type || !serviceId || originalRate === undefined || customRate === undefined) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -78,12 +78,14 @@ export async function POST(request: NextRequest) {
       originalRate: parseFloat(originalRate),
       customRate: parseFloat(customRate),
       name: name ?? null,
+      minQuantity: minQuantity ? parseInt(minQuantity) : 10,
     },
     update: {
       serviceId: String(serviceId),
       originalRate: parseFloat(originalRate),
       customRate: parseFloat(customRate),
       name: name ?? null,
+      minQuantity: minQuantity ? parseInt(minQuantity) : 10,
     },
   });
 

@@ -2,11 +2,23 @@
 
 
 
+
+
+
+
 import { useEffect, useState } from "react";
 
 
 
+
+
+
+
 import { useRouter } from "next/navigation";
+
+
+
+
 
 
 
@@ -18,7 +30,19 @@ import Link from "next/link";
 
 
 
+
+
+
+
+
+
+
+
 interface AdminSettings {
+
+
+
+
 
 
 
@@ -26,7 +50,15 @@ interface AdminSettings {
 
 
 
+
+
+
+
   bep20Address: string | null;
+
+
+
+
 
 
 
@@ -34,7 +66,15 @@ interface AdminSettings {
 
 
 
+
+
+
+
   siteName: string;
+
+
+
+
 
 
 
@@ -42,7 +82,15 @@ interface AdminSettings {
 
 
 
+
+
+
+
   maintenanceMode: boolean;
+
+
+
+
 
 
 
@@ -50,7 +98,15 @@ interface AdminSettings {
 
 
 
+
+
+
+
   upiId: string | null;
+
+
+
+
 
 
 
@@ -58,11 +114,27 @@ interface AdminSettings {
 
 
 
+
+
+
+
   minDeposit: number;
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -74,7 +146,15 @@ interface User {
 
 
 
+
+
+
+
   id: string;
+
+
+
+
 
 
 
@@ -82,7 +162,15 @@ interface User {
 
 
 
+
+
+
+
   name: string | null;
+
+
+
+
 
 
 
@@ -90,7 +178,15 @@ interface User {
 
 
 
+
+
+
+
   createdAt: string;
+
+
+
+
 
 
 
@@ -98,7 +194,15 @@ interface User {
 
 
 
+
+
+
+
   _count: { orders: number; panels: number };
+
+
+
+
 
 
 
@@ -106,7 +210,19 @@ interface User {
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -118,7 +234,15 @@ interface Payment {
 
 
 
+
+
+
+
   id: string;
+
+
+
+
 
 
 
@@ -126,7 +250,15 @@ interface Payment {
 
 
 
+
+
+
+
   network: string;
+
+
+
+
 
 
 
@@ -134,7 +266,15 @@ interface Payment {
 
 
 
+
+
+
+
   amountUsdt: number | null;
+
+
+
+
 
 
 
@@ -142,11 +282,27 @@ interface Payment {
 
 
 
+
+
+
+
   user: { email: string; name: string | null };
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -162,7 +318,19 @@ type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_pane
 
 
 
+
+
+
+
+
+
+
+
 const N = {
+
+
+
+
 
 
 
@@ -170,7 +338,15 @@ const N = {
 
 
 
+
+
+
+
   raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+
+
+
+
 
 
 
@@ -178,7 +354,15 @@ const N = {
 
 
 
+
+
+
+
   inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+
+
+
+
 
 
 
@@ -186,7 +370,15 @@ const N = {
 
 
 
+
+
+
+
   accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+
+
+
+
 
 
 
@@ -194,7 +386,15 @@ const N = {
 
 
 
+
+
+
+
   muted:    "#718096",
+
+
+
+
 
 
 
@@ -202,7 +402,19 @@ const N = {
 
 
 
+
+
+
+
 };
+
+
+
+
+
+
+
+
 
 
 
@@ -214,7 +426,15 @@ const PLAN_COLORS: Record<string, string> = {
 
 
 
+
+
+
+
   FREE: "#718096",
+
+
+
+
 
 
 
@@ -222,11 +442,23 @@ const PLAN_COLORS: Record<string, string> = {
 
 
 
+
+
+
+
   LIFETIME: "#16a34a",
 
 
 
+
+
+
+
   SUSPENDED: "#dc2626",
+
+
+
+
 
 
 
@@ -238,7 +470,19 @@ const PLAN_COLORS: Record<string, string> = {
 
 
 
+
+
+
+
+
+
+
+
 export default function AdminPage() {
+
+
+
+
 
 
 
@@ -246,7 +490,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [secret, setSecret] = useState("");
+
+
+
+
 
 
 
@@ -254,7 +506,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [tab, setTab] = useState<AdminTab>("settings");
+
+
+
+
 
 
 
@@ -262,7 +522,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     trc20Address: "",
+
+
+
+
 
 
 
@@ -270,7 +538,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     priceUsdt: 20,
+
+
+
+
 
 
 
@@ -278,7 +554,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     freeTrialHours: 24,
+
+
+
+
 
 
 
@@ -286,7 +570,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     supportEmail: "",
+
+
+
+
 
 
 
@@ -294,7 +586,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     upiQrCode: "",
+
+
+
+
 
 
 
@@ -302,7 +602,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   });
+
+
+
+
 
 
 
@@ -310,7 +618,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [payments, setPayments] = useState<Payment[]>([]);
+
+
+
+
 
 
 
@@ -318,7 +634,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [systemData, setSystemData] = useState<{
+
+
+
+
 
 
 
@@ -326,7 +650,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     panels: any[];
+
+
+
+
 
 
 
@@ -334,7 +666,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     eventStats: { status: string; count: number }[];
+
+
+
+
 
 
 
@@ -342,7 +682,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [loading, setLoading] = useState(false);
+
+
+
+
 
 
 
@@ -350,11 +698,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [error, setError] = useState("");
 
 
 
+
+
+
+
   const [orderQuery, setOrderQuery] = useState("");
+
+
+
+
 
 
 
@@ -366,7 +726,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
   // New UPI Payments & Admin Panels States
+
+
+
+
 
 
 
@@ -374,7 +746,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [adminPanels, setAdminPanels] = useState<any[]>([]);
+
+
+
+
 
 
 
@@ -382,7 +762,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [liveServices, setLiveServices] = useState<any[]>([]);
+
+
+
+
 
 
 
@@ -390,7 +778,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [fetchingServices, setFetchingServices] = useState(false);
+
+
+
+
 
 
 
@@ -402,7 +798,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
   // New Panel fields
+
+
+
+
 
 
 
@@ -410,7 +818,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [newPanelApiUrl, setNewPanelApiUrl] = useState("");
+
+
+
+
 
 
 
@@ -418,7 +834,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [newPanelPriority, setNewPanelPriority] = useState("1");
+
+
+
+
 
 
 
@@ -430,7 +854,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
   // Service Pricing fields
+
+
+
+
 
 
 
@@ -438,7 +874,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [pricingType, setPricingType] = useState("views");
+
+
+
+
 
 
 
@@ -446,7 +890,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [pricingOriginalRate, setPricingOriginalRate] = useState("");
+
+
+
+
 
 
 
@@ -454,13 +906,31 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const [pricingName, setPricingName] = useState("");
 
 
 
+
+
+
+
   const [pricingMultiplier, setPricingMultiplier] = useState("");
+
   const [pricingMin, setPricingMin] = useState("");
+
   const [pricingMax, setPricingMax] = useState("");
+
+
+
+
+
+
+
+
 
 
 
@@ -472,7 +942,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     setPricingMultiplier(multValue);
+
+
+
+
 
 
 
@@ -480,7 +958,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     const orig = parseFloat(customOriginalRate ?? pricingOriginalRate);
+
+
+
+
 
 
 
@@ -488,7 +974,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       const customVal = (orig * 83 * m).toFixed(2);
+
+
+
+
 
 
 
@@ -496,7 +990,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } else {
+
+
+
+
 
 
 
@@ -504,11 +1006,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -524,7 +1042,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
   const loadAll = async () => {
+
+
+
+
 
 
 
@@ -532,7 +1062,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     setError("");
+
+
+
+
 
 
 
@@ -540,7 +1078,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       const sRes = await fetch("/api/admin/settings", { headers });
+
+
+
+
 
 
 
@@ -548,7 +1094,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setError("Wrong admin secret");
+
+
+
+
 
 
 
@@ -556,7 +1110,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setLoading(false);
+
+
+
+
 
 
 
@@ -564,7 +1126,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -572,7 +1142,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setError(`Server error ${sRes.status} — check DATABASE_URL in Vercel env vars`);
+
+
+
+
 
 
 
@@ -580,7 +1158,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         return;
+
+
+
+
 
 
 
@@ -588,11 +1174,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       const s = await sRes.json();
 
 
 
+
+
+
+
       if (s.settings) setSettings(s.settings);
+
+
+
+
 
 
 
@@ -604,7 +1202,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
       const [uRes, pRes, oRes, sysRes, upiRes, apRes] = await Promise.all([
+
+
+
+
 
 
 
@@ -612,7 +1222,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         fetch("/api/admin/payments", { headers }),
+
+
+
+
 
 
 
@@ -620,7 +1238,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         fetch("/api/admin/system",   { headers }),
+
+
+
+
 
 
 
@@ -628,7 +1254,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         fetch("/api/admin/panels",   { headers }),
+
+
+
+
 
 
 
@@ -636,7 +1270,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       if (uRes.ok)   { const u = await uRes.json();   setUsers(u.users ?? []); }
+
+
+
+
 
 
 
@@ -644,7 +1286,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       if (oRes.ok)   { const o = await oRes.json();   setOrders(o.orders ?? []); }
+
+
+
+
 
 
 
@@ -652,7 +1302,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -660,7 +1318,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       try {
+
+
+
+
 
 
 
@@ -668,11 +1334,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         if (upiData.payments) setUpiPayments(upiData.payments);
 
 
 
+
+
+
+
       } catch (err) {}
+
+
+
+
+
+
+
+
 
 
 
@@ -684,7 +1366,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       try {
+
+
+
+
 
 
 
@@ -692,7 +1382,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         if (apData.panels) setAdminPanels(apData.panels);
+
+
+
+
 
 
 
@@ -700,7 +1398,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } catch (e) {
+
+
+
+
 
 
 
@@ -708,7 +1414,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -716,7 +1430,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -728,7 +1454,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     setSaved("Processing…");
+
+
+
+
 
 
 
@@ -736,7 +1470,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       const res = await fetch("/api/admin/orders", {
+
+
+
+
 
 
 
@@ -744,7 +1486,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         headers,
+
+
+
+
 
 
 
@@ -752,7 +1502,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -760,7 +1518,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       if (res.ok) {
+
+
+
+
 
 
 
@@ -768,7 +1534,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setTimeout(() => setSaved(""), 2000);
+
+
+
+
 
 
 
@@ -776,7 +1550,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       } else {
+
+
+
+
 
 
 
@@ -784,7 +1566,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -792,7 +1582,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } catch (e) {
+
+
+
+
 
 
 
@@ -800,7 +1598,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -808,7 +1614,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -820,7 +1638,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     const res = await fetch("/api/admin/settings", { method: "PATCH", headers, body: JSON.stringify(settings) });
+
+
+
+
 
 
 
@@ -828,7 +1654,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setSaved("Saved!");
+
+
+
+
 
 
 
@@ -836,7 +1670,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } else {
+
+
+
+
 
 
 
@@ -844,11 +1686,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -860,7 +1718,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const handleUpiAction = async (paymentId: string, action: "approve" | "reject", rejectedReason?: string) => {
+
+
+
+
 
 
 
@@ -868,7 +1734,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -876,7 +1750,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         method: "POST",
+
+
+
+
 
 
 
@@ -884,7 +1766,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         body: JSON.stringify({ paymentId, action, rejectedReason }),
+
+
+
+
 
 
 
@@ -892,7 +1782,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       if (res.ok) {
+
+
+
+
 
 
 
@@ -900,7 +1798,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setTimeout(() => setSaved(""), 2000);
+
+
+
+
 
 
 
@@ -908,7 +1814,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       } else {
+
+
+
+
 
 
 
@@ -916,7 +1830,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setError(errJson.error ?? "Payment action failed");
+
+
+
+
 
 
 
@@ -924,7 +1846,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -932,7 +1862,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setError(String(e));
+
+
+
+
 
 
 
@@ -940,11 +1878,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -956,7 +1910,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   const handleAddPanel = async () => {
+
+
+
+
 
 
 
@@ -964,11 +1926,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setError("Name, API URL, and API Key are required");
 
 
 
+
+
+
+
       setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -976,7 +1950,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -984,7 +1966,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -992,7 +1982,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         method: "POST",
+
+
+
+
 
 
 
@@ -1000,7 +1998,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         body: JSON.stringify({
+
+
+
+
 
 
 
@@ -1008,7 +2014,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           apiUrl: newPanelApiUrl.trim(),
+
+
+
+
 
 
 
@@ -1016,7 +2030,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           priority: parseInt(newPanelPriority) || 1,
+
+
+
+
 
 
 
@@ -1024,7 +2046,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         }),
+
+
+
+
 
 
 
@@ -1032,7 +2062,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       if (res.ok) {
+
+
+
+
 
 
 
@@ -1040,7 +2078,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setNewPanelName("");
+
+
+
+
 
 
 
@@ -1048,7 +2094,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setNewPanelApiKey("");
+
+
+
+
 
 
 
@@ -1056,7 +2110,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setNewPanelLoadPercentage("100");
+
+
+
+
 
 
 
@@ -1064,7 +2126,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         loadAll();
+
+
+
+
 
 
 
@@ -1072,7 +2142,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         const errJson = await res.json();
+
+
+
+
 
 
 
@@ -1080,7 +2158,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -1088,7 +2174,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } catch (e) {
+
+
+
+
 
 
 
@@ -1096,7 +2190,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -1104,7 +2206,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1116,7 +2230,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     if (!confirm("Are you sure you want to delete this admin SMM panel?")) return;
+
+
+
+
 
 
 
@@ -1124,7 +2246,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -1132,7 +2262,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         method: "DELETE",
+
+
+
+
 
 
 
@@ -1140,7 +2278,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -1148,7 +2294,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setSaved("Panel deleted!");
+
+
+
+
 
 
 
@@ -1156,7 +2310,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         loadAll();
+
+
+
+
 
 
 
@@ -1164,7 +2326,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           setSelectedPanelId("");
+
+
+
+
 
 
 
@@ -1172,7 +2342,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           setSavedServices([]);
+
+
+
+
 
 
 
@@ -1180,7 +2358,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       } else {
+
+
+
+
 
 
 
@@ -1188,7 +2374,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -1196,7 +2390,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } catch (e) {
+
+
+
+
 
 
 
@@ -1204,7 +2406,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -1212,7 +2422,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1224,7 +2446,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     setSelectedPanelId(panelId);
+
+
+
+
 
 
 
@@ -1232,7 +2462,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     setLiveServices([]);
+
+
+
+
 
 
 
@@ -1240,7 +2478,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -1248,7 +2494,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       const liveRes = await fetch(`/api/admin/services?action=fetch&panelId=${panelId}`, { headers });
+
+
+
+
 
 
 
@@ -1256,7 +2510,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         const liveJson = await liveRes.json();
+
+
+
+
 
 
 
@@ -1264,7 +2526,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       } else {
+
+
+
+
 
 
 
@@ -1272,7 +2542,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setError(errJson.error ?? "Failed to load live services from SMM API");
+
+
+
+
 
 
 
@@ -1280,7 +2558,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -1292,7 +2582,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       const savedRes = await fetch(`/api/admin/services?panelId=${panelId}`, { headers });
+
+
+
+
 
 
 
@@ -1300,7 +2598,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         const savedJson = await savedRes.json();
+
+
+
+
 
 
 
@@ -1308,7 +2614,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -1316,7 +2630,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setError(String(e));
+
+
+
+
 
 
 
@@ -1324,7 +2646,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } finally {
+
+
+
+
 
 
 
@@ -1332,11 +2662,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1348,7 +2694,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     if (!selectedPanelId || !pricingServiceId || !pricingCustomRate) {
+
+
+
+
 
 
 
@@ -1356,7 +2710,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setTimeout(() => setError(""), 3000);
+
+
+
+
 
 
 
@@ -1364,7 +2726,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1372,7 +2742,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -1380,7 +2758,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         method: "POST",
+
+
+
+
 
 
 
@@ -1388,7 +2774,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         body: JSON.stringify({
+
+
+
+
 
 
 
@@ -1396,7 +2790,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           platform: pricingPlatform,
+
+
+
+
 
 
 
@@ -1404,7 +2806,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           serviceId: pricingServiceId,
+
+
+
+
 
 
 
@@ -1412,11 +2822,24 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           customRate: parseFloat(pricingCustomRate),
 
 
 
-          name: pricingName,
+
+
+
+
+          name: pricingName,
+          minQuantity: pricingMin ? parseInt(pricingMin) : 10,
+
+
+
+
 
 
 
@@ -1424,7 +2847,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -1432,7 +2863,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setSaved("Pricing configured successfully!");
+
+
+
+
 
 
 
@@ -1440,7 +2879,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setPricingOriginalRate("");
+
+
+
+
 
 
 
@@ -1448,7 +2895,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setPricingName("");
+
+
+
+
 
 
 
@@ -1456,7 +2911,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         // Refresh saved services config
+
+
+
+
 
 
 
@@ -1464,7 +2927,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         if (savedRes.ok) {
+
+
+
+
 
 
 
@@ -1472,7 +2943,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           setSavedServices(savedJson.services ?? []);
+
+
+
+
 
 
 
@@ -1480,7 +2959,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       } else {
+
+
+
+
 
 
 
@@ -1488,7 +2975,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setError(errJson.error ?? "Failed to save pricing");
+
+
+
+
 
 
 
@@ -1496,7 +2991,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -1504,7 +3007,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setError(String(e));
+
+
+
+
 
 
 
@@ -1512,7 +3023,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     } finally {
+
+
+
+
 
 
 
@@ -1520,11 +3039,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1536,7 +3071,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     await fetch("/api/admin/users", { method: "PATCH", headers, body: JSON.stringify({ userId, action }) });
+
+
+
+
 
 
 
@@ -1544,7 +3087,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1556,7 +3111,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     setSaved("Authenticating as user…");
+
+
+
+
 
 
 
@@ -1564,7 +3127,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       const res = await fetch("/api/admin/impersonate", {
+
+
+
+
 
 
 
@@ -1572,7 +3143,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         headers,
+
+
+
+
 
 
 
@@ -1580,7 +3159,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -1588,7 +3175,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       if (res.ok && data.redirectTo) {
+
+
+
+
 
 
 
@@ -1596,7 +3191,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         window.location.href = data.redirectTo;
+
+
+
+
 
 
 
@@ -1604,7 +3207,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         setError(data.error ?? "Failed to impersonate");
+
+
+
+
 
 
 
@@ -1612,7 +3223,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -1620,7 +3239,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       setError(String(e));
+
+
+
+
 
 
 
@@ -1628,7 +3255,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1640,7 +3275,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
   // Auth Screen REDESIGNED
+
+
+
+
 
 
 
@@ -1648,7 +3295,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     <div style={{
+
+
+
+
 
 
 
@@ -1656,7 +3311,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       display: "flex",
+
+
+
+
 
 
 
@@ -1664,7 +3327,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       justifyContent: "center",
+
+
+
+
 
 
 
@@ -1672,7 +3343,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+
+
+
+
 
 
 
@@ -1680,7 +3359,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     }}>
+
+
+
+
 
 
 
@@ -1688,7 +3375,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         .neo-input:focus {
+
+
+
+
 
 
 
@@ -1696,7 +3391,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -1704,7 +3407,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           transform: translateY(-1px);
+
+
+
+
 
 
 
@@ -1712,7 +3423,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -1720,7 +3439,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           transform: none;
+
+
+
+
 
 
 
@@ -1728,7 +3455,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -1736,7 +3471,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       <div style={{
+
+
+
+
 
 
 
@@ -1744,7 +3487,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         maxWidth: 380,
+
+
+
+
 
 
 
@@ -1752,7 +3503,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         padding: 36,
+
+
+
+
 
 
 
@@ -1760,7 +3519,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         boxShadow: N.raised,
+
+
+
+
 
 
 
@@ -1768,7 +3535,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         flexDirection: "column",
+
+
+
+
 
 
 
@@ -1776,7 +3551,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         textAlign: "center"
+
+
+
+
 
 
 
@@ -1784,7 +3567,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         <div>
+
+
+
+
 
 
 
@@ -1792,7 +3583,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             width: 48,
+
+
+
+
 
 
 
@@ -1800,7 +3599,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             borderRadius: "50%",
+
+
+
+
 
 
 
@@ -1808,7 +3615,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             alignItems: "center",
+
+
+
+
 
 
 
@@ -1816,7 +3631,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             margin: "0 auto 16px",
+
+
+
+
 
 
 
@@ -1824,7 +3647,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             fontWeight: 900,
+
+
+
+
 
 
 
@@ -1832,11 +3663,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             background: N.accentBg,
 
 
 
+
+
+
+
             boxShadow: N.raisedSm,
+
+
+
+
 
 
 
@@ -1844,7 +3687,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           <h1 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>Admin Panel</h1>
+
+
+
+
 
 
 
@@ -1852,7 +3703,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         </div>
+
+
+
+
 
 
 
@@ -1860,7 +3719,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           onKeyDown={(e) => e.key === "Enter" && loadAll()}
+
+
+
+
 
 
 
@@ -1868,7 +3735,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           className="neo-input"
+
+
+
+
 
 
 
@@ -1876,7 +3751,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             width: "100%",
+
+
+
+
 
 
 
@@ -1884,11 +3767,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             borderRadius: 12,
 
 
 
+
+
+
+
             fontSize: 13,
+
+
+
+
 
 
 
@@ -1896,7 +3791,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             color: N.text,
+
+
+
+
 
 
 
@@ -1904,7 +3807,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             border: "none",
+
+
+
+
 
 
 
@@ -1912,7 +3823,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             outline: "none",
+
+
+
+
 
 
 
@@ -1920,7 +3839,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           }} />
+
+
+
+
 
 
 
@@ -1928,7 +3855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         <button onClick={loadAll} className="neo-btn"
+
+
+
+
 
 
 
@@ -1936,7 +3871,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             width: "100%",
+
+
+
+
 
 
 
@@ -1944,7 +3887,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             borderRadius: 12,
+
+
+
+
 
 
 
@@ -1952,7 +3903,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             fontWeight: 850,
+
+
+
+
 
 
 
@@ -1960,7 +3919,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             color: "#ffffff",
+
+
+
+
 
 
 
@@ -1968,7 +3935,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             boxShadow: N.raisedSm,
+
+
+
+
 
 
 
@@ -1976,7 +3951,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           }}>
+
+
+
+
 
 
 
@@ -1984,7 +3967,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         </button>
+
+
+
+
 
 
 
@@ -1992,11 +3983,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     </div>
 
 
 
+
+
+
+
   );
+
+
+
+
+
+
+
+
 
 
 
@@ -2008,7 +4015,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
   return (
+
+
+
+
 
 
 
@@ -2016,7 +4031,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       minHeight: "100vh",
+
+
+
+
 
 
 
@@ -2024,7 +4047,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+
+
+
+
 
 
 
@@ -2032,7 +4063,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       boxSizing: "border-box"
+
+
+
+
 
 
 
@@ -2040,7 +4079,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
       <style>{`
+
+
+
+
 
 
 
@@ -2048,11 +4095,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           box-shadow: inset 6px 6px 12px #c8d0e7, inset -6px -6px 12px #ffffff, 0 0 0 2px rgba(217, 119, 6, 0.25) !important;
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -2060,7 +4119,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           transform: translateY(-1px);
+
+
+
+
 
 
 
@@ -2068,7 +4135,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -2076,7 +4151,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           transform: none;
+
+
+
+
 
 
 
@@ -2084,7 +4167,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -2092,11 +4183,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           background: rgba(200, 208, 231, 0.15) !important;
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -2104,7 +4207,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           from { opacity: 0; transform: translateY(8px); }
+
+
+
+
 
 
 
@@ -2112,7 +4223,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -2124,7 +4243,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
+
+
+
+
 
 
 
@@ -2132,7 +4263,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+
+
+
+
 
 
 
@@ -2140,7 +4279,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             <div style={{
+
+
+
+
 
 
 
@@ -2148,7 +4295,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               height: 42,
+
+
+
+
 
 
 
@@ -2156,7 +4311,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               display: "flex",
+
+
+
+
 
 
 
@@ -2164,7 +4327,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               justifyContent: "center",
+
+
+
+
 
 
 
@@ -2172,7 +4343,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               fontWeight: 900,
+
+
+
+
 
 
 
@@ -2180,7 +4359,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               background: N.accentBg,
+
+
+
+
 
 
 
@@ -2188,7 +4375,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             }}>Y</div>
+
+
+
+
 
 
 
@@ -2196,7 +4391,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <h1 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>YoyoSMM Admin</h1>
+
+
+
+
 
 
 
@@ -2204,11 +4407,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             </div>
 
 
 
+
+
+
+
           </div>
+
+
+
+
 
 
 
@@ -2216,7 +4431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             {saved && (
+
+
+
+
 
 
 
@@ -2224,7 +4447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 padding: "8px 14px",
+
+
+
+
 
 
 
@@ -2232,7 +4463,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 fontSize: 12,
+
+
+
+
 
 
 
@@ -2240,7 +4479,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 fontWeight: 800,
+
+
+
+
 
 
 
@@ -2248,7 +4495,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 boxShadow: N.inset,
+
+
+
+
 
 
 
@@ -2256,7 +4511,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             )}
+
+
+
+
 
 
 
@@ -2264,7 +4527,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               style={{
+
+
+
+
 
 
 
@@ -2272,7 +4543,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 borderRadius: 12,
+
+
+
+
 
 
 
@@ -2280,7 +4559,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 fontWeight: 850,
+
+
+
+
 
 
 
@@ -2288,7 +4575,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 background: N.bg,
+
+
+
+
 
 
 
@@ -2296,7 +4591,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 boxShadow: N.raisedSm,
+
+
+
+
 
 
 
@@ -2304,7 +4607,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               }}>
+
+
+
+
 
 
 
@@ -2312,7 +4623,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             </button>
+
+
+
+
 
 
 
@@ -2320,7 +4639,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -2332,7 +4663,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24 }}>
+
+
+
+
 
 
 
@@ -2340,7 +4679,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             ["👥", "Total Users", users.length],
+
+
+
+
 
 
 
@@ -2348,7 +4695,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             ["🔄", "Free Trial Users", users.filter((u) => u.plan === "FREE" || u.plan === "TRIAL").length],
+
+
+
+
 
 
 
@@ -2356,7 +4711,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           ].map(([icon, label, val]) => (
+
+
+
+
 
 
 
@@ -2364,7 +4727,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               borderRadius: 20,
+
+
+
+
 
 
 
@@ -2372,7 +4743,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               background: N.bg,
+
+
+
+
 
 
 
@@ -2380,7 +4759,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               display: "flex",
+
+
+
+
 
 
 
@@ -2388,7 +4775,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               gap: 16
+
+
+
+
 
 
 
@@ -2396,7 +4791,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div style={{
+
+
+
+
 
 
 
@@ -2404,7 +4807,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 height: 46,
+
+
+
+
 
 
 
@@ -2412,7 +4823,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 background: N.bg,
+
+
+
+
 
 
 
@@ -2420,7 +4839,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 display: "flex",
+
+
+
+
 
 
 
@@ -2428,7 +4855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 justifyContent: "center",
+
+
+
+
 
 
 
@@ -2436,7 +4871,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               }}>{icon}</div>
+
+
+
+
 
 
 
@@ -2444,7 +4887,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <p style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>{val}</p>
+
+
+
+
 
 
 
@@ -2452,7 +4903,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               </div>
+
+
+
+
 
 
 
@@ -2460,11 +4919,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           ))}
 
 
 
+
+
+
+
         </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -2476,7 +4951,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
+
+
+
+
 
 
 
@@ -2484,7 +4967,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             const iconMap: Record<AdminTab, string> = {
+
+
+
+
 
 
 
@@ -2492,7 +4983,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               users: "👥 ",
+
+
+
+
 
 
 
@@ -2500,7 +4999,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               upi_payments: "🇮🇳 ",
+
+
+
+
 
 
 
@@ -2508,7 +5015,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               campaigns: "📦 ",
+
+
+
+
 
 
 
@@ -2516,7 +5031,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             };
+
+
+
+
 
 
 
@@ -2524,7 +5047,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <button key={t} onClick={() => setTab(t)} className="neo-btn"
+
+
+
+
 
 
 
@@ -2532,7 +5063,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   padding: "10px 20px",
+
+
+
+
 
 
 
@@ -2540,7 +5079,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   fontSize: 13,
+
+
+
+
 
 
 
@@ -2548,7 +5095,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   border: "none",
+
+
+
+
 
 
 
@@ -2556,7 +5111,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   background: N.bg,
+
+
+
+
 
 
 
@@ -2564,7 +5127,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   boxShadow: tab === t ? N.inset : N.raisedSm,
+
+
+
+
 
 
 
@@ -2572,7 +5143,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   alignItems: "center",
+
+
+
+
 
 
 
@@ -2580,7 +5159,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 }}>
+
+
+
+
 
 
 
@@ -2588,7 +5175,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <span style={{ textTransform: "capitalize" }}>{t.replace("_", " ")}</span>
+
+
+
+
 
 
 
@@ -2596,7 +5191,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             );
+
+
+
+
 
 
 
@@ -2604,7 +5207,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -2616,7 +5231,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
         <div style={{ borderRadius: 24, padding: 32, background: N.bg, boxShadow: N.raised, minHeight: 280, display: "flex", flexDirection: "column", gap: 24 }}>
+
+
+
+
+
+
+
+
 
 
 
@@ -2628,7 +5255,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           {tab === "settings" && (
+
+
+
+
 
 
 
@@ -2636,7 +5271,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                <div>
+
+
+
+
 
 
 
@@ -2644,7 +5287,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                  <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Configure active brand names and client support channels</p>
+
+
+
+
 
 
 
@@ -2652,7 +5303,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+
+
+
 
 
 
@@ -2660,7 +5319,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🏷️ Brand Site Name</label>
+
+
+
+
 
 
 
@@ -2668,7 +5335,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                      onChange={(e) => setSettings((p) => ({ ...p, siteName: e.target.value }))}
+
+
+
+
 
 
 
@@ -2676,7 +5351,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                      className="neo-input"
+
+
+
+
 
 
 
@@ -2684,7 +5367,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                        width: "100%",
+
+
+
+
 
 
 
@@ -2692,7 +5383,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                        borderRadius: 12,
+
+
+
+
 
 
 
@@ -2700,7 +5399,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                        fontWeight: 600,
+
+
+
+
 
 
 
@@ -2708,7 +5415,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                        background: N.bg,
+
+
+
+
 
 
 
@@ -2716,7 +5431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                        boxShadow: N.inset,
+
+
+
+
 
 
 
@@ -2724,7 +5447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                        boxSizing: "border-box"
+
+
+
+
 
 
 
@@ -2732,11 +5463,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                  </div>
 
 
 
+
+
+
+
                 <div>
+
+
+
+
 
 
 
@@ -2744,7 +5487,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <input value={settings.supportEmail ?? ""} onChange={(e) => setSettings((p) => ({ ...p, supportEmail: e.target.value }))}
+
+
+
+
 
 
 
@@ -2752,7 +5503,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     className="neo-input"
+
+
+
+
 
 
 
@@ -2760,7 +5519,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       width: "100%",
+
+
+
+
 
 
 
@@ -2768,7 +5535,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       borderRadius: 12,
+
+
+
+
 
 
 
@@ -2776,7 +5551,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       fontWeight: 600,
+
+
+
+
 
 
 
@@ -2784,7 +5567,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       background: N.bg,
+
+
+
+
 
 
 
@@ -2792,7 +5583,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       boxShadow: N.inset,
+
+
+
+
 
 
 
@@ -2800,7 +5599,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       boxSizing: "border-box"
+
+
+
+
 
 
 
@@ -2808,7 +5615,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -2816,7 +5631,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>🇮🇳 UPI Wallet Settings</h2>
+
+
+
+
 
 
 
@@ -2824,7 +5647,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -2832,7 +5663,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <div>
+
+
+
+
 
 
 
@@ -2840,7 +5679,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <input value={settings.upiId ?? ""} onChange={(e) => setSettings((p) => ({ ...p, upiId: e.target.value }))}
+
+
+
+
 
 
 
@@ -2848,7 +5695,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       className="neo-input"
+
+
+
+
 
 
 
@@ -2856,7 +5711,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         width: "100%",
+
+
+
+
 
 
 
@@ -2864,7 +5727,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         borderRadius: 12,
+
+
+
+
 
 
 
@@ -2872,7 +5743,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         fontWeight: 600,
+
+
+
+
 
 
 
@@ -2880,7 +5759,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         background: N.bg,
+
+
+
+
 
 
 
@@ -2888,7 +5775,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         boxShadow: N.inset,
+
+
+
+
 
 
 
@@ -2896,7 +5791,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         boxSizing: "border-box"
+
+
+
+
 
 
 
@@ -2904,7 +5807,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </div>
+
+
+
+
 
 
 
@@ -2912,7 +5823,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>UPI QR Code Image URL</label>
+
+
+
+
 
 
 
@@ -2920,7 +5839,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       placeholder="https://imgur.com/myqrcode.png"
+
+
+
+
 
 
 
@@ -2928,7 +5855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       style={{
+
+
+
+
 
 
 
@@ -2936,7 +5871,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         padding: "14px 18px",
+
+
+
+
 
 
 
@@ -2944,7 +5887,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         fontSize: 13,
+
+
+
+
 
 
 
@@ -2952,7 +5903,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         color: N.text,
+
+
+
+
 
 
 
@@ -2960,7 +5919,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         border: "none",
+
+
+
+
 
 
 
@@ -2968,7 +5935,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         outline: "none",
+
+
+
+
 
 
 
@@ -2976,7 +5951,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       }} />
+
+
+
+
 
 
 
@@ -2984,7 +5967,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -2992,7 +5983,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🪙 Minimum Deposit Amount (INR)</label>
+
+
+
+
 
 
 
@@ -3000,7 +5999,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     placeholder="500"
+
+
+
+
 
 
 
@@ -3008,7 +6015,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     style={{
+
+
+
+
 
 
 
@@ -3016,7 +6031,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       padding: "14px 18px",
+
+
+
+
 
 
 
@@ -3024,7 +6047,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       fontSize: 13,
+
+
+
+
 
 
 
@@ -3032,7 +6063,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       color: N.text,
+
+
+
+
 
 
 
@@ -3040,7 +6079,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       border: "none",
+
+
+
+
 
 
 
@@ -3048,7 +6095,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       outline: "none",
+
+
+
+
 
 
 
@@ -3056,11 +6111,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     }} />
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -3068,7 +6135,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <input type="checkbox" id="maintenance" checked={settings.maintenanceMode}
+
+
+
+
 
 
 
@@ -3076,7 +6151,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     style={{ width: 18, height: 18, accentColor: N.accent, cursor: "pointer" }} />
+
+
+
+
 
 
 
@@ -3084,7 +6167,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -3092,7 +6183,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <button onClick={saveSettings} className="neo-btn"
+
+
+
+
 
 
 
@@ -3100,7 +6199,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   alignSelf: "flex-start",
+
+
+
+
 
 
 
@@ -3108,7 +6215,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   borderRadius: 12,
+
+
+
+
 
 
 
@@ -3116,7 +6231,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   fontWeight: 850,
+
+
+
+
 
 
 
@@ -3124,7 +6247,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   color: "#ffffff",
+
+
+
+
 
 
 
@@ -3132,7 +6263,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   boxShadow: N.raisedSm,
+
+
+
+
 
 
 
@@ -3140,7 +6279,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 }}>
+
+
+
+
 
 
 
@@ -3148,7 +6295,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               </button>
+
+
+
+
 
 
 
@@ -3156,7 +6311,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           )}
+
+
+
+
+
+
+
+
 
 
 
@@ -3168,7 +6335,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           {tab === "users" && (
+
+
+
+
 
 
 
@@ -3176,7 +6351,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div>
+
+
+
+
 
 
 
@@ -3184,7 +6367,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Active registered operators and accounts: {users.length}</p>
+
+
+
+
 
 
 
@@ -3192,7 +6383,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               {users.length === 0 ? (
+
+
+
+
 
 
 
@@ -3200,7 +6399,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               ) : (
+
+
+
+
 
 
 
@@ -3208,7 +6415,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+
+
+
+
 
 
 
@@ -3216,7 +6431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+
+
+
+
 
 
 
@@ -3224,7 +6447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+
+
+
+
 
 
 
@@ -3232,7 +6463,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       </tr>
+
+
+
+
 
 
 
@@ -3240,7 +6479,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <tbody>
+
+
+
+
 
 
 
@@ -3248,7 +6495,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <tr key={u.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+
+
+
+
 
 
 
@@ -3256,11 +6511,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <td style={{ padding: "14px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
 
 
 
+
+
+
+
                           <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -3268,7 +6535,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               fontSize: 10,
+
+
+
+
 
 
 
@@ -3276,7 +6551,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               padding: "4px 8px",
+
+
+
+
 
 
 
@@ -3284,7 +6567,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               background: PLAN_COLORS[u.plan] + "1A",
+
+
+
+
 
 
 
@@ -3292,11 +6583,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             }}>{u.plan}</span>
 
 
 
+
+
+
+
                           </td>
+
+
+
+
 
 
 
@@ -3304,7 +6607,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u._count?.orders ?? 0} campaigns</td>
+
+
+
+
 
 
 
@@ -3312,7 +6623,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <div style={{ display: "flex", gap: 10 }}>
+
+
+
+
 
 
 
@@ -3320,7 +6639,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <button onClick={() => userAction(u.id, "upgrade")} className="neo-btn"
+
+
+
+
 
 
 
@@ -3328,7 +6655,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   Upgrade Lifetime
+
+
+
+
 
 
 
@@ -3336,7 +6671,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               )}
+
+
+
+
 
 
 
@@ -3344,7 +6687,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <button onClick={() => userAction(u.id, "suspend")} className="neo-btn"
+
+
+
+
 
 
 
@@ -3352,11 +6703,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   Suspend
 
 
 
+
+
+
+
                                 </button>
+
+
+
+
 
 
 
@@ -3364,7 +6727,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <button onClick={() => userAction(u.id, "unsuspend")} className="neo-btn"
+
+
+
+
 
 
 
@@ -3372,7 +6743,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   Unsuspend
+
+
+
+
 
 
 
@@ -3380,7 +6759,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               )}
+
+
+
+
 
 
 
@@ -3388,7 +6775,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#2563eb", boxShadow: N.raisedSm }}>
+
+
+
+
 
 
 
@@ -3396,7 +6791,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               </button>
+
+
+
+
 
 
 
@@ -3404,7 +6807,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           </td>
+
+
+
+
 
 
 
@@ -3412,7 +6823,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       ))}
+
+
+
+
 
 
 
@@ -3420,7 +6839,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </table>
+
+
+
+
 
 
 
@@ -3428,7 +6855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               )}
+
+
+
+
 
 
 
@@ -3436,7 +6871,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           )}
+
+
+
+
+
+
+
+
 
 
 
@@ -3448,7 +6895,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           {tab === "payments" && (
+
+
+
+
 
 
 
@@ -3456,7 +6911,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div>
+
+
+
+
 
 
 
@@ -3464,7 +6927,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Lifetime subscription deposits on USDT-TRC20 & BEP20 networks</p>
+
+
+
+
 
 
 
@@ -3472,7 +6943,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               {payments.length === 0 ? (
+
+
+
+
 
 
 
@@ -3480,7 +6959,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               ) : (
+
+
+
+
 
 
 
@@ -3488,7 +6975,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+
+
+
+
 
 
 
@@ -3496,7 +6991,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+
+
+
+
 
 
 
@@ -3504,7 +7007,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+
+
+
+
 
 
 
@@ -3512,7 +7023,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       </tr>
+
+
+
+
 
 
 
@@ -3520,7 +7039,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <tbody>
+
+
+
+
 
 
 
@@ -3528,7 +7055,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", FAILED: "#dc2626", VERIFYING: "#2563eb" };
+
+
+
+
 
 
 
@@ -3536,7 +7071,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+
+
+
+
 
 
 
@@ -3544,7 +7087,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -3552,7 +7103,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 fontSize: 11,
+
+
+
+
 
 
 
@@ -3560,7 +7119,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 padding: "4px 8px",
+
+
+
+
 
 
 
@@ -3568,7 +7135,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 background: p.network === "TRC20" ? "rgba(37,99,235,0.08)" : "rgba(217,119,6,0.08)",
+
+
+
+
 
 
 
@@ -3576,7 +7151,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               }}>{p.network}</span>
+
+
+
+
 
 
 
@@ -3584,7 +7167,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -3592,7 +7183,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </td>
+
+
+
+
 
 
 
@@ -3600,7 +7199,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -3608,7 +7215,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </td>
+
+
+
+
 
 
 
@@ -3616,7 +7231,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           </tr>
+
+
+
+
 
 
 
@@ -3624,7 +7247,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       })}
+
+
+
+
 
 
 
@@ -3632,7 +7263,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </table>
+
+
+
+
 
 
 
@@ -3640,7 +7279,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               )}
+
+
+
+
 
 
 
@@ -3648,7 +7295,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           )}
+
+
+
+
+
+
+
+
 
 
 
@@ -3660,7 +7319,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           {tab === "upi_payments" && (
+
+
+
+
 
 
 
@@ -3668,7 +7335,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div>
+
+
+
+
 
 
 
@@ -3676,7 +7351,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Verify manual UPI payment deposits via UTR numbers submitted by users</p>
+
+
+
+
 
 
 
@@ -3684,7 +7367,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               {upiPayments.length === 0 ? (
+
+
+
+
 
 
 
@@ -3692,7 +7383,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               ) : (
+
+
+
+
 
 
 
@@ -3700,7 +7399,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+
+
+
+
 
 
 
@@ -3708,7 +7415,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+
+
+
+
 
 
 
@@ -3716,7 +7431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+
+
+
+
 
 
 
@@ -3724,7 +7447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       </tr>
+
+
+
+
 
 
 
@@ -3732,7 +7463,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <tbody>
+
+
+
+
 
 
 
@@ -3740,7 +7479,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", REJECTED: "#dc2626" };
+
+
+
+
 
 
 
@@ -3748,7 +7495,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+
+
+
+
 
 
 
@@ -3756,7 +7511,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: "#16a34a" }}>₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+
+
+
+
 
 
 
@@ -3764,7 +7527,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -3772,7 +7543,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 fontSize: 10,
+
+
+
+
 
 
 
@@ -3780,7 +7559,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 padding: "4px 8px",
+
+
+
+
 
 
 
@@ -3788,7 +7575,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 background: statusColors[p.status] + "1A",
+
+
+
+
 
 
 
@@ -3796,11 +7591,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               }}>{p.status}</span>
 
 
 
+
+
+
+
                             </td>
+
+
+
+
 
 
 
@@ -3808,7 +7615,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -3816,7 +7631,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <div style={{ display: "flex", gap: 8 }}>
+
+
+
+
 
 
 
@@ -3824,7 +7647,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 850, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer" }}>
+
+
+
+
 
 
 
@@ -3832,7 +7663,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   </button>
+
+
+
+
 
 
 
@@ -3840,7 +7679,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     const reason = prompt("Enter rejection reason:", "Invalid UTR number");
+
+
+
+
 
 
 
@@ -3848,7 +7695,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   }} className="neo-btn"
+
+
+
+
 
 
 
@@ -3856,7 +7711,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     ✗ Reject
+
+
+
+
 
 
 
@@ -3864,7 +7727,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 </div>
+
+
+
+
 
 
 
@@ -3872,7 +7743,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>No actions</span>
+
+
+
+
 
 
 
@@ -3880,7 +7759,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </td>
+
+
+
+
 
 
 
@@ -3888,7 +7775,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         );
+
+
+
+
 
 
 
@@ -3896,7 +7791,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </tbody>
+
+
+
+
 
 
 
@@ -3904,7 +7807,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -3912,11 +7823,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             </div>
 
 
 
+
+
+
+
           )}
+
+
+
+
+
+
+
+
 
 
 
@@ -3928,7 +7855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           {tab === "admin_panels" && (
+
+
+
+
 
 
 
@@ -3936,7 +7871,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               
+
+
+
+
 
 
 
@@ -3944,7 +7887,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+
+
+
 
 
 
@@ -3952,7 +7903,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>🚀 SMM API Integrations (Admin-owned)</h2>
+
+
+
+
 
 
 
@@ -3960,7 +7919,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -3968,7 +7935,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 {/* Form to add admin panel */}
+
+
+
+
 
 
 
@@ -3976,7 +7951,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>➕ Add New SMM Panel API</p>
+
+
+
+
 
 
 
@@ -3984,7 +7967,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <div>
+
+
+
+
 
 
 
@@ -3992,7 +7983,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <input value={newPanelName} onChange={e => setNewPanelName(e.target.value)} placeholder="e.g. BulkSMM"
+
+
+
+
 
 
 
@@ -4000,11 +7999,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </div>
 
 
 
+
+
+
+
                     <div>
+
+
+
+
 
 
 
@@ -4012,7 +8023,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <input value={newPanelApiUrl} onChange={e => setNewPanelApiUrl(e.target.value)} placeholder="e.g. https://bulksmm.com/api/v2"
+
+
+
+
 
 
 
@@ -4020,11 +8039,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </div>
 
 
 
+
+
+
+
                   </div>
+
+
+
+
 
 
 
@@ -4032,7 +8063,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <div>
+
+
+
+
 
 
 
@@ -4040,7 +8079,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <input type="password" value={newPanelApiKey} onChange={e => setNewPanelApiKey(e.target.value)} placeholder="Enter API Key"
+
+
+
+
 
 
 
@@ -4048,11 +8095,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </div>
 
 
 
+
+
+
+
                     <div>
+
+
+
+
 
 
 
@@ -4060,7 +8119,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <input type="number" value={newPanelPriority} onChange={e => setNewPanelPriority(e.target.value)} placeholder="1"
+
+
+
+
 
 
 
@@ -4068,7 +8135,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </div>
+
+
+
+
 
 
 
@@ -4076,7 +8151,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Load %</label>
+
+
+
+
 
 
 
@@ -4084,7 +8167,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+
+
+
 
 
 
@@ -4092,7 +8183,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </div>
+
+
+
+
 
 
 
@@ -4100,7 +8199,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer" }}>
+
+
+
+
 
 
 
@@ -4108,11 +8215,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </button>
 
 
 
+
+
+
+
                 </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -4124,7 +8247,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 {adminPanels.length === 0 ? (
+
+
+
+
 
 
 
@@ -4132,7 +8263,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 ) : (
+
+
+
+
 
 
 
@@ -4140,7 +8279,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
+
+
+
+
 
 
 
@@ -4148,7 +8295,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+
+
+
+
 
 
 
@@ -4156,7 +8311,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
+
+
+
+
 
 
 
@@ -4164,7 +8327,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         </tr>
+
+
+
+
 
 
 
@@ -4172,7 +8343,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <tbody>
+
+
+
+
 
 
 
@@ -4180,7 +8359,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
+
+
+
+
 
 
 
@@ -4188,7 +8375,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "12px 16px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
+
+
+
+
 
 
 
@@ -4196,11 +8391,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.loadPercentage}%</td>
 
 
 
+
+
+
+
                             <td style={{ padding: "12px 16px" }}>
+
+
+
+
 
 
 
@@ -4208,7 +8415,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 {p.status}
+
+
+
+
 
 
 
@@ -4216,7 +8431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </td>
+
+
+
+
 
 
 
@@ -4224,7 +8447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <div style={{ display: "flex", gap: 10 }}>
+
+
+
+
 
 
 
@@ -4232,7 +8463,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
+
+
+
+
 
 
 
@@ -4240,7 +8479,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 </button>
+
+
+
+
 
 
 
@@ -4248,7 +8495,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
+
+
+
+
 
 
 
@@ -4256,7 +8511,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 </button>
+
+
+
+
 
 
 
@@ -4264,7 +8527,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </td>
+
+
+
+
 
 
 
@@ -4272,7 +8543,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         ))}
+
+
+
+
 
 
 
@@ -4280,7 +8559,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </table>
+
+
+
+
 
 
 
@@ -4288,11 +8575,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 )}
 
 
 
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -4304,7 +8607,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               {selectedPanelId && (
+
+
+
+
 
 
 
@@ -4312,7 +8623,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <div>
+
+
+
+
 
 
 
@@ -4320,7 +8639,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       Configure Custom Pricing for: <strong style={{ color: N.accent }}>{adminPanels.find(p => p.id === selectedPanelId)?.name}</strong>
+
+
+
+
 
 
 
@@ -4328,11 +8655,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Map SMM Panel service IDs to user delivery types and define markup rates</p>
 
 
 
+
+
+
+
                   </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -4344,7 +8687,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     
+
+
+
+
 
 
 
@@ -4352,7 +8703,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
+
+
+
+
 
 
 
@@ -4360,11 +8719,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       
 
 
 
+
+
+
+
                       <div>
+
+
+
+
 
 
 
@@ -4372,11 +8743,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <select value={pricingPlatform} onChange={e => setPricingPlatform(e.target.value)}
 
 
 
+
+
+
+
                           style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 700 }}>
+
+
+
+
 
 
 
@@ -4384,7 +8767,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <option value="TIKTOK">TikTok</option>
+
+
+
+
 
 
 
@@ -4392,7 +8783,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         </select>
+
+
+
+
 
 
 
@@ -4404,7 +8803,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
                       <div>
+
+
+
+
 
 
 
@@ -4412,7 +8823,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <select value={pricingType} onChange={e => setPricingType(e.target.value)}
+
+
+
+
 
 
 
@@ -4420,7 +8839,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <option value="views">Views</option>
+
+
+
+
 
 
 
@@ -4428,7 +8855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <option value="saves">Saves</option>
+
+
+
+
 
 
 
@@ -4436,7 +8871,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <option value="comments">Comments</option>
+
+
+
+
 
 
 
@@ -4444,7 +8887,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -4456,7 +8911,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>3. Choose SMM Service ID &amp; Original Rate (from SMM API)</label>
+
+
+
+
 
 
 
@@ -4464,7 +8927,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <p style={{ fontSize:12, color:N.muted, margin: "6px 0", fontWeight:600 }}>Loading services list from API…</p>
+
+
+
+
 
 
 
@@ -4472,7 +8943,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <div style={{ display: "flex", gap: 10 }}>
+
+
+
+
 
 
 
@@ -4480,7 +8959,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               style={{ flex:1, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+
+
+
 
 
 
@@ -4488,7 +8975,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               style={{ width: 110, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+
+
+
 
 
 
@@ -4496,7 +8991,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         ) : (
+
+
+
+
 
 
 
@@ -4504,7 +9007,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             const val = e.target.value;
+
+
+
+
 
 
 
@@ -4512,7 +9023,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             const selected = liveServices.find(s => String(s.service) === val);
+
+
+
+
 
 
 
@@ -4520,13 +9039,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               setPricingOriginalRate(selected.rate);
 
 
 
+
+
+
+
                               setPricingName(selected.name ?? "");
+
                               setPricingMin(selected.min ?? "");
+
                               setPricingMax(selected.max ?? "");
+
+
+
+
 
 
 
@@ -4534,7 +9067,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 handleMultiplierChange(pricingMultiplier, selected.rate);
+
+
+
+
 
 
 
@@ -4542,7 +9083,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             }
+
+
+
+
 
 
 
@@ -4550,7 +9099,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer" }}>
+
+
+
+
 
 
 
@@ -4558,7 +9115,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             {liveServices.map(s => (
+
+
+
+
 
 
 
@@ -4566,7 +9131,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 #{s.service} - {s.name?.slice(0, 50)} (Cost: ${s.rate}/1k | Min: {s.min} | Max: {s.max})
+
+
+
+
 
 
 
@@ -4574,7 +9147,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             ))}
+
+
+
+
 
 
 
@@ -4582,11 +9163,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         )}
 
 
 
+
+
+
+
                       </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -4598,7 +9195,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <div style={{ padding: 14, borderRadius: 12, background: "rgba(168, 85, 247, 0.04)", border: `1.5px solid ${N.border}`, display: "flex", flexDirection: "column", gap: 12 }}>
+
+
+
+
 
 
 
@@ -4606,7 +9211,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             💵 Original Cost: <strong style={{ color: N.text }}>${pricingOriginalRate} per 1k</strong>
+
+
+
+
 
 
 
@@ -4614,21 +9227,43 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               (~ ₹{(parseFloat(pricingOriginalRate) * 83).toFixed(2)} per 1k)
+
+
 
                             </span>
 
+
+
                           </p>
+
+
 
                           {pricingMin && (
 
+
+
                             <p style={{ fontSize: 10, color: N.muted, margin: 0, fontWeight: 700, marginTop: 4 }}>
+
+
 
                               📦 SMM Service Limits: Min Order: <strong style={{ color: N.text }}>{pricingMin}</strong> | Max Order: <strong style={{ color: N.text }}>{pricingMax}</strong>
 
+
+
                             </p>
 
+
+
                           )}
+
+
+
+
 
 
 
@@ -4636,7 +9271,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <div>
+
+
+
+
 
 
 
@@ -4644,7 +9287,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+
+
+
+
 
 
 
@@ -4652,7 +9303,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <button key={factor} type="button" onClick={() => handleMultiplierChange(String(factor))}
+
+
+
+
 
 
 
@@ -4660,7 +9319,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     padding: "6px 12px",
+
+
+
+
 
 
 
@@ -4668,7 +9335,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     border: pricingMultiplier === String(factor) ? "1.5px solid #a855f7" : `1px solid ${N.border}`,
+
+
+
+
 
 
 
@@ -4676,7 +9351,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     color: pricingMultiplier === String(factor) ? "#a855f7" : N.text,
+
+
+
+
 
 
 
@@ -4684,7 +9367,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     fontWeight: 900,
+
+
+
+
 
 
 
@@ -4692,7 +9383,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     transition: "all 0.15s ease"
+
+
+
+
 
 
 
@@ -4700,7 +9399,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   {factor}x Markup
+
+
+
+
 
 
 
@@ -4708,7 +9415,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               ))}
+
+
+
+
 
 
 
@@ -4716,7 +9431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 style={{
+
+
+
+
 
 
 
@@ -4724,7 +9447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   borderRadius: 6,
+
+
+
+
 
 
 
@@ -4732,7 +9463,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   background: N.bg,
+
+
+
+
 
 
 
@@ -4740,7 +9479,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   fontSize: 10,
+
+
+
+
 
 
 
@@ -4748,7 +9495,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   cursor: "pointer"
+
+
+
+
 
 
 
@@ -4756,7 +9511,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 Clear
+
+
+
+
 
 
 
@@ -4764,7 +9527,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </div>
+
+
+
+
 
 
 
@@ -4772,7 +9543,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>Custom Factor:</span>
+
+
+
+
 
 
 
@@ -4780,7 +9559,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 style={{ width: 80, padding: "6px 10px", borderRadius: 8, fontSize: 11, background: N.bg, border: "none", color: N.text, outline: "none", boxShadow: N.raisedSm, fontWeight: 700 }} />
+
+
+
+
 
 
 
@@ -4788,7 +9575,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </div>
+
+
+
+
 
 
 
@@ -4796,11 +9591,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         </div>
 
 
 
+
+
+
+
                       )}
+
+
+
+
+
+
+
+
 
 
 
@@ -4812,7 +9623,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>4. Final Custom Rate Charged to Users (INR per 1,000)</label>
+
+
+
+
 
 
 
@@ -4820,7 +9639,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           setPricingCustomRate(e.target.value);
+
+
+
+
 
 
 
@@ -4828,11 +9655,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         }}
 
 
 
+
+
+
+
                           style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", outline:"none", boxShadow: N.raisedSm, fontWeight: 800, color: "#16a34a" }} />
+
+
+
+
 
 
 
@@ -4844,7 +9683,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
                       <button onClick={handleSaveServicePrice} disabled={savingService} className="neo-btn"
+
+
+
+
 
 
 
@@ -4852,7 +9703,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         {savingService ? "Saving configuration…" : "Save Custom Pricing"}
+
+
+
+
 
 
 
@@ -4860,7 +9719,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -4872,7 +9743,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+
+
+
 
 
 
@@ -4880,7 +9759,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       
+
+
+
+
 
 
 
@@ -4888,7 +9775,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <div style={{ padding: "32px", textAlign: "center", border: `1.5px dashed ${N.border}`, borderRadius: 16, color: N.muted, fontSize: 12, fontWeight: 700 }}>
+
+
+
+
 
 
 
@@ -4896,7 +9791,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         </div>
+
+
+
+
 
 
 
@@ -4904,7 +9807,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 420, overflowY: "auto" }}>
+
+
+
+
 
 
 
@@ -4912,7 +9823,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <div key={s.id} style={{ padding: 12, borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+
+
+
 
 
 
@@ -4920,7 +9839,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <span style={{ fontSize: 10, fontWeight: 850, padding: "2px 6px", borderRadius: 4, background: "rgba(168,85,247,0.08)", color: "#a855f7", textTransform: "uppercase" }}>{s.platform}</span>
+
+
+
+
 
 
 
@@ -4928,7 +9855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <p style={{ fontSize: 11, color: N.muted, margin: "4px 0 0" }}>Service ID: #{s.serviceId} {s.name ? `(${s.name.slice(0, 25)}…)` : ""}</p>
+
+
+
+
 
 
 
@@ -4936,7 +9871,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               </div>
+
+
+
+
 
 
 
@@ -4944,7 +9887,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <span style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>₹ {s.customRate}/1k</span>
+
+
+
+
 
 
 
@@ -4952,7 +9903,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </div>
+
+
+
+
 
 
 
@@ -4960,7 +9919,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         </div>
+
+
+
+
 
 
 
@@ -4968,7 +9935,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </div>
+
+
+
+
 
 
 
@@ -4976,7 +9951,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </div>
+
+
+
+
 
 
 
@@ -4984,11 +9967,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             </div>
 
 
 
+
+
+
+
           )}
+
+
+
+
+
+
+
+
 
 
 
@@ -5000,7 +9999,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           {tab === "campaigns" && (
+
+
+
+
 
 
 
@@ -5008,7 +10015,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div>
+
+
+
+
 
 
 
@@ -5016,11 +10031,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Monitor and force actions on active or queued pacing schedules</p>
 
 
 
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -5032,7 +10063,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+
+
+
+
 
 
 
@@ -5040,11 +10079,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   className="neo-input"
 
 
 
+
+
+
+
                   style={{
+
+
+
+
 
 
 
@@ -5052,7 +10103,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     minWidth: 280,
+
+
+
+
 
 
 
@@ -5060,11 +10119,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     borderRadius: 12,
 
 
 
+
+
+
+
                     fontSize: 13,
+
+
+
+
 
 
 
@@ -5072,7 +10143,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     color: N.text,
+
+
+
+
 
 
 
@@ -5080,7 +10159,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     border: "none",
+
+
+
+
 
 
 
@@ -5088,7 +10175,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     outline: "none"
+
+
+
+
 
 
 
@@ -5096,7 +10191,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <select value={orderFilter} onChange={(e) => setOrderFilter(e.target.value)}
+
+
+
+
 
 
 
@@ -5104,7 +10207,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     padding: "12px 16px",
+
+
+
+
 
 
 
@@ -5112,7 +10223,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     fontSize: 13,
+
+
+
+
 
 
 
@@ -5120,7 +10239,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     background: N.bg,
+
+
+
+
 
 
 
@@ -5128,7 +10255,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     border: "none",
+
+
+
+
 
 
 
@@ -5136,7 +10271,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     cursor: "pointer",
+
+
+
+
 
 
 
@@ -5144,7 +10287,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   }}>
+
+
+
+
 
 
 
@@ -5152,7 +10303,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <option value="DELIVERING">Delivering</option>
+
+
+
+
 
 
 
@@ -5160,7 +10319,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <option value="PAUSED">Paused</option>
+
+
+
+
 
 
 
@@ -5168,7 +10335,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <option value="FAILED">Failed</option>
+
+
+
+
 
 
 
@@ -5176,11 +10351,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </select>
 
 
 
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -5192,7 +10383,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+
+
+
+
 
 
 
@@ -5200,7 +10399,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   <thead>
+
+
+
+
 
 
 
@@ -5208,7 +10415,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       {["User & Target Reel", "Speed & Curve", "Targets Overview", "Status", "Manual Overrides"].map((h) => (
+
+
+
+
 
 
 
@@ -5216,7 +10431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       ))}
+
+
+
+
 
 
 
@@ -5224,7 +10447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </thead>
+
+
+
+
 
 
 
@@ -5232,7 +10463,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     {orders
+
+
+
+
 
 
 
@@ -5240,7 +10479,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         const matchesQuery =
+
+
+
+
 
 
 
@@ -5248,7 +10495,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           o.reel.url.toLowerCase().includes(orderQuery.toLowerCase()) ||
+
+
+
+
 
 
 
@@ -5256,7 +10511,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         const matchesFilter = orderFilter === "All" || o.status === orderFilter;
+
+
+
+
 
 
 
@@ -5264,7 +10527,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       })
+
+
+
+
 
 
 
@@ -5272,7 +10543,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         const statusColors: Record<string, string> = { DELIVERING: "#d97706", COMPLETED: "#16a34a", PAUSED: "#718096", CANCELLED: "#dc2626", FAILED: "#dc2626", QUEUED: "#2563eb" };
+
+
+
+
 
 
 
@@ -5280,11 +10559,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           <tr key={o.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -5292,7 +10583,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
+
+
+
+
 
 
 
@@ -5300,7 +10599,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               </a>
+
+
+
+
 
 
 
@@ -5308,7 +10615,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -5316,7 +10631,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 fontSize: 11,
+
+
+
+
 
 
 
@@ -5324,7 +10647,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 padding: "4px 8px",
+
+
+
+
 
 
 
@@ -5332,7 +10663,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 background: "rgba(217,119,6,0.08)",
+
+
+
+
 
 
 
@@ -5340,7 +10679,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               }}>{o.curveStyle}</span>
+
+
+
+
 
 
 
@@ -5348,11 +10695,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </td>
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -5360,7 +10719,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0", fontWeight: 600 }}>
+
+
+
+
 
 
 
@@ -5368,7 +10735,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 {o.savesTarget > 0 && `🔖 ${o.savesTarget.toLocaleString()} `}
+
+
+
+
 
 
 
@@ -5376,7 +10751,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               </p>
+
+
+
+
 
 
 
@@ -5384,7 +10767,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <td style={{ padding: "14px 24px" }}>
+
+
+
+
 
 
 
@@ -5392,7 +10783,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </td>
+
+
+
+
 
 
 
@@ -5400,7 +10799,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <div style={{ display: "flex", gap: 8 }}>
+
+
+
+
 
 
 
@@ -5408,7 +10815,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   <button onClick={() => handleCampaignAction(o.id, "pause")} className="neo-btn"
+
+
+
+
 
 
 
@@ -5416,7 +10831,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     Pause
+
+
+
+
 
 
 
@@ -5424,7 +10847,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 )}
+
+
+
+
 
 
 
@@ -5432,7 +10863,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   <button onClick={() => handleCampaignAction(o.id, "resume")} className="neo-btn"
+
+
+
+
 
 
 
@@ -5440,7 +10879,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     Resume
+
+
+
+
 
 
 
@@ -5448,7 +10895,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 )}
+
+
+
+
 
 
 
@@ -5456,7 +10911,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   <button onClick={() => handleCampaignAction(o.id, "cancel")} className="neo-btn"
+
+
+
+
 
 
 
@@ -5464,7 +10927,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     Cancel
+
+
+
+
 
 
 
@@ -5472,7 +10943,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 )}
+
+
+
+
 
 
 
@@ -5480,7 +10959,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   <button onClick={() => handleCampaignAction(o.id, "refill")} className="neo-btn"
+
+
+
+
 
 
 
@@ -5488,7 +10975,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                     title="Query status & place refill if partial">
+
+
+
+
 
 
 
@@ -5496,7 +10991,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                   </button>
+
+
+
+
 
 
 
@@ -5504,7 +11007,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               </div>
+
+
+
+
 
 
 
@@ -5512,7 +11023,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           </tr>
+
+
+
+
 
 
 
@@ -5520,7 +11039,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       })}
+
+
+
+
 
 
 
@@ -5528,7 +11055,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 </table>
+
+
+
+
 
 
 
@@ -5536,11 +11071,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
             </div>
 
 
 
+
+
+
+
           )}
+
+
+
+
+
+
+
+
 
 
 
@@ -5552,7 +11103,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
           {tab === "system" && (
+
+
+
+
 
 
 
@@ -5560,7 +11119,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div>
+
+
+
+
 
 
 
@@ -5568,11 +11135,27 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Real-time execution tick states and user panel statuses</p>
 
 
 
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -5584,7 +11167,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20 }}>
+
+
+
+
 
 
 
@@ -5592,7 +11183,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   ["Active Campaigns", orders.filter((o) => ["DELIVERING", "QUEUED"].includes(o.status)).length, N.accent],
+
+
+
+
 
 
 
@@ -5600,7 +11199,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   ["Scheduled Ticks", systemData.eventStats.find((s) => s.status === "SCHEDULED")?.count ?? 0, N.text],
+
+
+
+
 
 
 
@@ -5608,7 +11215,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 ].map(([label, val, color]) => (
+
+
+
+
 
 
 
@@ -5616,7 +11231,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <p style={{ color: N.muted, fontSize: 11, fontWeight: 700, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</p>
+
+
+
+
 
 
 
@@ -5624,7 +11247,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </div>
+
+
+
+
 
 
 
@@ -5632,7 +11263,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -5644,7 +11287,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+
+
+
 
 
 
@@ -5652,7 +11303,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 {systemData.panels.length === 0 ? (
+
+
+
+
 
 
 
@@ -5660,7 +11319,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 ) : (
+
+
+
+
 
 
 
@@ -5668,7 +11335,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+
+
+
+
 
 
 
@@ -5676,7 +11351,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
+
+
+
+
 
 
 
@@ -5684,7 +11367,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+
+
+
+
 
 
 
@@ -5692,7 +11383,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         </tr>
+
+
+
+
 
 
 
@@ -5700,7 +11399,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <tbody>
+
+
+
+
 
 
 
@@ -5708,7 +11415,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           const statusColor = p.status === "ONLINE" ? "#16a34a" : p.status === "OFFLINE" ? "#dc2626" : p.status === "SLOW" ? "#d97706" : N.muted;
+
+
+
+
 
 
 
@@ -5716,7 +11431,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+
+
+
+
 
 
 
@@ -5724,7 +11447,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.name}</td>
+
+
+
+
 
 
 
@@ -5732,7 +11463,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <td style={{ padding: "12px 24px" }}>
+
+
+
+
 
 
 
@@ -5740,7 +11479,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               </td>
+
+
+
+
 
 
 
@@ -5748,7 +11495,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.successRate.toFixed(1)}%</td>
+
+
+
+
 
 
 
@@ -5756,7 +11511,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           );
+
+
+
+
 
 
 
@@ -5764,7 +11527,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       </tbody>
+
+
+
+
 
 
 
@@ -5772,7 +11543,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                   </div>
+
+
+
+
 
 
 
@@ -5780,7 +11559,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
 
 
 
@@ -5792,7 +11583,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+
+
+
 
 
 
@@ -5800,7 +11599,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 {systemData.events.length === 0 ? (
+
+
+
+
 
 
 
@@ -5808,7 +11615,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 ) : (
+
+
+
+
 
 
 
@@ -5816,7 +11631,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+
+
+
+
 
 
 
@@ -5824,7 +11647,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
+
+
+
+
 
 
 
@@ -5832,7 +11663,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+
+
+
+
 
 
 
@@ -5840,7 +11679,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         </tr>
+
+
+
+
 
 
 
@@ -5848,7 +11695,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                       <tbody>
+
+
+
+
 
 
 
@@ -5856,7 +11711,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                           const statusColors: Record<string, string> = { DONE: "#16a34a", FAILED: "#dc2626", SCHEDULED: "#718096", EXECUTING: "#d97706", RETRYING: "#4f46e5" };
+
+
+
+
 
 
 
@@ -5864,11 +11727,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             <tr key={e.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
 
 
+
+
+
+
                               <td style={{ padding: "12px 24px" }}>
+
+
+
+
 
 
 
@@ -5876,11 +11751,23 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 <p style={{ fontSize: 11, color: N.muted, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>{e.order?.reel?.url}</p>
 
 
 
+
+
+
+
                               </td>
+
+
+
+
 
 
 
@@ -5888,7 +11775,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <td style={{ padding: "12px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{e.panel?.name}</td>
+
+
+
+
 
 
 
@@ -5896,7 +11791,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               <td style={{ padding: "12px 24px" }}>
+
+
+
+
 
 
 
@@ -5904,7 +11807,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                               </td>
+
+
+
+
 
 
 
@@ -5912,7 +11823,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                                 {e.errorMessage ?? "—"}
+
+
+
+
 
 
 
@@ -5920,7 +11839,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                             </tr>
+
+
+
+
 
 
 
@@ -5928,7 +11855,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                         })}
+
+
+
+
 
 
 
@@ -5936,7 +11871,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                     </table>
+
+
+
+
 
 
 
@@ -5944,7 +11887,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
                 )}
+
+
+
+
 
 
 
@@ -5956,7 +11907,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
 
 
 
@@ -5968,7 +11931,19 @@ export default function AdminPage() {
 
 
 
+
+
+
+
+
+
+
+
         </div>
+
+
+
+
 
 
 
@@ -5976,7 +11951,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -5984,7 +11967,15 @@ export default function AdminPage() {
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 

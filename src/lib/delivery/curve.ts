@@ -438,7 +438,7 @@ export function calculateEngagementDue(
   viewsDeliveredNow: number,
   targets: { likes: number; saves: number; shares: number; comments: number },
   alreadyDelivered: { likes: number; saves: number; shares: number; comments: number },
-  minBatchSize = 10,
+  minBatchSizes: { likes: number; saves: number; shares: number; comments: number } = { likes: 50, saves: 10, shares: 50, comments: 5 },
 ): EngagementDue {
   if (viewsTarget <= 0) return { likes: 0, saves: 0, shares: 0, comments: 0 };
 
@@ -465,10 +465,10 @@ export function calculateEngagementDue(
   // (or it's the LAST batch of the campaign — flush remainder)
   const isLastBatch = fraction >= 0.99;
 
-  const minLikes = 50;
-  const minSaves = 10;
-  const minShares = 50;
-  const minComments = 5;
+  const minLikes = minBatchSizes.likes;
+  const minSaves = minBatchSizes.saves;
+  const minShares = minBatchSizes.shares;
+  const minComments = minBatchSizes.comments;
 
   return {
     likes:    (due.likes    >= minLikes    || (isLastBatch && due.likes    > 0)) ? due.likes    : 0,
