@@ -45,10 +45,72 @@ function StatCard({ label, value, sub, icon }: { label:string; value:string|numb
   );
 }
 
+function formatTimeDiff(targetDateStr: string) {
+  const diffMs = new Date(targetDateStr).getTime() - new Date().getTime();
+  if (diffMs <= 0) return "Executing now…";
+  
+  const totalMins = Math.round(diffMs / (1000 * 60));
+  const hrs = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  
+  if (hrs > 0) {
+    return `In ${hrs}h ${mins}m`;
+  }
+  return `In ${mins}m`;
+}
+
+function DashboardMiniChart({ data }: { data: any[] }) {
+  if (!data.length) return null;
+
+  // Calculate cumulative planned and actual views
+  let runningPlanned = 0;
+  let runningActual = 0;
+  const cumulativeData = data.map((d) => {
+    runningPlanned += d.planned;
+    runningActual += d.status === "DONE" ? d.planned : 0;
+    return {
+      ...d,
+      cumulativePlanned: runningPlanned,
+      cumulativeActual: runningActual,
+    };
+  });
+
+  const W = 350, H = 100, pad = 10;
+  const maxVal = Math.max(cumulativeData.at(-1)!.cumulativePlanned, 1);
+
+  const toX = (i: number) => pad + (i / Math.max(cumulativeData.length - 1, 1)) * (W - 2 * pad);
+  const toY = (v: number) => H - pad - (v / maxVal) * (H - 2 * pad);
+
+  const plannedPts = cumulativeData.map((d, i) => ({ x: toX(i), y: toY(d.cumulativePlanned) }));
+  
+  const lastExecutedIdx = data.findLastIndex((d) => d.status === "DONE" || d.status === "FAILED");
+  const actualPts = cumulativeData
+    .slice(0, lastExecutedIdx !== -1 ? lastExecutedIdx + 1 : 0)
+    .map((d, i) => ({ x: toX(i), y: toY(d.cumulativeActual) }));
+
+  const makePath = (pts: { x: number; y: number }[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ borderRadius:10, background: "#120324", padding: "8px 0", overflow: "visible" }}>
+      {/* Planned line */}
+      {plannedPts.length > 0 && (
+        <path d={makePath(plannedPts)} fill="none" stroke="rgba(217, 119, 6, 0.4)" strokeWidth="1.5" strokeDasharray="3 2" />
+      )}
+      {/* Actual line */}
+      {actualPts.length > 0 && (
+        <path d={makePath(actualPts)} fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 3px #16a34a)" }} />
+      )}
+    </svg>
+  );
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({});
   const [loading, setLoading] = useState(true);
   const [panels, setPanels] = useState<any[]>([]);
+  const [runningCampaign, setRunningCampaign] = useState<any>(null);
+  const [trackerLoading, setTrackerLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/analytics")
@@ -58,6 +120,25 @@ export default function DashboardPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    // Fetch user's orders to check for active campaigns
+    fetch("/api/orders")
+      .then((r) => r.json())
+      .then((d) => {
+        const list = d.orders ?? [];
+        const running = list.find((o: any) => o.status === "DELIVERING" || o.status === "QUEUED" || o.status === "PAUSED");
+        if (running) {
+          setTrackerLoading(true);
+          fetch(`/api/delivery/status/${running.id}`)
+            .then((res) => res.json())
+            .then((statusData) => {
+              setRunningCampaign(statusData);
+              setTrackerLoading(false);
+            })
+            .catch(() => setTrackerLoading(false));
+        }
+      })
+      .catch(() => {});
 
     // Fetch panels and dynamic balances
     fetch("/api/panels")
@@ -122,6 +203,129 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Live Campaign Tracker Widget */}
+      {runningCampaign && (
+        <div style={{
+          borderRadius: 24,
+          padding: 24,
+          background: "#08010f",
+          border: "1px solid #1c0a35",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+          color: "#f3e8ff",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          animation: "fadeUp 0.3s ease"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 16, color: "#d946ef", animation: "pulse 1.5s infinite" }}>⚡</span>
+              <h2 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: 0 }}>Live Campaign Tracker</h2>
+              <span style={{
+                padding: "2px 8px",
+                borderRadius: 20,
+                fontSize: 10,
+                fontWeight: 800,
+                background: runningCampaign.order.status === "DELIVERING" ? "rgba(22, 163, 74, 0.2)" : "rgba(217, 119, 6, 0.2)",
+                color: runningCampaign.order.status === "DELIVERING" ? "#22c55e" : "#f59e0b"
+              }}>
+                {runningCampaign.order.status}
+              </span>
+            </div>
+            <Link href={`/orders/${runningCampaign.order.id}`}
+              style={{ fontSize: 11, fontWeight: 800, color: "#c084fc", textDecoration: "none" }}
+              className="neo-btn">
+              View Full Details →
+            </Link>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 24 }}>
+            {/* Left Column: Progress & Next Batch info */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Target reel URL */}
+              <div style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600 }}>
+                🎬 {runningCampaign.order.reel.platform} ·{" "}
+                <span style={{ color: "#f3e8ff", fontWeight: 700 }}>
+                  {runningCampaign.order.reel.url.length > 50
+                    ? runningCampaign.order.reel.url.slice(0, 50) + "..."
+                    : runningCampaign.order.reel.url}
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 12 }}>
+                  <span style={{ color: "#a78bfa", fontWeight: 700 }}>Fulfillment Progress</span>
+                  <span style={{ color: "#d946ef", fontWeight: 900 }}>{runningCampaign.order.progressPct}%</span>
+                </div>
+                <div style={{ width: "100%", height: 8, borderRadius: 6, background: "rgba(168, 85, 247, 0.1)", overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%",
+                    borderRadius: 6,
+                    width: `${runningCampaign.order.progressPct}%`,
+                    background: "linear-gradient(90deg, #d946ef, #a855f7)",
+                    transition: "width 0.5s ease"
+                  }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 11, color: "#a78bfa", fontWeight: 600 }}>
+                  <span>👁 {runningCampaign.order.viewsDelivered.toLocaleString()} / {runningCampaign.order.viewsTarget.toLocaleString()} views</span>
+                  <span>{runningCampaign.completedBatches} / {runningCampaign.totalBatches} batches complete</span>
+                </div>
+              </div>
+
+              {/* Next Batch Box */}
+              {(() => {
+                const nextBatch = runningCampaign.chartData.find((b: any) => b.status === "SCHEDULED");
+                if (!nextBatch) return <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 800 }}>✓ Campaign fully scheduled/completed</div>;
+
+                const scale = runningCampaign.order.viewsTarget > 0 ? nextBatch.planned / runningCampaign.order.viewsTarget : 0;
+                const bLikes = runningCampaign.order.likesTarget > 0 ? Math.round(runningCampaign.order.likesTarget * scale) : 0;
+                const bSaves = runningCampaign.order.savesTarget > 0 ? Math.round(runningCampaign.order.savesTarget * scale) : 0;
+                
+                const engTexts = [];
+                if (bLikes > 0) engTexts.push(`👍 ${bLikes}`);
+                if (bSaves > 0) engTexts.push(`🔖 ${bSaves}`);
+                const engStr = engTexts.length > 0 ? ` · ${engTexts.join(" · ")}` : "";
+
+                const triggerText = nextBatch.scheduledAt ? formatTimeDiff(nextBatch.scheduledAt) : `Hour +${nextBatch.hour}h`;
+
+                return (
+                  <div style={{
+                    borderRadius: 14,
+                    padding: "12px 16px",
+                    background: "rgba(217, 119, 6, 0.06)",
+                    border: "1px solid rgba(217, 119, 6, 0.15)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Next Batch Dispatch</div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#f3e8ff" }}>
+                        👁 {nextBatch.planned.toLocaleString()} views{engStr}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 12, fontWeight: 900, color: "#f59e0b" }}>{triggerText}</div>
+                      <div style={{ fontSize: 10, color: "#a78bfa", fontWeight: 600 }}>Batch #{runningCampaign.completedBatches + 1}</div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Right Column: Mini Cumulative Chart */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, justifyContent: "center" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#a78bfa" }}>📉 Live Cumulative Growth</span>
+                <span style={{ fontSize: 11, color: "#a78bfa", fontWeight: 600 }}>Pacing: {runningCampaign.order.curveStyle}</span>
+              </div>
+              <DashboardMiniChart data={runningCampaign.chartData} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       {loading ? (

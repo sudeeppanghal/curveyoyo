@@ -46,12 +46,17 @@ export async function GET(
     : 0;
 
   // Build chart data: planned vs actual per hour
-  const chartData = order.deliveryEvents.map((e, i) => ({
-    hour: i,
-    planned: e.viewsBatch,
-    actual: e.status === "DONE" ? e.viewsBatch : 0,
-    status: e.status,
-  }));
+  const chartData = order.deliveryEvents.map((e) => {
+    const firstEventTime = order.deliveryEvents[0]?.scheduledAt.getTime() ?? new Date().getTime();
+    const hourOffset = Math.round((e.scheduledAt.getTime() - firstEventTime) / (1000 * 60 * 60));
+    return {
+      hour: hourOffset,
+      planned: e.viewsBatch,
+      actual: e.status === "DONE" ? e.viewsBatch : 0,
+      status: e.status,
+      scheduledAt: e.scheduledAt,
+    };
+  });
 
   return NextResponse.json({
     order: {
