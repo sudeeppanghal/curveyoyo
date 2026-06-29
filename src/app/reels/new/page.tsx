@@ -848,6 +848,12 @@ export default function NewReelPage() {
   const [error, setError] = useState("");
   const [schedule, setSchedule] = useState<DeliveryBatch[]>([]);
   const [expandedSchedule, setExpandedSchedule] = useState(false);
+  const [pricingInfo, setPricingInfo] = useState<{
+    walletMode: boolean;
+    balance: number;
+    rates: Record<string, Record<string, number>>;
+  } | null>(null);
+
 
   // Custom Mode state
   const [isCustomMode, setIsCustomMode] = useState(false);
@@ -1041,7 +1047,16 @@ export default function NewReelPage() {
   useEffect(() => {
     fetch("/api/panels").then((r) => r.json()).then((d) => setPanels(d.panels ?? [])).catch(() => {});
     fetch("/api/templates").then((r) => r.json()).then((d) => setTemplates(d.templates ?? [])).catch(() => {});
+    
+    // Fetch pricing settings
+    fetch("/api/orders/pricing")
+      .then(res => res.json())
+      .then(d => {
+        if (d && d.walletMode) setPricingInfo(d);
+      })
+      .catch(() => {});
   }, []);
+
 
   useEffect(() => {
     setFetchingLimits(true);
@@ -1220,10 +1235,33 @@ export default function NewReelPage() {
     engEnabled && commentsOn ? commentsRatio : 0,
   );
 
+  const calculateTotalCost = () => {
+    if (!pricingInfo || !pricingInfo.walletMode) return 0;
+    const rates = pricingInfo.rates[platform] || { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 };
+
+    const totalViews = isCustomMode ? customSchedule.reduce((a, b) => a + b.views, 0) : views;
+    const totalLikes = engEnabled && likesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget) : 0;
+    const totalSaves = engEnabled && savesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget) : 0;
+    const totalShares = engEnabled && sharesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) : 0;
+    const totalComments = engEnabled && commentsOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) : 0;
+
+    const viewsCost = (totalViews / 1000) * (rates.views ?? 3.0);
+    const likesCost = (totalLikes / 1000) * (rates.likes ?? 5.0);
+    const savesCost = (totalSaves / 1000) * (rates.saves ?? 5.0);
+    const sharesCost = (totalShares / 1000) * (rates.shares ?? 8.0);
+    const commentsCost = (totalComments / 1000) * (rates.comments ?? 15.0);
+
+    return viewsCost + likesCost + savesCost + sharesCost + commentsCost;
+  };
+
+  const totalCost = calculateTotalCost();
+  const hasInsufficientBalance = pricingInfo?.walletMode ? (pricingInfo.balance < totalCost) : false;
+
   const canProceed1 = reelUrl.trim().length > 10;
   const minViewsRequired = smmLimits.views?.min ?? 100;
   const maxViewsRequired = smmLimits.views?.max ?? 10000000;
-  const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1 && (!isCustomMode || !hasCustomScheduleErrors);
+  const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1 && (!isCustomMode || !hasCustomScheduleErrors) && (!hasInsufficientBalance);
+
 
   const submit = useCallback(async () => {
     setSubmitting(true); setError("");
@@ -1705,12 +1743,24 @@ export default function NewReelPage() {
                 ...(sharesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) > 0 ? [["📤 Shares Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget).toLocaleString()}`]] : []),
                 ...(commentsOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) > 0 ? [["💬 Comments Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget).toLocaleString()}`]] : []),
               ] : [["Engagement Mode", "⬜ Views only"]]),
-            ].map(([k, v]) => (
-              <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
-                <span style={{ color:N.muted, fontWeight:600 }}>{k}</span>
-                <span style={{ fontWeight:800, color:N.text, textAlign:"right" }}>{v}</span>
-              </div>
-            ))}
+              ...(pricingInfo?.walletMode ? [
+                ["Campaign Cost", `₹ ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                ["Wallet Balance", `₹ ${pricingInfo.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+              ] : [])
+            ].map(([k, v]) => {
+              const isCost = k === "Campaign Cost";
+              const isBalance = k === "Wallet Balance";
+              return (
+                <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
+                  <span style={{ color:N.muted, fontWeight:600 }}>{k}</span>
+                  <span style={{
+                    fontWeight: 800,
+                    color: isCost ? "#ea580c" : isBalance ? (hasInsufficientBalance ? "#dc2626" : "#16a34a") : N.text,
+                    textAlign: "right"
+                  }}>{v}</span>
+                </div>
+              );
+            })}
           </div>
 
           <div style={{ borderRadius:16, padding:18, background:N.bg, boxShadow:N.inset, display:"flex", flexDirection:"column", gap:12 }}>
@@ -1725,9 +1775,15 @@ export default function NewReelPage() {
             )}
           </div>
 
-          {panels.length === 0 && (
+          {panels.length === 0 && !pricingInfo?.walletMode && (
             <div style={{ padding:12, borderRadius:12, background:"rgba(220,38,38,0.1)", color:"#dc2626", fontSize:12, fontWeight:700, border:"1px solid rgba(220,38,38,0.2)" }}>
               ⚠️ No connected SMM providers. <Link href="/panels" style={{ textDecoration:"underline", color:"#dc2626" }}>Connect a panel in Settings first</Link>
+            </div>
+          )}
+
+          {hasInsufficientBalance && (
+            <div style={{ padding:12, borderRadius:12, background:"rgba(220,38,38,0.1)", color:"#dc2626", fontSize:12, fontWeight:700, border:"1px solid rgba(220,38,38,0.2)" }}>
+              ⚠️ Insufficient Wallet Balance. You need ₹{totalCost.toFixed(2)} to place this order (Current: ₹{pricingInfo?.balance.toFixed(2)}). <Link href="/billing" style={{ textDecoration:"underline", color:"#dc2626" }}>Please go to Billing to add funds.</Link>
             </div>
           )}
 
@@ -1735,11 +1791,12 @@ export default function NewReelPage() {
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <button onClick={() => setStep(3)} style={{ padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"none", cursor:"pointer", color:N.muted, background:N.bg, boxShadow:N.raisedSm }} className="neo-btn">← Back</button>
-            <button onClick={submit} disabled={submitting || panels.length === 0} className="neo-btn"
-              style={{ padding:"12px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", color:"#ffffff", background:N.accentBg, boxShadow:N.raisedSm, opacity: (submitting || panels.length === 0) ? 0.5 : 1 }}>
+            <button onClick={submit} disabled={submitting || (panels.length === 0 && !pricingInfo?.walletMode) || hasInsufficientBalance} className="neo-btn"
+              style={{ padding:"12px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", color:"#ffffff", background:N.accentBg, boxShadow:N.raisedSm, opacity: (submitting || (panels.length === 0 && !pricingInfo?.walletMode) || hasInsufficientBalance) ? 0.5 : 1 }}>
               {submitting ? "Deploying…" : "🚀 Start Campaign"}
             </button>
           </div>
+
         </div>
       )}
 
