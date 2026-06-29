@@ -118,17 +118,27 @@ function CurvePreview({
 
   if (!batches.length) return null;
 
+  // Calculate cumulative views for each batch
+  let runningViewsSum = 0;
+  const cumulativeBatches = batches.map((b) => {
+    runningViewsSum += b.views;
+    return {
+      ...b,
+      cumulativeViews: runningViewsSum,
+    };
+  });
+
   const W = 550, H = 200, pad = 30;
-  const maxViews = Math.max(...batches.map((b) => b.views), 1);
+  const maxVal = Math.max(views, 1);
 
   // Helper to map index & quantity to coordinates
   const getCoords = (val: number, max: number, idx: number) => {
-    const x = pad + (idx / (batches.length - 1)) * (W - 2 * pad);
+    const x = pad + (idx / (cumulativeBatches.length - 1)) * (W - 2 * pad);
     const y = H - pad - (val / max) * (H - 2 * pad);
     return { x, y };
   };
 
-  const viewsPts = batches.map((b, i) => getCoords(b.views, maxViews, i));
+  const viewsPts = cumulativeBatches.map((b, i) => getCoords(b.cumulativeViews, maxVal, i));
 
   const makePath = (pts: { x: number; y: number }[]) =>
     pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
@@ -142,10 +152,10 @@ function CurvePreview({
   const curveInfo = CURVE_DESCRIPTIONS[style];
 
   // Determine current active simulation batch
-  const currentBatchIdx = isPlaying ? playHour : (batches.length - 1);
-  const currentBatch = batches[currentBatchIdx];
+  const currentBatchIdx = isPlaying ? playHour : (cumulativeBatches.length - 1);
+  const currentBatch = cumulativeBatches[currentBatchIdx];
   const currentPt = viewsPts[currentBatchIdx];
-  const dispatchPct = Math.round((currentBatch.views / views) * 100);
+  const dispatchPct = Math.round((currentBatch.cumulativeViews / maxVal) * 100);
 
   return (
     <div style={{
@@ -718,7 +728,7 @@ export default function NewReelPage() {
   }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, eng, router, saveAsTemplate, templateName]);
 
   return (
-    <div style={{ maxWidth:640, display:"flex", flexDirection:"column", gap:24 }}>
+    <div style={{ maxWidth: step === 2 ? 1100 : 640, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 24, transition: "max-width 0.3s ease-in-out" }}>
       <style>{`
         .neo-input:focus{box-shadow:inset 6px 6px 12px #c8d0e7,inset -6px -6px 12px #ffffff,0 0 0 2px rgba(217,119,6,0.25) !important}
         .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
