@@ -181,16 +181,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             display:"flex", alignItems:"center", gap:8,
           }}>
             <div style={{ width:28, height:28, borderRadius:8, background: walletMode ? "rgba(22, 163, 74, 0.12)" : "rgba(217, 119, 6, 0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, boxShadow:N.raisedSm }}>
-              {walletMode ? "₹" : "⚡"}
+              {walletMode ? "₹" : "🔌"}
             </div>
             <div>
               <div style={{ fontSize:11, fontWeight:800, color: walletMode ? "#16a34a" : N.accent }}>
-                {walletMode ? `₹ ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "Free Trial Active"}
+                {walletMode ? `₹ ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "Developer Mode"}
               </div>
               <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:700 }}>
-                {walletMode ? "Wallet Balance" : "Upgrade → $20 lifetime"}
+                {walletMode ? "Wallet Balance" : "Own SMM API Connected"}
               </div>
             </div>
+
           </Link>
 
           <button onClick={handleLogout} disabled={loggingOut} className="neo-btn"

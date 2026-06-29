@@ -644,75 +644,31 @@ export default function AdminPage() {
           {/* ── SETTINGS TAB ─── */}
           {tab === "settings" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <div>
-                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>💳 Crypto Wallet Addresses</h2>
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Addresses where lifetime upgrade deposits are routed</p>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {[
-                  { key: "trc20Address", label: "USDT TRC20 Address (TRON Network)", placeholder: "T..." },
-                  { key: "bep20Address", label: "USDT BEP20 Address (BSC Network)", placeholder: "0x..." },
-                ].map(({ key, label, placeholder }) => (
-                  <div key={key}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>{label}</label>
-                    <input value={(settings as unknown as Record<string, string>)[key] ?? ""}
-                      onChange={(e) => setSettings((prev) => ({ ...prev, [key]: e.target.value }))}
-                      placeholder={placeholder}
-                      className="neo-input"
-                      style={{
-                        width: "100%",
-                        padding: "14px 18px",
-                        borderRadius: 12,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily: "monospace",
-                        color: N.text,
-                        background: N.bg,
-                        border: "none",
-                        boxShadow: N.inset,
-                        outline: "none",
-                        boxSizing: "border-box"
-                      }} />
-                  </div>
-                ))}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>💵 Price (USDT)</label>
-                    <input type="number" value={settings.priceUsdt} onChange={(e) => setSettings((p) => ({ ...p, priceUsdt: parseFloat(e.target.value) }))}
-                      className="neo-input"
-                      style={{
-                        width: "100%",
-                        padding: "14px 18px",
-                        borderRadius: 12,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: N.text,
-                        background: N.bg,
-                        border: "none",
-                        boxShadow: N.inset,
-                        outline: "none",
-                        boxSizing: "border-box"
-                      }} />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>⏱ Free Trial Hours</label>
-                    <input type="number" value={settings.freeTrialHours} onChange={(e) => setSettings((p) => ({ ...p, freeTrialHours: parseInt(e.target.value) }))}
-                      className="neo-input"
-                      style={{
-                        width: "100%",
-                        padding: "14px 18px",
-                        borderRadius: 12,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: N.text,
-                        background: N.bg,
-                        border: "none",
-                        boxShadow: N.inset,
-                        outline: "none",
-                        boxSizing: "border-box"
-                      }} />
-                  </div>
-                </div>
+               <div>
+                 <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 6px" }}>⚙️ Global System Settings</h2>
+                 <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Configure active brand names and client support channels</p>
+               </div>
+               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                 <div>
+                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🏷️ Brand Site Name</label>
+                   <input value={settings.siteName ?? "YoyoSMM"}
+                     onChange={(e) => setSettings((p) => ({ ...p, siteName: e.target.value }))}
+                     placeholder="YoyoSMM"
+                     className="neo-input"
+                     style={{
+                       width: "100%",
+                       padding: "14px 18px",
+                       borderRadius: 12,
+                       fontSize: 13,
+                       fontWeight: 600,
+                       color: N.text,
+                       background: N.bg,
+                       border: "none",
+                       boxShadow: N.inset,
+                       outline: "none",
+                       boxSizing: "border-box"
+                     }} />
+                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>📧 Support Email</label>
                   <input value={settings.supportEmail ?? ""} onChange={(e) => setSettings((p) => ({ ...p, supportEmail: e.target.value }))}
