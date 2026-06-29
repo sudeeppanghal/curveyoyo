@@ -831,19 +831,23 @@ export default function NewReelPage() {
   useEffect(() => {
     const info = CURVE_DESCRIPTIONS[style];
     if (!info) return;
-    const s = generateRawSchedule({
-      totalViews: views,
-      durationHours: durationDays * 24,
-      warmupHours: info.warmup,
-      peakHours: info.peak,
-      style,
-      engagementEnabled: engEnabled,
-      likesRatioPct: likesOn ? likesRatio : 0,
-      savesRatioPct: savesOn ? savesRatio : 0,
-      sharesRatioPct: sharesOn ? sharesRatio : 0,
-      commentsRatioPct: commentsOn ? commentsRatio : 0,
-    });
-    setSchedule(s);
+    // Defer heavy schedule computation off the main thread to prevent UI freeze
+    const timer = setTimeout(() => {
+      const s = generateRawSchedule({
+        totalViews: views,
+        durationHours: durationDays * 24,
+        warmupHours: info.warmup,
+        peakHours: info.peak,
+        style,
+        engagementEnabled: engEnabled,
+        likesRatioPct: likesOn ? likesRatio : 0,
+        savesRatioPct: savesOn ? savesRatio : 0,
+        sharesRatioPct: sharesOn ? sharesRatio : 0,
+        commentsRatioPct: commentsOn ? commentsRatio : 0,
+      });
+      setSchedule(s);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [views, durationDays, style, engEnabled, likesOn, likesRatio, savesOn, savesRatio, sharesOn, sharesRatio, commentsOn, commentsRatio]);
 
   const applyTemplate = (templateId: string) => {
