@@ -461,14 +461,19 @@ export function calculateEngagementDue(
     comments: Math.max(0, owed.comments - alreadyDelivered.comments),
   };
 
-  // Only fire if due amount meets minimum threshold
+  // Only fire if due amount meets the specific SMM service minimum threshold
   // (or it's the LAST batch of the campaign — flush remainder)
   const isLastBatch = fraction >= 0.99;
 
+  const minLikes = 50;
+  const minSaves = 10;
+  const minShares = 50;
+  const minComments = 5;
+
   return {
-    likes:    (due.likes    >= minBatchSize || (isLastBatch && due.likes    > 0)) ? due.likes    : 0,
-    saves:    (due.saves    >= minBatchSize || (isLastBatch && due.saves    > 0)) ? due.saves    : 0,
-    shares:   (due.shares   >= minBatchSize || (isLastBatch && due.shares   > 0)) ? due.shares   : 0,
-    comments: (due.comments >= minBatchSize || (isLastBatch && due.comments > 0)) ? due.comments : 0,
+    likes:    (due.likes    >= minLikes    || (isLastBatch && due.likes    > 0)) ? due.likes    : 0,
+    saves:    (due.saves    >= minSaves    || (isLastBatch && due.saves    > 0)) ? due.saves    : 0,
+    shares:   (due.shares   >= minShares   || (isLastBatch && due.shares   > 0)) ? due.shares   : 0,
+    comments: (due.comments >= minComments || (isLastBatch && due.comments > 0)) ? due.comments : 0,
   };
 }
