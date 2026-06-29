@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { generateDeliverySchedule, calculateEngagementTargets } from "@/lib/delivery/curve";
+import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets } from "@/lib/delivery/curve";
 
 // ── Types ───────────────────────────────────────────────────────
 type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
@@ -85,7 +85,7 @@ function CurvePreview({
   const [playHour, setPlayHour] = useState(0);
   const playTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const batches = generateDeliverySchedule({
+  const batches = generateRawSchedule({
     totalViews: views,
     durationHours,
     warmupHours: warmup,

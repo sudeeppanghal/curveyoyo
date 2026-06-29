@@ -85,7 +85,7 @@ export function peakHourMultiplier(utcHour: number, tzOffsetHours = 5.5): number
  * Generates per-hour delivery batches following a logistic S-curve with peak-hour weighting.
  * Engagement quantities per batch are proportional to views in that batch.
  */
-export function generateDeliverySchedule(params: CurveParams): DeliveryBatch[] {
+export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
   const {
     totalViews, durationHours, warmupHours, peakHours, style,
     engagementEnabled = true,
@@ -209,20 +209,22 @@ export function generateDeliverySchedule(params: CurveParams): DeliveryBatch[] {
     if (lastNonZero >= 0) distributed[lastNonZero] = Math.max(0, distributed[lastNonZero] + diff);
   }
 
-  return distributed
-    .map((views, hour) => {
-      const ratio = totalViews > 0 ? views / totalViews : 0;
-      return {
-        hour,
-        scheduledDelayMs: hour * 60 * 60 * 1000,
-        views,
-        likes:    engagementEnabled ? Math.round((likesRatioPct    / 100) * totalViews * ratio) : 0,
-        saves:    engagementEnabled ? Math.round((savesRatioPct    / 100) * totalViews * ratio) : 0,
-        shares:   engagementEnabled ? Math.round((sharesRatioPct   / 100) * totalViews * ratio) : 0,
-        comments: engagementEnabled ? Math.round((commentsRatioPct / 100) * totalViews * ratio) : 0,
-      };
-    })
-    .filter((b) => b.views > 0);
+  return distributed.map((views, hour) => {
+    const ratio = totalViews > 0 ? views / totalViews : 0;
+    return {
+      hour,
+      scheduledDelayMs: hour * 60 * 60 * 1000,
+      views,
+      likes:    engagementEnabled ? Math.round((likesRatioPct    / 100) * totalViews * ratio) : 0,
+      saves:    engagementEnabled ? Math.round((savesRatioPct    / 100) * totalViews * ratio) : 0,
+      shares:   engagementEnabled ? Math.round((sharesRatioPct   / 100) * totalViews * ratio) : 0,
+      comments: engagementEnabled ? Math.round((commentsRatioPct / 100) * totalViews * ratio) : 0,
+    };
+  });
+}
+
+export function generateDeliverySchedule(params: CurveParams): DeliveryBatch[] {
+  return generateRawSchedule(params).filter((b) => b.views > 0);
 }
 
 /**
