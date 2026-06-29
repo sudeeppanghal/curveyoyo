@@ -56,6 +56,16 @@ export async function POST(request: NextRequest) {
     data: { status: "DELIVERING" },
   });
 
+  // Execute the first event instantly (so the campaign starts immediately without waiting for cron/QStash ticks)
+  const firstEvent = await prisma.deliveryEvent.findFirst({
+    where: { orderId, status: "SCHEDULED" },
+    orderBy: { scheduledAt: "asc" },
+  });
+  if (firstEvent) {
+    const { processEvent } = await import("@/lib/delivery/process");
+    await processEvent(firstEvent.id).catch(console.error);
+  }
+
   // 2. Try QStash if configured (faster, per-batch scheduling)
   const hasQStash = !!(process.env.QSTASH_TOKEN);
   let enqueued = 0;

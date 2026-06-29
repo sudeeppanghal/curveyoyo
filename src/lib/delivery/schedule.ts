@@ -48,14 +48,29 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
 
   // Persist all delivery events to DB
   const now = new Date();
-  await prisma.deliveryEvent.createMany({
-    data: batches.map((batch) => ({
+  const data = batches.map((batch, index) => {
+    let delayMs = batch.scheduledDelayMs;
+    if (index === 0) {
+      delayMs = 0; // First batch starts instantly!
+    } else if (index < batches.length - 1) {
+      // Add ±15 minutes of random time jitter (±900,000 ms)
+      const jitterMs = (Math.random() * 2 - 1) * 15 * 60 * 1000;
+      delayMs = Math.max(5 * 60 * 1000, delayMs + jitterMs); // keep at least 5 minutes delay
+    }
+    return {
       orderId: order.id,
       panelId: primaryPanel.id,
       viewsBatch: batch.views,
-      scheduledAt: new Date(now.getTime() + batch.scheduledDelayMs),
-      status: "SCHEDULED",
-    })),
+      scheduledAt: new Date(now.getTime() + delayMs),
+      status: "SCHEDULED" as const,
+    };
+  });
+
+  // Sort chronologically to maintain strictly increasing execution times
+  data.sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+
+  await prisma.deliveryEvent.createMany({
+    data,
   });
 
   // Mark order as QUEUED + record start time + assign panel

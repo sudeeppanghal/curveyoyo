@@ -8,7 +8,11 @@ export interface CurveParams {
   durationHours: number;
   warmupHours: number;
   peakHours: number;
-  style: "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
+  style: "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"
+    | "LINEAR" | "EXPONENTIAL" | "S_CURVE" | "BELL_CURVE" | "LOGARITHMIC" | "QUADRATIC" | "CUBIC"
+    | "SINE_WAVE" | "COSINE_WAVE" | "SAWTOOTH" | "CHAOTIC" | "DOUBLE_BELL" | "STEP_LADDER"
+    | "ALTERNATING" | "FIBONACCI" | "PARETO" | "MORNING_SURGE" | "NOON_PEAK" | "EVENING_BLAST"
+    | "SIGMOID_DECAY" | "STEEP_WARMUP";
   // Engagement
   engagementEnabled?: boolean;
   likesRatioPct?: number;
@@ -90,36 +94,77 @@ export function generateDeliverySchedule(params: CurveParams): DeliveryBatch[] {
     tzOffsetHours = 5.5,
   } = params;
 
-  const r = RATES[style] ?? 0.8;
-  const t0 = warmupHours + peakHours / 2;
+  const RATES_MAP: Record<string, number> = RATES;
   const nowUtcHour = new Date().getUTCHours();
 
   const raw = Array.from({ length: durationHours }, (_, t) => {
-    let logistic = 1 / (1 + Math.exp(-r * (t - t0)));
+    const progress = t / durationHours;
+    let val = 1.0;
 
-    // Custom shape modifications for special platforms
-    if (style === "CLIPSTAKE") {
-      // Double-plateau step-wise curve simulating viral trigger prompts
-      const progress = t / durationHours;
-      const stepFactor = progress < 0.35 ? 0.4 : progress < 0.7 ? 0.75 : 1.0;
-      logistic = logistic * stepFactor;
-    } else if (style === "CROSSWAVE") {
-      // Wave-like oscillation simulating syndication across multiple platforms
-      const wave = 1 + 0.3 * Math.sin((t * Math.PI) / 4);
-      logistic = logistic * wave;
-    } else if (style === "WHOP") {
-      // Extremely slow building ramp (commerce activity profile)
-      logistic = Math.pow(logistic, 1.5);
-    } else if (style === "CLIPSTAR") {
-      // Rapid spike with long-tail plateau retention
-      logistic = Math.sqrt(logistic);
-    } else if (style === "PICSART") {
-      // Smooth gradual S-curve but shifted to peak later in the day
-      logistic = Math.pow(logistic, 1.2);
+    if (style === "LINEAR") {
+      val = 1.0;
+    } else if (style === "EXPONENTIAL") {
+      val = Math.exp(progress * 3);
+    } else if (style === "S_CURVE") {
+      val = 1 / (1 + Math.exp(-6 * (progress - 0.5)));
+    } else if (style === "BELL_CURVE") {
+      val = Math.exp(-Math.pow((progress - 0.5) / 0.2, 2));
+    } else if (style === "LOGARITHMIC") {
+      val = Math.log(1 + 9 * progress);
+    } else if (style === "QUADRATIC") {
+      val = Math.pow(progress, 2) + 0.1;
+    } else if (style === "CUBIC") {
+      val = Math.pow(progress, 3) + 0.05;
+    } else if (style === "SINE_WAVE") {
+      val = 1.0 + 0.5 * Math.sin(progress * 4 * Math.PI);
+    } else if (style === "COSINE_WAVE") {
+      val = 1.0 + 0.5 * Math.cos(progress * 4 * Math.PI);
+    } else if (style === "SAWTOOTH") {
+      const period = Math.max(1, Math.floor(durationHours / 4));
+      val = (t % period) / period + 0.1;
+    } else if (style === "CHAOTIC") {
+      val = 0.5 + 0.3 * Math.sin(progress * 6 * Math.PI) + 0.2 * Math.sin(progress * 14 * Math.PI + 1.0) + 0.1 * Math.cos(progress * 22 * Math.PI);
+    } else if (style === "DOUBLE_BELL") {
+      val = Math.exp(-Math.pow((progress - 0.25) / 0.1, 2)) + Math.exp(-Math.pow((progress - 0.75) / 0.1, 2)) + 0.05;
+    } else if (style === "STEP_LADDER") {
+      val = Math.floor(progress * 4) / 4 + 0.1;
+    } else if (style === "ALTERNATING") {
+      val = (Math.floor(t) % 2 === 0) ? 1.0 : 0.05;
+    } else if (style === "FIBONACCI") {
+      val = Math.pow(1.618, progress * 8);
+    } else if (style === "PARETO") {
+      val = Math.pow(1 - progress, 4) + 0.02;
+    } else if (style === "MORNING_SURGE") {
+      val = Math.exp(-Math.pow((progress - 0.15) / 0.1, 2));
+    } else if (style === "NOON_PEAK") {
+      val = Math.exp(-Math.pow((progress - 0.5) / 0.15, 2));
+    } else if (style === "EVENING_BLAST") {
+      val = Math.exp(-Math.pow((progress - 0.8) / 0.15, 2));
+    } else if (style === "SIGMOID_DECAY") {
+      val = 1 / (1 + Math.exp(10 * (progress - 0.85)));
+    } else if (style === "STEEP_WARMUP") {
+      val = (progress < 0.1) ? (progress / 0.1) : 1.0;
+    } else {
+      const r = RATES_MAP[style] ?? 0.8;
+      const t0 = warmupHours + peakHours / 2;
+      let logistic = 1 / (1 + Math.exp(-r * (t - t0)));
+
+      if (style === "CLIPSTAKE") {
+        logistic = logistic * (progress < 0.35 ? 0.4 : progress < 0.7 ? 0.75 : 1.0);
+      } else if (style === "CROSSWAVE") {
+        logistic = logistic * (1 + 0.3 * Math.sin((t * Math.PI) / 4));
+      } else if (style === "WHOP") {
+        logistic = Math.pow(logistic, 1.5);
+      } else if (style === "CLIPSTAR") {
+        logistic = Math.sqrt(logistic);
+      } else if (style === "PICSART") {
+        logistic = Math.pow(logistic, 1.2);
+      }
+      val = logistic;
     }
 
     const utcHour = (nowUtcHour + t) % 24;
-    return logistic * peakHourMultiplier(utcHour, tzOffsetHours);
+    return val * peakHourMultiplier(utcHour, tzOffsetHours);
   });
 
   const sum = raw.reduce((a, b) => a + b, 0);

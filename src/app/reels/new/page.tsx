@@ -6,7 +6,11 @@ import { generateDeliverySchedule, calculateEngagementTargets } from "@/lib/deli
 
 // ── Types ───────────────────────────────────────────────────────
 type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
-type CurveStyle = "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
+type CurveStyle = "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"
+  | "LINEAR" | "EXPONENTIAL" | "S_CURVE" | "BELL_CURVE" | "LOGARITHMIC" | "QUADRATIC" | "CUBIC"
+  | "SINE_WAVE" | "COSINE_WAVE" | "SAWTOOTH" | "CHAOTIC" | "DOUBLE_BELL" | "STEP_LADDER"
+  | "ALTERNATING" | "FIBONACCI" | "PARETO" | "MORNING_SURGE" | "NOON_PEAK" | "EVENING_BLAST"
+  | "SIGMOID_DECAY" | "STEEP_WARMUP";
 
 interface Panel {
   id: string; name: string; isActive: boolean;
@@ -30,15 +34,39 @@ const N = {
 const PLATFORM_ICONS: Record<Platform, string> = {
   INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️",
 };
-const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warmup: number; peak: number; icon: string }> = {
-  ORGANIC:    { label: "Organic",    desc: "Natural viral growth — slow warmup, steady peak, smooth decay. Best for account health.", warmup: 4, peak: 8, icon: "🌅" },
-  FAST:       { label: "Fast",       desc: "Compressed 12h curve — quicker ramp, shorter peak. Good for time-sensitive content.", warmup: 2, peak: 4, icon: "⚡" },
-  AGGRESSIVE: { label: "Aggressive", desc: "Rapid 6h burst — immediate surge. Use sparingly, higher visibility risk.", warmup: 1, peak: 2, icon: "🔥" },
-  WHOP:       { label: "Whop",       desc: "Steady commerce pacing — slow morning warmup with sustained midday activity plateau.", warmup: 5, peak: 10, icon: "💳" },
-  CLIPSTAKE:  { label: "Clipstake",  desc: "Algorithmic step-wise wave pacing — spikes at 35% and 70% of duration to mimic viral prompts.", warmup: 3, peak: 6, icon: "🎲" },
-  CLIPSTAR:   { label: "Clipstar",   desc: "Immediate sustained viral burst — quick warmup with long-tail plateau retention.", warmup: 2, peak: 12, icon: "⭐" },
-  PICSART:    { label: "Picsart",    desc: "Creative designer pacing — afternoon peak with high interaction curves.", warmup: 4, peak: 8, icon: "🎨" },
-  CROSSWAVE:  { label: "Crosswave",  desc: "Periodic multi-platform cross pacing — oscillatory crest/trough waves simulating syndication.", warmup: 4, peak: 8, icon: "🌊" },
+const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warmup: number; peak: number; icon: string; category: string }> = {
+  ORGANIC:       { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic" },
+  FAST:          { label: "Fast Burst",      desc: "Compressed 12h curve — quicker ramp, shorter peak.", warmup: 2, peak: 4, icon: "⚡", category: "Classic" },
+  AGGRESSIVE:    { label: "Aggressive Spike",desc: "Rapid 6h burst — immediate surge. Higher visibility risk.", warmup: 1, peak: 2, icon: "🔥", category: "Classic" },
+  WHOP:          { label: "Whop commerce",   desc: "Commerce activity profile — sustained midday plateau.", warmup: 5, peak: 10, icon: "💳", category: "Classic" },
+  CLIPSTAKE:     { label: "Clipstake Wave",  desc: "Double-plateau step-wise curve simulating viral trigger prompts.", warmup: 3, peak: 6, icon: "🎲", category: "Classic" },
+  CLIPSTAR:      { label: "Clipstar Burst",  desc: "Immediate sustained viral burst with long-tail retention.", warmup: 2, peak: 12, icon: "⭐", category: "Classic" },
+  PICSART:       { label: "Picsart Creative",desc: "Creative designer pacing — afternoon peak with high interaction curves.", warmup: 4, peak: 8, icon: "🎨", category: "Classic" },
+  CROSSWAVE:     { label: "Crosswave Multi", desc: "Oscillatory crest/trough waves simulating syndication.", warmup: 4, peak: 8, icon: "🌊", category: "Classic" },
+
+  LINEAR:        { label: "Linear Pace",     desc: "Constant, equal-increment delivery rate over the entire campaign.", warmup: 0, peak: 0, icon: "📈", category: "Standard" },
+  EXPONENTIAL:   { label: "Exponential Surge",desc: "Starts slowly and accelerates sharply. Ideal for countdowns.", warmup: 0, peak: 0, icon: "🚀", category: "Standard" },
+  S_CURVE:       { label: "S-Curve Growth",  desc: "Slow ramp-up, rapid mid-campaign dispatch, and smooth saturation.", warmup: 0, peak: 0, icon: "📉", category: "Standard" },
+  BELL_CURVE:    { label: "Bell Curve Dispatch",desc: "Symmetric pacing starting gently, peaking at mid-duration.", warmup: 0, peak: 0, icon: "🔔", category: "Standard" },
+  LOGARITHMIC:   { label: "Logarithmic Warm-up",desc: "Surges immediately on launch, then maintains a decelerating pace.", warmup: 0, peak: 0, icon: "🪵", category: "Standard" },
+  QUADRATIC:     { label: "Quadratic Velocity",desc: "Accelerates at a moderate squared rate.", warmup: 0, peak: 0, icon: "📐", category: "Standard" },
+  CUBIC:         { label: "Cubic Accelerating",desc: "Aggressive third-degree curve with longer slow-phase and sharper final surge.", warmup: 0, peak: 0, icon: "🧮", category: "Standard" },
+
+  SINE_WAVE:     { label: "Sine Wave Ripple", desc: "Alternate peaks and valleys of activity for natural testing.", warmup: 0, peak: 0, icon: "〰️", category: "Waves & Pulses" },
+  COSINE_WAVE:   { label: "Cosine Wave Ripple",desc: "Starts at absolute peak output, dipping and recovering periodically.", warmup: 0, peak: 0, icon: "🎢", category: "Waves & Pulses" },
+  SAWTOOTH:      { label: "Sawtooth Throttling",desc: "Linear ramp-up cycles that sharply drop back to baseline.", warmup: 0, peak: 0, icon: "🪚", category: "Waves & Pulses" },
+  CHAOTIC:       { label: "Chaotic Wave",    desc: "Simulates pseudo-random fluctuations to mimic organic user patterns.", warmup: 0, peak: 0, icon: "🌀", category: "Waves & Pulses" },
+  DOUBLE_BELL:   { label: "Double Bell Surge",desc: "Dual peaks centered around morning and evening high-traffic blocks.", warmup: 0, peak: 0, icon: "🐫", category: "Waves & Pulses" },
+  STEP_LADDER:   { label: "Step Ladder",     desc: "Increments output in discrete, flat tiers.", warmup: 0, peak: 0, icon: "🪜", category: "Waves & Pulses" },
+  ALTERNATING:   { label: "Alternating Pulse",desc: "Outputs either 100% or 0% at alternating steps.", warmup: 0, peak: 0, icon: "🫀", category: "Waves & Pulses" },
+  FIBONACCI:     { label: "Fibonacci Pace",  desc: "Paces delivery according to the golden ratio sequence.", warmup: 0, peak: 0, icon: "🐚", category: "Specialized" },
+  PARETO:        { label: "Pareto 80/20",    desc: "Dispatches 80% of volume in the first 20% of duration.", warmup: 0, peak: 0, icon: "📊", category: "Specialized" },
+
+  MORNING_SURGE: { label: "Morning Surge",   desc: "Heavily front-loaded peak in the early hours to target feed checkings.", warmup: 0, peak: 0, icon: "🌅", category: "Surge Peaks" },
+  NOON_PEAK:     { label: "Noon Peak",       desc: "Centered peak focusing on the typical lunch-break browsing slot.", warmup: 0, peak: 0, icon: "☀️", category: "Surge Peaks" },
+  EVENING_BLAST: { label: "Evening Blast",   desc: "Back-loaded dispatch peak targeted at after-work leisure hours.", warmup: 0, peak: 0, icon: "🌆", category: "Surge Peaks" },
+  SIGMOID_DECAY: { label: "Sigmoid Decay",   desc: "Starts at maximum volume and stays flat, before dropping in a smooth S-curve.", warmup: 0, peak: 0, icon: "🥀", category: "Surge Peaks" },
+  STEEP_WARMUP:  { label: "Steep Warm-up",   desc: "Ramps up extremely quickly to max output within the first 10%.", warmup: 0, peak: 0, icon: "📈", category: "Surge Peaks" },
 };
 
 // ── Premium Neon Animated Chart ──────────────────────────────────
@@ -294,9 +322,36 @@ function Slider({ label, value, min, max, step = 1, onChange, format }: {
 }) {
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
         <span style={{ fontSize:13, fontWeight:700, color:N.text }}>{label}</span>
-        <span style={{ fontSize:13, fontWeight:900, color:N.accent }}>{format(value)}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <input
+            type="number"
+            value={value}
+            min={min}
+            max={max}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              if (!isNaN(val)) onChange(val);
+            }}
+            style={{
+              width: 80,
+              padding: "4px 8px",
+              borderRadius: 8,
+              fontSize: 12,
+              background: N.bg,
+              border: "none",
+              color: N.accent,
+              fontWeight: 905,
+              outline: "none",
+              boxShadow: N.inset,
+              textAlign: "right",
+              fontFamily: "inherit"
+            }}
+            className="neo-input"
+          />
+          <span style={{ fontSize:12, fontWeight:700, color:N.muted }}>({format(value)})</span>
+        </div>
       </div>
       <div style={{ padding:"8px", borderRadius:12, background:N.bg, boxShadow:N.inset }}>
         <input type="range" min={min} max={max} step={step} value={value}
@@ -373,11 +428,35 @@ export default function NewReelPage() {
   const [sharesRatio, setSharesRatio] = useState(0.5);
   const [commentsRatio, setCommentsRatio] = useState(0.2);
   const [hasCustomizedEng, setHasCustomizedEng] = useState(false);
+  const [smmLimits, setSmmLimits] = useState<{
+    views: { min: number; max: number } | null;
+    likes: { min: number; max: number } | null;
+    saves: { min: number; max: number } | null;
+    shares: { min: number; max: number } | null;
+    comments: { min: number; max: number } | null;
+  }>({ views: null, likes: null, saves: null, shares: null, comments: null });
+  const [fetchingLimits, setFetchingLimits] = useState(false);
 
   useEffect(() => {
     fetch("/api/panels").then((r) => r.json()).then((d) => setPanels(d.panels ?? [])).catch(() => {});
     fetch("/api/templates").then((r) => r.json()).then((d) => setTemplates(d.templates ?? [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setFetchingLimits(true);
+    fetch(`/api/panels/services?platform=${platform}`)
+      .then(res => res.json())
+      .then(d => {
+        if (d.limits) {
+          setSmmLimits(d.limits);
+          if (d.limits.views && views < d.limits.views.min) {
+            setViews(d.limits.views.min);
+          }
+        }
+        setFetchingLimits(false);
+      })
+      .catch(() => setFetchingLimits(false));
+  }, [platform]);
 
   useEffect(() => {
     if (hasCustomizedEng) return;
@@ -519,7 +598,9 @@ export default function NewReelPage() {
   );
 
   const canProceed1 = reelUrl.trim().length > 10;
-  const canProceed2 = views >= 100 && durationDays >= 1;
+  const minViewsRequired = smmLimits.views?.min ?? 100;
+  const maxViewsRequired = smmLimits.views?.max ?? 10000000;
+  const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1;
 
   const submit = useCallback(async () => {
     setSubmitting(true); setError("");
@@ -647,8 +728,15 @@ export default function NewReelPage() {
             </div>
           )}
 
-          <Slider label="Total Views" value={views} min={1000} max={1000000} step={1000}
-            onChange={setViews} format={(v) => v >= 100000 ? `${(v / 100000).toFixed(1)}L` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)} />
+          <div>
+            <Slider label="Total Views" value={views} min={minViewsRequired} max={maxViewsRequired} step={100}
+              onChange={setViews} format={(v) => v >= 100000 ? `${(v / 100000).toFixed(1)}L` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)} />
+            {smmLimits.views && (
+              <p style={{ fontSize:11, color:N.muted, marginTop:8, marginLeft:4, fontWeight:600 }}>
+                💡 Panel Limits: Min <strong>{smmLimits.views.min.toLocaleString()}</strong> · Max <strong>{smmLimits.views.max.toLocaleString()}</strong>
+              </p>
+            )}
+          </div>
 
           <Slider label="Duration" value={durationDays} min={1} max={90} step={1}
             onChange={setDurationDays} format={(v) => `${v} day${v === 1 ? "" : "s"}`} />
@@ -661,21 +749,32 @@ export default function NewReelPage() {
           )}
 
           <div>
-            <p style={{ fontSize:13, fontWeight:700, color:N.text, marginBottom:10 }}>Delivery Style</p>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10 }}>
-              {(["ORGANIC", "FAST", "AGGRESSIVE", "WHOP", "CLIPSTAKE", "CLIPSTAR", "PICSART", "CROSSWAVE"] as CurveStyle[]).map((s) => (
-                <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }} className="neo-btn"
-                  style={{ padding:"14px 6px", borderRadius:14, border:"none", cursor:"pointer", transition:"all 0.2s", display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                    background: N.bg,
-                    color: style === s ? N.accent : N.muted,
-                    boxShadow: style === s ? N.inset : N.raisedSm,
-                  }}>
-                  <span style={{ fontSize:18 }}>{CURVE_DESCRIPTIONS[s].icon}</span>
-                  <span style={{ fontSize:12, fontWeight:800 }}>{CURVE_DESCRIPTIONS[s].label}</span>
-                </button>
-              ))}
+            <p style={{ fontSize:13, fontWeight:700, color:N.text, marginBottom:12 }}>Delivery Style</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              {["Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized"].map((cat) => {
+                const catStyles = (Object.keys(CURVE_DESCRIPTIONS) as CurveStyle[]).filter(s => CURVE_DESCRIPTIONS[s].category === cat);
+                if (catStyles.length === 0) return null;
+                return (
+                  <div key={cat}>
+                    <p style={{ fontSize:10, fontWeight:900, color:N.muted, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>{cat}</p>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10 }}>
+                      {catStyles.map((s) => (
+                        <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }} className="neo-btn"
+                          style={{ padding:"14px 6px", borderRadius:14, border:"none", cursor:"pointer", transition:"all 0.2s", display:"flex", flexDirection:"column", alignItems:"center", gap:6,
+                            background: N.bg,
+                            color: style === s ? N.accent : N.muted,
+                            boxShadow: style === s ? N.inset : N.raisedSm,
+                          }}>
+                          <span style={{ fontSize:18 }}>{CURVE_DESCRIPTIONS[s].icon}</span>
+                          <span style={{ fontSize:11, fontWeight:805, textAlign:"center" }}>{CURVE_DESCRIPTIONS[s].label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p style={{ fontSize:12, color:N.muted, marginTop:10, fontWeight:600, lineHeight:1.5 }}>{curveInfo.desc}</p>
+            <p style={{ fontSize:12, color:N.muted, marginTop:14, fontWeight:600, lineHeight:1.5 }}>{curveInfo.desc}</p>
           </div>
 
           <CurvePreview
@@ -696,7 +795,7 @@ export default function NewReelPage() {
           />
 
           <div style={{ fontSize:12, color:N.muted, textAlign:"center", fontWeight:600 }}>
-            ≈ {Math.round(views / durationDays).toLocaleString()} views/day · {durationHours} hourly batches
+            ≈ {Math.round(views / durationDays).toLocaleString()} views/day · {durationHours} hourly batches (with ±15m time jitter)
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
