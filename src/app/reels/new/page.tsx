@@ -69,6 +69,246 @@ const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warm
   STEEP_WARMUP:  { label: "Steep Warm-up",   desc: "Ramps up extremely quickly to max output within the first 10%.", warmup: 0, peak: 0, icon: "📈", category: "Surge Peaks" },
 };
 
+// ── Custom Graph Drawing Canvas ──────────────────────────────────
+type CtrlPoint = { x: number; y: number };
+
+function evalSpline(pts: CtrlPoint[], t: number): number {
+  if (pts.length === 0) return 0;
+  if (pts.length === 1) return pts[0].y;
+  if (t <= pts[0].x) return pts[0].y;
+  if (t >= pts[pts.length - 1].x) return pts[pts.length - 1].y;
+  let i = 0;
+  while (i < pts.length - 2 && pts[i + 1].x < t) i++;
+  const p0 = pts[Math.max(0, i - 1)];
+  const p1 = pts[i];
+  const p2 = pts[i + 1];
+  const p3 = pts[Math.min(pts.length - 1, i + 2)];
+  const segLen = p2.x - p1.x;
+  const tt = segLen > 0 ? (t - p1.x) / segLen : 0;
+  const h00 = 2*tt*tt*tt - 3*tt*tt + 1;
+  const h10 = tt*tt*tt - 2*tt*tt + tt;
+  const h01 = -2*tt*tt*tt + 3*tt*tt;
+  const h11 = tt*tt*tt - tt*tt;
+  const m1 = (p2.y - p0.y) / 2;
+  const m2 = (p3.y - p1.y) / 2;
+  return Math.max(0, Math.min(1, h00*p1.y + h10*m1 + h01*p2.y + h11*m2));
+}
+
+function makeSplinePath(pts: CtrlPoint[], toX: (n:number)=>number, toY: (n:number)=>number): string {
+  if (pts.length < 2) return '';
+  let d = `M ${toX(pts[0].x).toFixed(1)} ${toY(pts[0].y).toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const p2x = pts[Math.max(0, i-2)];
+    const p1x = pts[i-1];
+    const cur = pts[i];
+    const nxt = pts[Math.min(pts.length-1, i+1)];
+    const cp1x = toX(p1x.x + (cur.x - p2x.x) / 6);
+    const cp1y = toY(p1x.y + (cur.y - p2x.y) / 6);
+    const cp2x = toX(cur.x - (nxt.x - p1x.x) / 6);
+    const cp2y = toY(cur.y - (nxt.y - p1x.y) / 6);
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${toX(cur.x).toFixed(1)} ${toY(cur.y).toFixed(1)}`;
+  }
+  return d;
+}
+
+const PRESET_SHAPES: { label: string; icon: string; pts: CtrlPoint[] }[] = [
+  { label: 'S-Curve',    icon: '~',  pts: [{x:0,y:0},{x:0.2,y:0.05},{x:0.5,y:0.5},{x:0.8,y:0.95},{x:1,y:1}] },
+  { label: 'Early Peak', icon: 'EP', pts: [{x:0,y:0},{x:0.15,y:0.7},{x:0.4,y:0.9},{x:1,y:1}] },
+  { label: 'Late Surge', icon: 'LS', pts: [{x:0,y:0},{x:0.5,y:0.1},{x:0.75,y:0.5},{x:0.9,y:0.9},{x:1,y:1}] },
+  { label: 'Linear',     icon: '/',  pts: [{x:0,y:0},{x:0.33,y:0.33},{x:0.67,y:0.67},{x:1,y:1}] },
+  { label: 'Bell Peak',  icon: 'BP', pts: [{x:0,y:0},{x:0.2,y:0.3},{x:0.5,y:1},{x:0.8,y:0.3},{x:1,y:0.05}] },
+  { label: 'Step',       icon: '=',  pts: [{x:0,y:0},{x:0.33,y:0},{x:0.34,y:0.5},{x:0.66,y:0.5},{x:0.67,y:1},{x:1,y:1}] },
+];
+
+function CustomGraphDesigner({
+  views, durationHours, engEnabled,
+  likesRatio, savesRatio, sharesRatio, commentsRatio,
+  likesOn, savesOn, sharesOn, commentsOn,
+  onScheduleChange,
+}: {
+  views: number; durationHours: number; engEnabled: boolean;
+  likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number;
+  likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean;
+  onScheduleChange: (s: DeliveryBatch[]) => void;
+}) {
+  const W = 560, H = 260;
+  const PAD = { t: 24, r: 20, b: 40, l: 52 };
+  const CW = W - PAD.l - PAD.r;
+  const CH = H - PAD.t - PAD.b;
+
+  const [ctrlPts, setCtrlPts] = useState<CtrlPoint[]>([
+    {x:0,y:0},{x:0.2,y:0.05},{x:0.5,y:0.5},{x:0.8,y:0.95},{x:1,y:1},
+  ]);
+  const [draggingIdx, setDraggingIdx] = useState<number|null>(null);
+  const [hoverIdx,    setHoverIdx]    = useState<number|null>(null);
+  const [tooltip, setTooltip]         = useState<{x:number;y:number;label:string}|null>(null);
+  const svgRef = useRef<SVGSVGElement|null>(null);
+
+  const toSvgX = (nx: number) => PAD.l + nx * CW;
+  const toSvgY = (ny: number) => PAD.t + (1 - ny) * CH;
+  const fromSvg = (sx: number, sy: number): CtrlPoint => ({
+    x: Math.max(0, Math.min(1, (sx - PAD.l) / CW)),
+    y: Math.max(0, Math.min(1, 1 - (sy - PAD.t) / CH)),
+  });
+  const getSvgCoords = (e: React.MouseEvent|React.TouchEvent) => {
+    const rect = svgRef.current!.getBoundingClientRect();
+    const scX = W / rect.width, scY = H / rect.height;
+    if ('touches' in e) {
+      const t = (e as React.TouchEvent).touches[0];
+      return { sx: (t.clientX - rect.left)*scX, sy: (t.clientY - rect.top)*scY };
+    }
+    const m = e as React.MouseEvent;
+    return { sx: (m.clientX - rect.left)*scX, sy: (m.clientY - rect.top)*scY };
+  };
+
+  const buildSchedule = useCallback((pts: CtrlPoint[]): DeliveryBatch[] => {
+    const sorted = [...pts].sort((a,b) => a.x - b.x);
+    const intMins = Math.max(30, Math.round((durationHours*60) / Math.min(96, durationHours*2)));
+    const steps   = Math.max(2, Math.round((durationHours*60) / intMins));
+    const batches: DeliveryBatch[] = [];
+    let prevCum = 0;
+    for (let s = 0; s < steps; s++) {
+      const t = s / (steps - 1);
+      const cumFrac  = evalSpline(sorted, t);
+      const cumViews = Math.round(cumFrac * views);
+      const bViews   = Math.max(0, cumViews - prevCum);
+      const hr = t * durationHours;
+      batches.push({
+        hour: hr, views: bViews,
+        likes:    engEnabled && likesOn    ? Math.round(bViews * likesRatio    / 100) : 0,
+        saves:    engEnabled && savesOn    ? Math.round(bViews * savesRatio    / 100) : 0,
+        shares:   engEnabled && sharesOn   ? Math.round(bViews * sharesRatio   / 100) : 0,
+        comments: engEnabled && commentsOn ? Math.round(bViews * commentsRatio / 100) : 0,
+        scheduledTime: new Date(Date.now() + hr*3600000).toISOString(),
+        scheduledDelayMs: hr * 3600000,
+      });
+      prevCum = cumViews;
+    }
+    return batches;
+  }, [views, durationHours, engEnabled, likesOn, savesOn, sharesOn, commentsOn, likesRatio, savesRatio, sharesRatio, commentsRatio]);
+
+  useEffect(() => {
+    const id = setTimeout(() => onScheduleChange(buildSchedule(ctrlPts)), 0);
+    return () => clearTimeout(id);
+  }, [ctrlPts, buildSchedule, onScheduleChange]);
+
+  const handleMove = (e: React.MouseEvent<SVGSVGElement>|React.TouchEvent<SVGSVGElement>) => {
+    if (draggingIdx === null) return;
+    e.preventDefault();
+    const {sx, sy} = getSvgCoords(e);
+    const norm = fromSvg(sx, sy);
+    const newPts = [...ctrlPts];
+    const idx = draggingIdx;
+    if (idx === 0)                    newPts[idx] = {x:0, y: norm.y};
+    else if (idx === newPts.length-1) newPts[idx] = {x:1, y: norm.y};
+    else {
+      const prevX = newPts[idx-1].x + 0.02;
+      const nextX = newPts[idx+1].x - 0.02;
+      newPts[idx] = {x: Math.max(prevX, Math.min(nextX, norm.x)), y: norm.y};
+    }
+    setCtrlPts(newPts);
+    const p = newPts[idx];
+    setTooltip({x: toSvgX(p.x), y: toSvgY(p.y),
+      label: `${Math.round(p.y*100)}% @ ${Math.round(p.x*durationHours*10)/10}h`});
+  };
+  const handleUp = () => { setDraggingIdx(null); setTooltip(null); };
+
+  const handleCanvasClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (draggingIdx !== null) return;
+    const {sx, sy} = getSvgCoords(e);
+    const norm = fromSvg(sx, sy);
+    if (ctrlPts.some(p => Math.hypot(toSvgX(p.x)-sx, toSvgY(p.y)-sy) < 18)) return;
+    setCtrlPts([...ctrlPts, norm].sort((a,b) => a.x - b.x));
+  };
+
+  const handleDblClick = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (ctrlPts.length <= 2) return;
+    setCtrlPts(ctrlPts.filter((_,i) => i !== idx));
+  };
+
+  const sorted = [...ctrlPts].sort((a,b) => a.x - b.x);
+  const pathD  = makeSplinePath(sorted, toSvgX, toSvgY);
+  const lp     = sorted[sorted.length-1];
+  const fillD  = pathD ? `${pathD} L ${toSvgX(lp.x).toFixed(1)} ${(PAD.t+CH).toFixed(1)} L ${toSvgX(0).toFixed(1)} ${(PAD.t+CH).toFixed(1)} Z` : '';
+  const gridXs = [0, 0.25, 0.5, 0.75, 1];
+  const gridYs = [0, 0.25, 0.5, 0.75, 1];
+
+  return (
+    <div style={{background:'#08010f',border:'1.5px solid #1c0a35',borderRadius:20,padding:20,display:'flex',flexDirection:'column',gap:14}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+        <div>
+          <p style={{margin:0,fontSize:13,fontWeight:900,color:'#f3e8ff'}}>Draw Your Delivery Curve</p>
+          <p style={{margin:'2px 0 0',fontSize:11,color:'#a78bfa',fontWeight:600}}>Drag dots · Click canvas to add · Double-click to remove</p>
+        </div>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+          {PRESET_SHAPES.map(ps => (
+            <button key={ps.label} onClick={()=>setCtrlPts(ps.pts)}
+              style={{padding:'5px 10px',borderRadius:8,border:'1px solid #2d0a52',background:'#120324',color:'#c084fc',fontSize:11,fontWeight:700,cursor:'pointer'}}>
+              {ps.icon} {ps.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <svg ref={svgRef} width='100%' viewBox={`0 0 ${W} ${H}`}
+        style={{display:'block',cursor:draggingIdx!==null?'grabbing':'crosshair',userSelect:'none',touchAction:'none'}}
+        onMouseMove={handleMove} onMouseUp={handleUp} onMouseLeave={handleUp}
+        onTouchMove={handleMove} onTouchEnd={handleUp}
+        onClick={handleCanvasClick}>
+        <defs>
+          <linearGradient id='cgGrad' x1='0' y1='0' x2='1' y2='0'>
+            <stop offset='0%' stopColor='#7c3aed'/><stop offset='100%' stopColor='#d946ef'/>
+          </linearGradient>
+          <linearGradient id='cgFill' x1='0' y1='0' x2='0' y2='1'>
+            <stop offset='0%' stopColor='#d946ef' stopOpacity='0.35'/>
+            <stop offset='100%' stopColor='#7c3aed' stopOpacity='0.02'/>
+          </linearGradient>
+        </defs>
+        {gridXs.map((gx,i)=><line key={`gx${i}`} x1={toSvgX(gx)} y1={PAD.t} x2={toSvgX(gx)} y2={PAD.t+CH} stroke='#1c0a35' strokeWidth='1' strokeDasharray={gx===0||gx===1?undefined:'3,4'}/>)}
+        {gridYs.map((gy,i)=><line key={`gy${i}`} x1={PAD.l} y1={toSvgY(gy)} x2={PAD.l+CW} y2={toSvgY(gy)} stroke='#1c0a35' strokeWidth='1' strokeDasharray={gy===0||gy===1?undefined:'3,4'}/>)}
+        <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={PAD.t+CH} stroke='#3f1b6d' strokeWidth='1.5'/>
+        <line x1={PAD.l} y1={PAD.t+CH} x2={PAD.l+CW} y2={PAD.t+CH} stroke='#3f1b6d' strokeWidth='1.5'/>
+        {fillD && <path d={fillD} fill='url(#cgFill)'/>}
+        {pathD && <path d={pathD} fill='none' stroke='url(#cgGrad)' strokeWidth='2.5' strokeLinecap='round' style={{filter:'drop-shadow(0 0 6px rgba(217,70,239,0.7))'}}/>}
+        {gridXs.map((gx,i)=><text key={`lx${i}`} x={toSvgX(gx)} y={PAD.t+CH+20} textAnchor='middle' fill='#6b21a8' fontSize='10' fontWeight='700'>{Math.round(gx*durationHours)}h</text>)}
+        {gridYs.map((gy,i)=><text key={`ly${i}`} x={PAD.l-6} y={toSvgY(gy)+4} textAnchor='end' fill='#6b21a8' fontSize='10' fontWeight='700'>{Math.round(gy*100)}%</text>)}
+        {sorted.map((pt,i)=>i>0&&(
+          <line key={`cn${i}`} x1={toSvgX(sorted[i-1].x)} y1={toSvgY(sorted[i-1].y)} x2={toSvgX(pt.x)} y2={toSvgY(pt.y)} stroke='#2d0a52' strokeWidth='1' strokeDasharray='3,4'/>
+        ))}
+        {ctrlPts.map((pt,idx)=>{
+          const sx=toSvgX(pt.x),sy=toSvgY(pt.y);
+          const isDrag=draggingIdx===idx,isHov=hoverIdx===idx;
+          return (
+            <g key={idx}>
+              <circle cx={sx} cy={sy} r={isDrag?20:isHov?16:12} fill='rgba(217,70,239,0.08)' stroke={isDrag?'#d946ef':'#7c3aed'} strokeWidth='1'/>
+              <circle cx={sx} cy={sy} r={isDrag?10:isHov?8:6} fill={isDrag?'#d946ef':'#7c3aed'} stroke='#f3e8ff' strokeWidth='2'
+                style={{cursor:'grab',filter:isDrag?'drop-shadow(0 0 10px #d946ef)':isHov?'drop-shadow(0 0 6px #7c3aed)':'none'}}
+                onMouseDown={e=>{e.stopPropagation();setDraggingIdx(idx);}}
+                onMouseEnter={()=>setHoverIdx(idx)} onMouseLeave={()=>setHoverIdx(null)}
+                onDoubleClick={e=>handleDblClick(idx,e)}
+                onTouchStart={e=>{e.stopPropagation();setDraggingIdx(idx);}}
+              />
+              <text x={sx} y={sy-14} textAnchor='middle' fill='#c084fc' fontSize='9' fontWeight='800'>{idx+1}</text>
+            </g>
+          );
+        })}
+        {tooltip&&(
+          <g>
+            <rect x={tooltip.x-36} y={tooltip.y-32} width={72} height={20} rx={6} fill='#1a0636' stroke='#d946ef' strokeWidth='1'/>
+            <text x={tooltip.x} y={tooltip.y-18} textAnchor='middle' fill='#f3e8ff' fontSize='10' fontWeight='800'>{tooltip.label}</text>
+          </g>
+        )}
+      </svg>
+      <div style={{display:'flex',gap:20,fontSize:11,color:'#a78bfa',fontWeight:700,flexWrap:'wrap'}}>
+        <span>Points: <strong style={{color:'#f3e8ff'}}>{ctrlPts.length}</strong></span>
+        <span>Duration: <strong style={{color:'#f3e8ff'}}>{durationHours}h</strong></span>
+        <span>Total views: <strong style={{color:'#f3e8ff'}}>{views.toLocaleString()}</strong></span>
+      </div>
+    </div>
+  );
+}
+
 // ── Premium Neon Animated Chart ──────────────────────────────────
 function CurvePreview({
   views, durationHours, style, warmup, peak,
@@ -1178,366 +1418,51 @@ export default function NewReelPage() {
             </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isCustomMode ? "1fr 1fr" : "1.2fr 1fr", gap: 32, alignItems: "start", marginTop: 8 }}>
-            {isCustomMode ? (
-              /* Custom Graph Designer Left Column */
-              <div style={{
-                background: "#08010f",
-                border: "1px solid #1c0a35",
-                borderRadius: 24,
-                padding: 24,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-                color: "#f3e8ff",
-                display: "flex",
-                flexDirection: "column",
-                gap: 16
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 2px 0" }}>Batch Customizer</h3>
-                    <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Configure selected dot value</p>
+          {isCustomMode ? (
+            /* Custom Mode: drawing canvas */
+            <div style={{marginTop:8}}>
+              <CustomGraphDesigner
+                views={views} durationHours={durationHours} engEnabled={engEnabled}
+                likesRatio={likesRatio} savesRatio={savesRatio} sharesRatio={sharesRatio} commentsRatio={commentsRatio}
+                likesOn={likesOn} savesOn={savesOn} sharesOn={sharesOn} commentsOn={commentsOn}
+                onScheduleChange={setCustomSchedule}
+              />
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:16}}>
+                <div style={{background:'#0c0218',border:'1px solid #1c0a35',borderRadius:16,padding:16,display:'flex',flexDirection:'column',gap:8}}>
+                  <p style={{margin:0,fontSize:11,fontWeight:900,color:'#c084fc',textTransform:'uppercase',letterSpacing:'0.06em'}}>Allocated Totals</p>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,fontSize:12,fontWeight:750}}>
+                    <div style={{display:'flex',justifyContent:'space-between'}}>
+                      <span style={{color:'#a78bfa'}}>Views:</span>
+                      <span style={{color:customSumViews===views?'#22c55e':'#f59e0b'}}>{customSumViews.toLocaleString()} / {views.toLocaleString()}</span>
+                    </div>
+                    {likesOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Likes:</span><span style={{color:'#c084fc'}}>{customSumLikes.toLocaleString()}</span></div>}
+                    {savesOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Saves:</span><span style={{color:'#c084fc'}}>{customSumSaves.toLocaleString()}</span></div>}
+                    {sharesOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Shares:</span><span style={{color:'#c084fc'}}>{customSumShares.toLocaleString()}</span></div>}
+                    {commentsOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Comments:</span><span style={{color:'#c084fc'}}>{customSumComments.toLocaleString()}</span></div>}
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={scaleScheduleToTargets} className="neo-btn"
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        background: "rgba(168, 85, 247, 0.2)",
-                        color: "#a855f7",
-                        fontSize: 11,
-                        fontWeight: 800,
-                        border: "1px solid rgba(168, 85, 247, 0.4)"
-                      }}>
-                      ⚖️ Scale Targets
-                    </button>
-                    <button onClick={() => {
-                      setCustomSchedule(schedule.map(b => ({
-                        ...b,
-                        scheduledTime: new Date(Date.now() + b.hour * 60 * 60 * 1000).toISOString()
-                      })));
-                      setSelectedBatchIndex(0);
-                    }} className="neo-btn"
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        background: "rgba(220, 38, 38, 0.15)",
-                        color: "#dc2626",
-                        fontSize: 11,
-                        fontWeight: 800,
-                        border: "1px solid rgba(220, 38, 38, 0.3)"
-                      }}>
-                      Reset
-                    </button>
+                  <div style={{display:'flex',gap:8,marginTop:4}}>
+                    <button onClick={scaleScheduleToTargets} style={{flex:1,padding:'6px',borderRadius:8,border:'1px solid rgba(168,85,247,0.4)',background:'rgba(168,85,247,0.15)',color:'#a855f7',fontSize:11,fontWeight:800,cursor:'pointer'}}>Scale to Targets</button>
+                    <button onClick={()=>{setCustomSchedule(schedule.map(b=>({...b,scheduledTime:new Date(Date.now()+b.hour*3600000).toISOString()})));setSelectedBatchIndex(0);}} style={{padding:'6px 10px',borderRadius:8,border:'1px solid rgba(220,38,38,0.3)',background:'rgba(220,38,38,0.12)',color:'#dc2626',fontSize:11,fontWeight:800,cursor:'pointer'}}>Reset</button>
                   </div>
                 </div>
-
-                {/* Selected Batch Details */}
-                {selectedBatchIndex !== null && customSchedule[selectedBatchIndex] ? (
-                  <div style={{
-                    background: "#120324",
-                    border: "1.5px solid #23083f",
-                    borderRadius: 16,
-                    padding: 16,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 12
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1.5px solid #1c0a35", paddingBottom: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 850, color: "#f3e8ff" }}>
-                        Selected: Dot #{selectedBatchIndex + 1}
-                      </span>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: "#a855f7" }}>
-                        {formatLocalTime(new Date(customSchedule[selectedBatchIndex].scheduledTime || (Date.now() + customSchedule[selectedBatchIndex].hour * 60 * 60 * 1000)))}
-                      </span>
-                    </div>
-
-                    {/* Date Time Picker (Only editable if index > 0) */}
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>📅 Schedule Time (Local)</span>
-                        <input 
-                          type="datetime-local" 
-                          disabled={selectedBatchIndex === 0}
-                          value={formatDateForInput(new Date(customSchedule[selectedBatchIndex].scheduledTime || (Date.now() + customSchedule[selectedBatchIndex].hour * 60 * 60 * 1000)))}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val) {
-                              const newTime = new Date(val);
-                              const finalTime = newTime.getTime() < Date.now() ? new Date() : newTime;
-                              const diffHours = (finalTime.getTime() - Date.now()) / (1000 * 60 * 60);
-                              
-                              const updatedSchedule = [...customSchedule];
-                              updatedSchedule[selectedBatchIndex] = {
-                                ...updatedSchedule[selectedBatchIndex],
-                                scheduledTime: finalTime.toISOString(),
-                                hour: Math.max(0, diffHours)
-                              };
-                              
-                              updatedSchedule.sort((a, b) => {
-                                if (a.scheduledTime && b.scheduledTime) {
-                                  return new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime();
-                                }
-                                return a.hour - b.hour;
-                              });
-                              
-                              setCustomSchedule(updatedSchedule);
-                              
-                              const newIdx = updatedSchedule.findIndex(b => b.scheduledTime === finalTime.toISOString());
-                              if (newIdx !== -1) {
-                                setSelectedBatchIndex(newIdx);
-                              }
-                            }
-                          }}
-                          style={{
-                            padding: "4px 8px",
-                            borderRadius: 8,
-                            fontSize: 12,
-                            background: "#08010f",
-                            border: "1px solid #1c0a35",
-                            color: "#f3e8ff",
-                            fontWeight: 800,
-                            outline: "none",
-                            opacity: selectedBatchIndex === 0 ? 0.5 : 1,
-                            cursor: selectedBatchIndex === 0 ? "not-allowed" : "default"
-                          }}
-                        />
-                      </div>
-                      {selectedBatchIndex === 0 && (
-                        <p style={{ fontSize: 10, color: "#a855f7", margin: "4px 0 0 0", fontWeight: 700 }}>
-                          ⚡ Instant delivery event (cannot change scheduled time)
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Views input */}
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>👁 Views Target</span>
-                        <input type="number" 
-                          value={customSchedule[selectedBatchIndex].views}
-                          min={0}
-                          onChange={(e) => updateSelectedBatchField("views", parseInt(e.target.value) || 0)}
-                          style={{
-                            width: 90,
-                            padding: "4px 8px",
-                            borderRadius: 8,
-                            fontSize: 12,
-                            background: "#08010f",
-                            border: "1px solid #1c0a35",
-                            color: "#f3e8ff",
-                            fontWeight: 800,
-                            textAlign: "right"
-                          }}
-                        />
-                      </div>
-                      <input type="range" 
-                        min={0} 
-                        max={views} 
-                        step={10}
-                        value={customSchedule[selectedBatchIndex].views}
-                        onChange={(e) => updateSelectedBatchField("views", parseInt(e.target.value) || 0)}
-                        style={{ width: "100%", accentColor: "#d946ef", cursor: "pointer", display: "block" }}
-                      />
-                      {customSchedule[selectedBatchIndex].views > 0 && customSchedule[selectedBatchIndex].views < getMinLimit("views") && (
-                        <p style={{ fontSize: 10, color: "#dc2626", margin: "4px 0 0 0", fontWeight: 700 }}>
-                          ⚠️ Minimum views required per dot is {getMinLimit("views")} (or set to 0 to skip)
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Engagement Inputs if engagement is enabled */}
-                    {engEnabled ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4, borderTop: "1px solid #1c0a35", paddingTop: 10 }}>
-                        <p style={{ fontSize: 10, fontWeight: 900, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px 0" }}>
-                          Dot Engagement Targets
-                        </p>
-                        
-                        {/* Likes */}
-                        {likesOn && (
-                          <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>👍 Likes</span>
-                              <input type="number" 
-                                value={customSchedule[selectedBatchIndex].likes}
-                                min={0}
-                                onChange={(e) => updateSelectedBatchField("likes", parseInt(e.target.value) || 0)}
-                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
-                              />
-                            </div>
-                            {customSchedule[selectedBatchIndex].likes > 0 && customSchedule[selectedBatchIndex].likes < getMinLimit("likes") && (
-                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
-                                ⚠️ Minimum likes: {getMinLimit("likes")} (or 0)
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Saves */}
-                        {savesOn && (
-                          <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>🔖 Saves</span>
-                              <input type="number" 
-                                value={customSchedule[selectedBatchIndex].saves}
-                                min={0}
-                                onChange={(e) => updateSelectedBatchField("saves", parseInt(e.target.value) || 0)}
-                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
-                              />
-                            </div>
-                            {customSchedule[selectedBatchIndex].saves > 0 && customSchedule[selectedBatchIndex].saves < getMinLimit("saves") && (
-                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
-                                ⚠️ Minimum saves: {getMinLimit("saves")} (or 0)
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Shares */}
-                        {sharesOn && (
-                          <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>📤 Shares</span>
-                              <input type="number" 
-                                value={customSchedule[selectedBatchIndex].shares}
-                                min={0}
-                                onChange={(e) => updateSelectedBatchField("shares", parseInt(e.target.value) || 0)}
-                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
-                              />
-                            </div>
-                            {customSchedule[selectedBatchIndex].shares > 0 && customSchedule[selectedBatchIndex].shares < getMinLimit("shares") && (
-                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
-                                ⚠️ Minimum shares: {getMinLimit("shares")} (or 0)
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Comments */}
-                        {commentsOn && (
-                          <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>💬 Comments</span>
-                              <input type="number" 
-                                value={customSchedule[selectedBatchIndex].comments}
-                                min={0}
-                                onChange={(e) => updateSelectedBatchField("comments", parseInt(e.target.value) || 0)}
-                                style={{ width: 80, padding: "4px 8px", borderRadius: 8, fontSize: 12, background: "#08010f", border: "1px solid #1c0a35", color: "#f3e8ff", fontWeight: 800, textAlign: "right" }}
-                              />
-                            </div>
-                            {customSchedule[selectedBatchIndex].comments > 0 && customSchedule[selectedBatchIndex].comments < getMinLimit("comments") && (
-                              <p style={{ fontSize: 10, color: "#dc2626", margin: "2px 0 0 0", fontWeight: 700 }}>
-                                ⚠️ Minimum comments: {getMinLimit("comments")} (or 0)
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: 12, color: "#a78bfa", margin: 0, textAlign: "center" }}>
-                    Select a dot on the right graph to customize its values.
-                  </p>
-                )}
-
-                {/* Validation Warnings Summary */}
-                {hasCustomScheduleErrors && (
-                  <div style={{
-                    padding: 12,
-                    borderRadius: 14,
-                    background: "rgba(220, 38, 38, 0.15)",
-                    border: "1px solid rgba(220, 38, 38, 0.3)",
-                    color: "#f87171",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4,
-                    maxHeight: 120,
-                    overflowY: "auto"
-                  }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: "#ef4444" }}>⚠️ Custom Schedule Validation Errors:</span>
-                    {customScheduleErrors.slice(0, 3).map((err, i) => (
-                      <span key={i}>• {err}</span>
-                    ))}
-                    {customScheduleErrors.length > 3 && (
-                      <span>• and {customScheduleErrors.length - 3} more errors...</span>
-                    )}
-                  </div>
-                )}
-
-                {/* Allocated Stats Summary */}
-                <div style={{
-                  background: "#120324",
-                  border: "1.5px solid #23083f",
-                  borderRadius: 16,
-                  padding: 14,
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 8,
-                  fontSize: 11,
-                  fontWeight: 750
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#a78bfa" }}>Allocated Views:</span>
-                    <span style={{ color: customSumViews === views ? "#22c55e" : "#f59e0b" }}>
-                      {customSumViews.toLocaleString()} / {views.toLocaleString()}
-                    </span>
-                  </div>
-                  {likesOn && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#a78bfa" }}>Likes:</span>
-                      <span style={{ color: customSumLikes === eng.likesTarget ? "#22c55e" : "#f59e0b" }}>
-                        {customSumLikes.toLocaleString()} / {eng.likesTarget.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                  {savesOn && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#a78bfa" }}>Saves:</span>
-                      <span style={{ color: customSumSaves === eng.savesTarget ? "#22c55e" : "#f59e0b" }}>
-                        {customSumSaves.toLocaleString()} / {eng.savesTarget.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                  {sharesOn && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#a78bfa" }}>Shares:</span>
-                      <span style={{ color: customSumShares === eng.sharesTarget ? "#22c55e" : "#f59e0b" }}>
-                        {customSumShares.toLocaleString()} / {eng.sharesTarget.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                  {commentsOn && (
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#a78bfa" }}>Comments:</span>
-                      <span style={{ color: customSumComments === eng.commentsTarget ? "#22c55e" : "#f59e0b" }}>
-                        {customSumComments.toLocaleString()} / {eng.commentsTarget.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
+                <div style={{background:'#0c0218',border:'1px solid #1c0a35',borderRadius:16,padding:16,display:'flex',flexDirection:'column',gap:8}}>
+                  <p style={{margin:0,fontSize:11,fontWeight:900,color:'#c084fc',textTransform:'uppercase',letterSpacing:'0.06em'}}>Validation</p>
+                  {hasCustomScheduleErrors
+                    ?<div style={{display:'flex',flexDirection:'column',gap:4,maxHeight:100,overflowY:'auto'}}>{customScheduleErrors.slice(0,4).map((e,i)=><span key={i} style={{fontSize:11,color:'#f87171',fontWeight:700}}>- {e}</span>)}{customScheduleErrors.length>4&&<span style={{fontSize:11,color:'#f87171'}}>+{customScheduleErrors.length-4} more</span>}</div>
+                    :<div style={{display:'flex',alignItems:'center',gap:8,flex:1}}><span style={{fontSize:12,color:'#22c55e',fontWeight:700}}>All batches valid</span></div>
+                  }
+                  <p style={{margin:0,fontSize:10,color:'#6b21a8',fontWeight:600}}>{customSchedule.filter(b=>b.views>0).length} active batches</p>
                 </div>
               </div>
-            ) : (
-              /* Preset Grid Left Column */
-              <div style={{
-                background: "#08010f",
-                border: "1px solid #1c0a35",
-                borderRadius: 24,
-                padding: 24,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-                color: "#f3e8ff",
-                display: "flex",
-                flexDirection: "column",
-                gap: 16
-              }}>
+            </div>
+          ) : (
+            /* Standard Mode: two-column preset picker + chart */
+            <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:32,alignItems:'start',marginTop:8}}>
+              <div style={{background:'#08010f',border:'1px solid #1c0a35',borderRadius:24,padding:24,boxShadow:'0 10px 30px rgba(0,0,0,0.5)',color:'#f3e8ff',display:'flex',flexDirection:'column',gap:16}}>
                 <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0" }}>3. Drip Pacing & Flow Settings</h3>
+                  <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0" }}>3. Drip Pacing &amp; Flow Settings</h3>
                   <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select Organic Pacing Growth Graph</p>
                 </div>
-
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {["Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized"].map((cat) => {
                     const catStyles = (Object.keys(CURVE_DESCRIPTIONS) as CurveStyle[]).filter(s => CURVE_DESCRIPTIONS[s].category === cat);
@@ -1549,14 +1474,8 @@ export default function NewReelPage() {
                           {catStyles.map((s) => (
                             <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }}
                               style={{
-                                padding: "14px 6px",
-                                borderRadius: 14,
-                                cursor: "pointer",
-                                transition: "all 0.25s ease",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                gap: 6,
+                                padding: "14px 6px", borderRadius: 14, cursor: "pointer", transition: "all 0.25s ease",
+                                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
                                 background: style === s ? "#1a0636" : "#0c0218",
                                 border: style === s ? "2.5px solid #d946ef" : "1.5px solid #1c0a35",
                                 boxShadow: style === s ? "0 0 15px rgba(217, 70, 239, 0.35)" : "none",
@@ -1572,31 +1491,30 @@ export default function NewReelPage() {
                   })}
                 </div>
               </div>
-            )}
 
-            {/* Right Column: Live Growth Plot */}
-            <CurvePreview
-              views={views}
-              durationHours={durationHours}
-              style={style}
-              warmup={curveInfo.warmup}
-              peak={curveInfo.peak}
-              likesRatio={likesRatio}
-              savesRatio={savesRatio}
-              sharesRatio={sharesRatio}
-              commentsRatio={commentsRatio}
-              likesOn={likesOn}
-              savesOn={savesOn}
-              sharesOn={sharesOn}
-              commentsOn={commentsOn}
-              engEnabled={engEnabled}
-              schedule={isCustomMode ? customSchedule : schedule}
-              isCustomMode={isCustomMode}
-              selectedBatchIndex={selectedBatchIndex}
-              onSelectBatch={setSelectedBatchIndex}
-              onChangeSchedule={setCustomSchedule}
-            />
-          </div>
+              <CurvePreview
+                views={views}
+                durationHours={durationHours}
+                style={style}
+                warmup={curveInfo.warmup}
+                peak={curveInfo.peak}
+                likesRatio={likesRatio}
+                savesRatio={savesRatio}
+                sharesRatio={sharesRatio}
+                commentsRatio={commentsRatio}
+                likesOn={likesOn}
+                savesOn={savesOn}
+                sharesOn={sharesOn}
+                commentsOn={commentsOn}
+                engEnabled={engEnabled}
+                schedule={schedule}
+                isCustomMode={false}
+                selectedBatchIndex={null}
+                onSelectBatch={null}
+                onChangeSchedule={null}
+              />
+            </div>
+          )}
 
           <div style={{ fontSize:12, color:N.muted, textAlign:"center", fontWeight:600 }}>
             {isCustomMode 
