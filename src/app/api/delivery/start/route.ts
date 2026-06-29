@@ -17,19 +17,31 @@ import { scheduleOrderDelivery } from "@/lib/delivery/schedule";
  * This means delivery works even without a paid QStash plan.
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const internalKey = request.headers.get("x-internal-key");
+  const expectedKey = process.env.NEXTAUTH_SECRET;
+  const isInternal = expectedKey && internalKey === expectedKey;
 
-  const { orderId } = await request.json();
+  let body: any;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { orderId } = body;
   if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
 
-  const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
-  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
   const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order || order.userId !== dbUser.id) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+
+  if (!isInternal) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
+    if (!dbUser || order.userId !== dbUser.id) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
   }
 
   // 1. Generate S-curve batches and save all delivery events to DB

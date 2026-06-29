@@ -115,6 +115,7 @@ export default function PanelsPage() {
     if (res.ok) {
       const d = await res.json();
       setPanels(d.panels ?? []);
+      setLoading(false);
       return d.panels ?? [];
     }
     setLoading(false);
