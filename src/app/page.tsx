@@ -40,7 +40,7 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
 
   ORGANIC: {
 
-    label: "Organic S-Curve",
+    label: "Organic",
 
     icon: "🌅",
 
@@ -54,41 +54,25 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
 
   },
 
-  FAST: {
+  UNIVERSAL: {
 
-    label: "Fast Burst",
+    label: "Universal",
 
-    icon: "⚡",
+    icon: "🪐",
 
-    bestFor: "Instagram Clipper accounts",
+    bestFor: "All types of content & general campaigns",
 
-    why: "Paces views within a compressed timeframe to catch early interest and boost immediate feed placement.",
+    why: "A balanced, double-peaked universal curve suitable for general audience reach across timezones.",
 
-    duration: "12h - 36h",
+    duration: "12h - 48h",
 
-    details: "Warmup: 2h · Peak: 4h. Designed for fast-paced content schedules."
-
-  },
-
-  AGGRESSIVE: {
-
-    label: "Aggressive Spike",
-
-    icon: "🔥",
-
-    bestFor: "Time-sensitive trends & announcements",
-
-    why: "Triggers a rapid surge of views within hours to maximize initial shock value on high-velocity campaigns.",
-
-    duration: "6h - 24h",
-
-    details: "Warmup: 1h · Peak: 2h. High initial velocity, higher visibility rate."
+    details: "Warmup: 2h · Peak: 6h. Optimized general pacing shape."
 
   },
 
   WHOP: {
 
-    label: "Whop commerce",
+    label: "Whop",
 
     icon: "💳",
 
@@ -104,7 +88,7 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
 
   CLIPSTAKE: {
 
-    label: "Clipstake Wave",
+    label: "Clipstake",
 
     icon: "🎲",
 
@@ -120,11 +104,11 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
 
   CLIPSTAR: {
 
-    label: "Clipstar Burst",
+    label: "Clipster",
 
     icon: "⭐",
 
-    bestFor: "Clipstar creators & long-tail campaigns",
+    bestFor: "Clipster creators & long-tail campaigns",
 
     why: "Delivers an immediate sustained burst followed by a very flat, high-retention tail for prolonged visibility.",
 
@@ -136,11 +120,11 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
 
   PICSART: {
 
-    label: "Picsart Creative",
+    label: "Picksart",
 
     icon: "🎨",
 
-    bestFor: "Picsart designers & creative portfolios",
+    bestFor: "Picksart designers & creative portfolios",
 
     why: "Tailored to creative traffic, peaking in the afternoon with custom engagement rates matching peak creative hours.",
 
@@ -152,7 +136,7 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
 
   CROSSWAVE: {
 
-    label: "Crosswave Multi",
+    label: "Crosswave",
 
     icon: "🌊",
 
@@ -262,7 +246,7 @@ export default function Home() {
 
   const [scrolled, setScrolled] = useState(false);
 
-  const [curveStyle, setCurveStyle] = useState<"ORGANIC"|"FAST"|"AGGRESSIVE"|"WHOP"|"CLIPSTAKE"|"CLIPSTAR"|"PICSART"|"CROSSWAVE">("ORGANIC");
+  const [curveStyle, setCurveStyle] = useState<"ORGANIC"|"UNIVERSAL"|"WHOP"|"CLIPSTAKE"|"CLIPSTAR"|"PICSART"|"CROSSWAVE">("ORGANIC");
 
   const [duration, setDuration] = useState(24);
 
@@ -582,7 +566,7 @@ export default function Home() {
 
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(90px, 1fr))", gap:10, marginBottom:28 }}>
 
-                {(["ORGANIC","FAST","AGGRESSIVE","WHOP","CLIPSTAKE","CLIPSTAR","PICSART","CROSSWAVE"] as const).map(s => (
+                {(["ORGANIC","UNIVERSAL","WHOP","CLIPSTAKE","CLIPSTAR","PICSART","CROSSWAVE"] as const).map(s => (
 
                   <button key={s} onClick={() => setCurveStyle(s)} style={{
 
@@ -978,7 +962,7 @@ export default function Home() {
 
 /* ─── Curve Chart ─────────────────────────────────── */
 
-function CurveChart({ style, duration }: { style: "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"; duration:number }) {
+function CurveChart({ style, duration }: { style: "ORGANIC" | "UNIVERSAL" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"; duration:number }) {
 
   const N = 26;
 
@@ -994,55 +978,47 @@ function CurveChart({ style, duration }: { style: "ORGANIC" | "FAST" | "AGGRESSI
 
       const peak = duration * 0.45;
 
-      const sigma = duration * 0.18;
+      const sigma = duration * 0.16;
 
-      v = 100 * Math.exp(-Math.pow(x - peak, 2) / (2 * Math.pow(sigma, 2)));
+      v = 95 * Math.exp(-Math.pow(x - peak, 2) / (2 * Math.pow(sigma, 2)));
 
-    } else if (style === "FAST") {
+    } else if (style === "UNIVERSAL") {
 
-      const peak = duration * 0.18;
+      const p1 = duration * 0.25, s1 = duration * 0.1;
 
-      const sigma = duration * 0.12;
+      const p2 = duration * 0.68, s2 = duration * 0.18;
 
-      v = 100 * Math.exp(-Math.pow(x - peak, 2) / (2 * Math.pow(sigma, 2)));
+      v = 40 * Math.exp(-Math.pow(x - p1, 2) / (2 * Math.pow(s1, 2))) +
 
-    } else if (style === "AGGRESSIVE") {
-
-      const peak = duration * 0.8;
-
-      const sigma = duration * 0.12;
-
-      v = 100 * Math.exp(-Math.pow(x - peak, 2) / (2 * Math.pow(sigma, 2)));
+          65 * Math.exp(-Math.pow(x - p2, 2) / (2 * Math.pow(s2, 2)));
 
     } else if (style === "WHOP") {
 
-      v = 40 + 35 * Math.sin((x * Math.PI * 2.5) / duration) + 25 * (x / duration);
+      v = 30 + 65 * Math.sin((x * Math.PI) / duration) * (1 - 0.28 * Math.sin((x * Math.PI * 6) / duration));
 
     } else if (style === "CLIPSTAKE") {
 
-      const p1 = duration * 0.25, s1 = duration * 0.08;
+      const p1 = duration * 0.3, s1 = duration * 0.08;
 
-      const p2 = duration * 0.72, s2 = duration * 0.08;
+      const p2 = duration * 0.75, s2 = duration * 0.08;
 
-      v = 50 * Math.exp(-Math.pow(x - p1, 2) / (2 * Math.pow(s1, 2))) +
+      v = 75 * Math.exp(-Math.pow(x - p1, 2) / (2 * Math.pow(s1, 2))) +
 
-          55 * Math.exp(-Math.pow(x - p2, 2) / (2 * Math.pow(s2, 2)));
+          70 * Math.exp(-Math.pow(x - p2, 2) / (2 * Math.pow(s2, 2)));
 
     } else if (style === "CLIPSTAR") {
 
-      v = 85 * Math.exp(-Math.pow(x - duration * 0.22, 2) / (2 * Math.pow(duration * 0.08, 2))) +
+      v = 90 * Math.exp(-Math.pow(x - duration * 0.2, 2) / (2 * Math.pow(duration * 0.06, 2))) +
 
-          15 * Math.exp(-Math.pow(x - duration * 0.65, 2) / (2 * Math.pow(duration * 0.22, 2)));
+          35 * Math.exp(-Math.pow(x - duration * 0.6, 2) / (2 * Math.pow(duration * 0.2, 2)));
 
     } else if (style === "PICSART") {
 
-      v = 55 + 5 * Math.sin((x * Math.PI * 5) / duration);
+      v = 45 + 35 * Math.sin((x * Math.PI * 3.5) / duration) * Math.sin((x * Math.PI * 0.8) / duration);
 
     } else if (style === "CROSSWAVE") {
 
-      const cycle = Math.floor((x / duration) * 6) % 2;
-
-      v = cycle === 0 ? 80 : 15;
+      v = 50 + 30 * Math.sin((x * Math.PI * 4) / duration) * Math.cos((x * Math.PI * 1.5) / duration);
 
     }
 
@@ -1052,15 +1028,35 @@ function CurveChart({ style, duration }: { style: "ORGANIC" | "FAST" | "AGGRESSI
 
   const max = Math.max(...pts);
 
-  const W=520, H=160, pad=18;
+  const W = 520, H = 160, pad = 18;
 
-  const xs = pts.map((_,i) => pad+(i/(N-1))*(W-2*pad));
+  const xs = pts.map((_, i) => pad + (i / (N - 1)) * (W - 2 * pad));
 
-  const ys = pts.map(p => H-pad-(p/max)*(H-2*pad));
+  const ys = pts.map(p => H - pad - (p / max) * (H - 2 * pad));
 
-  const line = xs.map((x,i) => `${i===0?"M":"L"} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
+  const line = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
 
-  const area = line + ` L ${xs[N-1].toFixed(1)} ${H-pad} L ${xs[0].toFixed(1)} ${H-pad} Z`;
+  const area = line + ` L ${xs[N - 1].toFixed(1)} ${H - pad} L ${xs[0].toFixed(1)} ${H - pad} Z`;
+
+  const COLOR_MAP: Record<string, { color: string; glow: string; dot: string; gradStart: string }> = {
+
+    ORGANIC:   { color: "#a855f7", glow: "rgba(168, 85, 247, 0.4)",  dot: "#f3e8ff", gradStart: "#c084fc" }, // Purple
+
+    UNIVERSAL: { color: "#eab308", glow: "rgba(234, 179, 8, 0.4)",   dot: "#fef9c3", gradStart: "#fde047" }, // Gold
+
+    WHOP:      { color: "#10b981", glow: "rgba(16, 185, 129, 0.4)",  dot: "#ecfdf5", gradStart: "#6ee7b7" }, // Emerald
+
+    CLIPSTAKE: { color: "#ef4444", glow: "rgba(239, 68, 68, 0.4)",   dot: "#fee2e2", gradStart: "#fca5a5" }, // Red
+
+    CLIPSTAR:  { color: "#3b82f6", glow: "rgba(59, 130, 246, 0.4)",  dot: "#eff6ff", gradStart: "#93c5fd" }, // Blue
+
+    PICSART:   { color: "#ec4899", glow: "rgba(236, 72, 153, 0.4)",  dot: "#fdf2f8", gradStart: "#fbcfe8" }, // Pink
+
+    CROSSWAVE: { color: "#06b6d4", glow: "rgba(6, 182, 212, 0.4)",   dot: "#ecfeff", gradStart: "#67e8f9" }, // Cyan
+
+  };
+
+  const theme = COLOR_MAP[style] || COLOR_MAP.ORGANIC;
 
   return (
 
@@ -1068,7 +1064,7 @@ function CurveChart({ style, duration }: { style: "ORGANIC" | "FAST" | "AGGRESSI
 
       <style>{`
 
-        @keyframes neon-flow {
+        @keyframes neon-flow-${style} {
 
           0% { stroke-dashoffset: 50; }
 
@@ -1076,71 +1072,71 @@ function CurveChart({ style, duration }: { style: "ORGANIC" | "FAST" | "AGGRESSI
 
         }
 
-        @keyframes pulse-opacity {
+        @keyframes pulse-opacity-${style} {
 
-          0%, 100% { opacity: 0.28; }
+          0%, 100% { opacity: 0.32; }
 
-          50% { opacity: 0.10; }
+          50% { opacity: 0.12; }
 
         }
 
-        .neon-glow-line {
+        .neon-glow-line-${style} {
 
-          filter: drop-shadow(0 0 5px #ea580c) drop-shadow(0 0 10px rgba(234, 88, 12, 0.4));
+          filter: drop-shadow(0 0 6px ${theme.color}) drop-shadow(0 0 12px ${theme.color});
 
         }
 
       `}</style>
 
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
 
-        <span style={{ fontSize:12, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase", color:C.textMuted }}>Dynamic Pacing Curve</span>
+        <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Dynamic Pacing Curve</span>
 
-        <span style={{ fontSize:12, fontWeight:800, color:C.amber }}>{style} · {duration}h</span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: theme.color }}>{style} · {duration}h</span>
 
       </div>
 
-      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width:"100%", overflow:"visible" }}>
+      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", overflow: "visible" }}>
 
         <defs>
 
-          <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`cg-${style}`} x1="0" y1="0" x2="0" y2="1">
 
-            <stop offset="0%" stopColor="#ea580c" stopOpacity="1" />
+            <stop offset="0%" stopColor={theme.color} stopOpacity="0.45" />
 
-            <stop offset="100%" stopColor="#ea580c" stopOpacity="0" />
+            <stop offset="100%" stopColor={theme.color} stopOpacity="0" />
 
           </linearGradient>
 
         </defs>
 
-        {[0.25,0.5,0.75].map(r => (
+        {[0.25, 0.5, 0.75].map(r => (
 
-          <line key={r} x1={pad} y1={H-pad-r*(H-2*pad)} x2={W-pad} y2={H-pad-r*(H-2*pad)} stroke="#c8d0e7" strokeWidth="1" strokeDasharray="3,3" opacity="0.5" />
-
-        ))}
-
-        <path d={area} fill="url(#cg)" style={{ animation: "pulse-opacity 3s ease-in-out infinite" }} />
-
-        <path d={line} fill="none" stroke="#ea580c" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="neon-glow-line" />
-
-        <path d={line} fill="none" stroke="#ffd9a3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="10,25" style={{ animation: "neon-flow 2s linear infinite" }} />
-
-        {xs.map((x,i) => (
-
-          i % 4 === 0 && <circle key={i} cx={x} cy={ys[i]} r="4.5" fill="#ffd9a3" stroke="#ea580c" strokeWidth="1.5" style={{ filter: "drop-shadow(0 0 3px #ea580c)" }} />
+          <line key={r} x1={pad} y1={H - pad - r * (H - 2 * pad)} x2={W - pad} y2={H - pad - r * (H - 2 * pad)} stroke="#c8d0e7" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
 
         ))}
 
-        {[0,Math.floor(N/4),Math.floor(N/2),Math.floor(3*N/4),N-1].map(i => (
+        <path d={area} fill={`url(#cg-${style})`} style={{ animation: `pulse-opacity-${style} 3s ease-in-out infinite` }} />
 
-          <text key={i} x={xs[i]} y={H+2} fill={C.textMuted} fontSize="9" fontWeight="700" textAnchor="middle">{Math.round((i/(N-1))*duration)}h</text>
+        <path d={line} fill="none" stroke={theme.color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className={`neon-glow-line-${style}`} />
+
+        <path d={line} fill="none" stroke={theme.dot} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="10,25" style={{ animation: `neon-flow-${style} 2.2s linear infinite` }} />
+
+        {xs.map((x, i) => (
+
+          i % 4 === 0 && <circle key={i} cx={x} cy={ys[i]} r="4.5" fill={theme.dot} stroke={theme.color} strokeWidth="1.5" style={{ filter: `drop-shadow(0 0 4px ${theme.color})` }} />
+
+        ))}
+
+        {[0, Math.floor(N / 4), Math.floor(N / 2), Math.floor(3 * N / 4), N - 1].map(i => (
+
+          <text key={i} x={xs[i]} y={H + 2} fill={C.textMuted} fontSize="9" fontWeight="700" textAnchor="middle">{Math.round((i / (N - 1)) * duration)}h</text>
 
         ))}
 
       </svg>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginTop:24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginTop: 24 }}>
 
         {[
 
@@ -1152,13 +1148,13 @@ function CurveChart({ style, duration }: { style: "ORGANIC" | "FAST" | "AGGRESSI
 
         ].map(([phase,range,action]) => (
 
-          <div key={phase} style={{ padding:"12px 8px", borderRadius:12, background:C.bg, boxShadow:C.raisedSm, textAlign:"center" }}>
+          <div key={phase} style={{ padding: "12px 8px", borderRadius: 12, background: C.bg, boxShadow: C.raisedSm, textAlign: "center" }}>
 
-            <div style={{ fontSize:10, fontWeight:800, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.05em" }}>{phase}</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>{phase}</div>
 
-            <div style={{ fontSize:13, fontWeight:900, color:C.amber, margin:"6px 0 2px" }}>{range}</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: theme.color, margin: "6px 0 2px" }}>{range}</div>
 
-            <div style={{ fontSize:10, color:C.textMuted, fontWeight:600 }}>{action}</div>
+            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600 }}>{action}</div>
 
           </div>
 
