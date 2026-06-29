@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets } from "@/lib/delivery/curve";
+import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets, DeliveryBatch } from "@/lib/delivery/curve";
 
 // ── Types ───────────────────────────────────────────────────────
 type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
@@ -73,28 +73,19 @@ const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warm
 function CurvePreview({
   views, durationHours, style, warmup, peak,
   likesRatio, savesRatio, sharesRatio, commentsRatio,
-  likesOn, savesOn, sharesOn, commentsOn, engEnabled
+  likesOn, savesOn, sharesOn, commentsOn, engEnabled,
+  schedule
 }: {
   views: number; durationHours: number; style: CurveStyle; warmup: number; peak: number;
   likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number;
   likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean; engEnabled: boolean;
+  schedule: any[];
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playHour, setPlayHour] = useState(0);
   const playTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const batches = generateRawSchedule({
-    totalViews: views,
-    durationHours,
-    warmupHours: warmup,
-    peakHours: peak,
-    style,
-    engagementEnabled: engEnabled,
-    likesRatioPct: likesOn ? likesRatio : 0,
-    savesRatioPct: savesOn ? savesRatio : 0,
-    sharesRatioPct: sharesOn ? sharesRatio : 0,
-    commentsRatioPct: commentsOn ? commentsRatio : 0,
-  });
+  const batches = schedule;
 
   // Playhead simulation timer
   useEffect(() => {
@@ -490,6 +481,8 @@ export default function NewReelPage() {
   const [templateName, setTemplateName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [schedule, setSchedule] = useState<DeliveryBatch[]>([]);
+  const [expandedSchedule, setExpandedSchedule] = useState(false);
 
   // Bulk Mode state
   const [mode, setMode] = useState<"single" | "bulk">("single");
@@ -559,6 +552,24 @@ export default function NewReelPage() {
       setLikesRatio(2.0); setSavesRatio(1.0); setSharesRatio(0.2); setCommentsRatio(0.1);
     }
   }, [views, hasCustomizedEng]);
+
+  useEffect(() => {
+    const info = CURVE_DESCRIPTIONS[style];
+    if (!info) return;
+    const s = generateRawSchedule({
+      totalViews: views,
+      durationHours: durationDays * 24,
+      warmupHours: info.warmup,
+      peakHours: info.peak,
+      style,
+      engagementEnabled: engEnabled,
+      likesRatioPct: likesOn ? likesRatio : 0,
+      savesRatioPct: savesOn ? savesRatio : 0,
+      sharesRatioPct: sharesOn ? sharesRatio : 0,
+      commentsRatioPct: commentsOn ? commentsRatio : 0,
+    });
+    setSchedule(s);
+  }, [views, durationDays, style, engEnabled, likesOn, likesRatio, savesOn, savesRatio, sharesOn, sharesRatio, commentsOn, commentsRatio]);
 
   const applyTemplate = (templateId: string) => {
     const t = templates.find((tmp) => tmp.id === templateId);
@@ -908,6 +919,7 @@ export default function NewReelPage() {
               sharesOn={sharesOn}
               commentsOn={commentsOn}
               engEnabled={engEnabled}
+              schedule={schedule}
             />
           </div>
 
@@ -997,7 +1009,87 @@ export default function NewReelPage() {
             sharesOn={sharesOn}
             commentsOn={commentsOn}
             engEnabled={engEnabled}
+            schedule={schedule}
           />
+
+          <div style={{ borderRadius: 16, background: N.bg, boxShadow: N.inset, padding: 12 }}>
+            <button onClick={() => setExpandedSchedule(!expandedSchedule)}
+              style={{
+                width: "100%",
+                background: "transparent",
+                border: "none",
+                textAlign: "left",
+                fontSize: 12,
+                fontWeight: 800,
+                color: N.text,
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+              <span>📊 View Detailed Batch-by-Batch Timeline ({schedule.filter(b => b.views > 0).length} active batches)</span>
+              <span>{expandedSchedule ? "▲ Hide" : "▼ Show"}</span>
+            </button>
+            
+            {expandedSchedule && (
+              <div style={{
+                maxHeight: 250,
+                overflowY: "auto",
+                marginTop: 12,
+                paddingRight: 6,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8
+              }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1.5fr 1fr 2.5fr",
+                  borderBottom: `1.5px solid ${N.border}`,
+                  paddingBottom: 6,
+                  fontSize: 10,
+                  fontWeight: 900,
+                  color: N.muted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
+                }}>
+                  <span>Batch</span>
+                  <span>Trigger Time</span>
+                  <span style={{ textAlign: "right" }}>Views</span>
+                  <span style={{ textAlign: "right" }}>Engagement</span>
+                </div>
+                {schedule.filter(b => b.views > 0).map((batch, idx) => {
+                  const totalMins = batch.hour * 60;
+                  const h = Math.floor(totalMins / 60);
+                  const m = Math.round(totalMins % 60);
+                  const timeText = idx === 0 ? "⚡ Instant" : `+${h > 0 ? `${h}h ` : ""}${m > 0 ? `${m}m` : ""}`;
+                  
+                  const engTexts = [];
+                  if (batch.likes > 0) engTexts.push(`👍 ${batch.likes}`);
+                  if (batch.saves > 0) engTexts.push(`🔖 ${batch.saves}`);
+                  if (batch.shares > 0) engTexts.push(`📤 ${batch.shares}`);
+                  if (batch.comments > 0) engTexts.push(`💬 ${batch.comments}`);
+                  const engStr = engTexts.length > 0 ? engTexts.join(" · ") : "None";
+
+                  return (
+                    <div key={idx} style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1.5fr 1fr 2.5fr",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: N.text,
+                      padding: "4px 0",
+                      borderBottom: `1px solid rgba(200, 208, 231, 0.2)`
+                    }}>
+                      <span style={{ color: N.muted }}>#{idx + 1}</span>
+                      <span style={{ color: "#d97706" }}>{timeText}</span>
+                      <span style={{ textAlign: "right", fontWeight: 800 }}>{batch.views.toLocaleString()}</span>
+                      <span style={{ textAlign: "right", fontSize: 11, color: "#16a34a" }}>{engStr}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <div style={{ display:"flex", flexDirection:"column", gap:10, padding:18, borderRadius:16, background:N.bg, boxShadow:N.inset }}>
             {[

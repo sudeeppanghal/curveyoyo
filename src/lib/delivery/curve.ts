@@ -163,14 +163,16 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     } else if (style === "STEEP_WARMUP") {
       val = (progress < 0.1) ? (progress / 0.1) : 1.0;
     } else {
-      const r = RATES_MAP[style] ?? 0.8;
-      const t0 = warmupHours + peakHours / 2;
-      let logistic = 1 / (1 + Math.exp(-r * (hourTime - t0)));
+      const relativeWarmup = warmupHours / 24;
+      const relativePeak = peakHours / 24;
+      const progressT0 = relativeWarmup + relativePeak / 2;
+      const progressR = (RATES_MAP[style] ?? 0.8) * 6;
+      let logistic = 1 / (1 + Math.exp(-progressR * (progress - progressT0)));
 
       if (style === "CLIPSTAKE") {
         logistic = logistic * (progress < 0.35 ? 0.4 : progress < 0.7 ? 0.75 : 1.0);
       } else if (style === "CROSSWAVE") {
-        logistic = logistic * (1 + 0.3 * Math.sin((hourTime * Math.PI) / 4));
+        logistic = logistic * (1 + 0.3 * Math.sin(progress * 8 * Math.PI));
       } else if (style === "WHOP") {
         logistic = Math.pow(logistic, 1.5);
       } else if (style === "CLIPSTAR") {
