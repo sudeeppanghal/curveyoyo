@@ -170,6 +170,37 @@ export function generateDeliverySchedule(params: CurveParams): DeliveryBatch[] {
   const sum = raw.reduce((a, b) => a + b, 0);
   let distributed = raw.map((v) => Math.max(0, Math.round((v / sum) * totalViews)));
 
+  // Enforce SMM minimum limit of 100 views per batch by merging smaller batches
+  const SMM_MIN = 100;
+  if (totalViews >= SMM_MIN) {
+    while (true) {
+      const underMinIdx = distributed.findIndex((v) => v > 0 && v < SMM_MIN);
+      if (underMinIdx === -1) break;
+
+      const val = distributed[underMinIdx];
+      distributed[underMinIdx] = 0;
+
+      let targetIdx = -1;
+      const leftIdx = underMinIdx - 1;
+      const rightIdx = underMinIdx + 1;
+
+      if (leftIdx >= 0 && rightIdx < distributed.length) {
+        targetIdx = distributed[leftIdx] >= distributed[rightIdx] ? leftIdx : rightIdx;
+      } else if (leftIdx >= 0) {
+        targetIdx = leftIdx;
+      } else if (rightIdx < distributed.length) {
+        targetIdx = rightIdx;
+      }
+
+      if (targetIdx !== -1) {
+        distributed[targetIdx] += val;
+      } else {
+        distributed[underMinIdx] = val;
+        break;
+      }
+    }
+  }
+
   // Fix rounding drift
   const actual = distributed.reduce((a, b) => a + b, 0);
   const diff = totalViews - actual;

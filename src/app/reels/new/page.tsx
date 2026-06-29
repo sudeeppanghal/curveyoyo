@@ -315,6 +315,92 @@ function CurvePreview({
   );
 }
 
+// ── Mini Sparkline Curve Chart ──────────────────────────────────
+function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean }) {
+  const points = Array.from({ length: 24 }, (_, t) => {
+    const progress = t / 24;
+    let val = 1.0;
+
+    if (style === "LINEAR") {
+      val = progress;
+    } else if (style === "EXPONENTIAL") {
+      val = Math.exp(progress * 3) / Math.exp(3);
+    } else if (style === "S_CURVE" || style === "ORGANIC") {
+      val = 1 / (1 + Math.exp(-6 * (progress - 0.5)));
+    } else if (style === "BELL_CURVE") {
+      val = Math.exp(-Math.pow((progress - 0.5) / 0.2, 2));
+    } else if (style === "LOGARITHMIC") {
+      val = Math.log(1 + 9 * progress) / Math.log(10);
+    } else if (style === "QUADRATIC") {
+      val = Math.pow(progress, 2);
+    } else if (style === "CUBIC") {
+      val = Math.pow(progress, 3);
+    } else if (style === "SINE_WAVE") {
+      val = 0.5 + 0.3 * Math.sin(progress * 4 * Math.PI);
+    } else if (style === "COSINE_WAVE") {
+      val = 0.5 + 0.3 * Math.cos(progress * 4 * Math.PI);
+    } else if (style === "SAWTOOTH") {
+      val = (t % 6) / 6;
+    } else if (style === "CHAOTIC") {
+      val = 0.4 + 0.2 * Math.sin(progress * 6 * Math.PI) + 0.2 * Math.cos(progress * 14 * Math.PI);
+    } else if (style === "DOUBLE_BELL") {
+      val = 0.5 * Math.exp(-Math.pow((progress - 0.25) / 0.1, 2)) + 0.5 * Math.exp(-Math.pow((progress - 0.75) / 0.1, 2));
+    } else if (style === "STEP_LADDER") {
+      val = Math.floor(progress * 4) / 4;
+    } else if (style === "ALTERNATING") {
+      val = (t % 2 === 0) ? 0.9 : 0.1;
+    } else if (style === "FIBONACCI") {
+      val = Math.pow(1.618, progress * 8) / Math.pow(1.618, 8);
+    } else if (style === "PARETO") {
+      val = Math.pow(1 - progress, 4);
+    } else if (style === "MORNING_SURGE") {
+      val = Math.exp(-Math.pow((progress - 0.15) / 0.1, 2));
+    } else if (style === "NOON_PEAK") {
+      val = Math.exp(-Math.pow((progress - 0.5) / 0.15, 2));
+    } else if (style === "EVENING_BLAST") {
+      val = Math.exp(-Math.pow((progress - 0.8) / 0.15, 2));
+    } else if (style === "SIGMOID_DECAY") {
+      val = 1 / (1 + Math.exp(10 * (progress - 0.85)));
+    } else if (style === "STEEP_WARMUP") {
+      val = (progress < 0.1) ? (progress / 0.1) : 1.0;
+    } else {
+      val = 1 / (1 + Math.exp(-1.2 * (t - 6)));
+    }
+
+    return val;
+  });
+
+  const maxVal = Math.max(...points, 0.001);
+  const width = 80;
+  const height = 24;
+  const padding = 2;
+
+  const pathD = points
+    .map((v, i) => {
+      const x = padding + (i / (points.length - 1)) * (width - 2 * padding);
+      const y = height - padding - (v / maxVal) * (height - 2 * padding);
+      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  return (
+    <svg width={width} height={height} style={{ overflow: "visible", marginTop: 4, display: "block" }}>
+      <path
+        d={pathD}
+        fill="none"
+        stroke={active ? N.accent : "#94a3b8"}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          filter: active ? `drop-shadow(0 0 3px ${N.accent}80)` : "none",
+          transition: "stroke 0.2s"
+        }}
+      />
+    </svg>
+  );
+}
+
 // ── Slider ───────────────────────────────────────────────────────
 function Slider({ label, value, min, max, step = 1, onChange, format }: {
   label: string; value: number; min: number; max: number; step?: number;
@@ -765,8 +851,8 @@ export default function NewReelPage() {
                             color: style === s ? N.accent : N.muted,
                             boxShadow: style === s ? N.inset : N.raisedSm,
                           }}>
-                          <span style={{ fontSize:18 }}>{CURVE_DESCRIPTIONS[s].icon}</span>
                           <span style={{ fontSize:11, fontWeight:805, textAlign:"center" }}>{CURVE_DESCRIPTIONS[s].label}</span>
+                          <MiniCurveChart style={s} active={style === s} />
                         </button>
                       ))}
                     </div>
