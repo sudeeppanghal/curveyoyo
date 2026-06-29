@@ -79,7 +79,7 @@ async function processEvent(eventId: string): Promise<{ ok: boolean; views?: num
   const platform = order.reel.platform?.toLowerCase() ?? "instagram";
   const svcIds = panel.serviceIds as ServiceIds | null;
   const viewsServiceId = getSvcId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
-  const jitteredViews = applyJitter(event.viewsBatch, 0.15);
+  const jitteredViews = Math.max(100, applyJitter(event.viewsBatch, 0.15));
   const startMs = Date.now();
 
   // ── Place views order ──────────────────────────────────────
@@ -114,7 +114,7 @@ async function processEvent(eventId: string): Promise<{ ok: boolean; views?: num
         apiKeyEncrypted: failover.apiKeyEncrypted,
         serviceId: foSvcId,
         link: order.reel.url,
-        quantity: event.viewsBatch,
+        quantity: Math.max(100, event.viewsBatch),
       });
       activePanel = failover;
       await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: failover.id } });

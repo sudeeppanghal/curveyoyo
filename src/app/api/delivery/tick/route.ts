@@ -98,7 +98,7 @@ async function handler(request: NextRequest) {
   // CurvePioneer: "Real human traffic has variance. We add small random jitter
   // to each batch to prevent machine-flat delivery patterns."
   // The accumulation algorithm corrects for drift — totals always match target.
-  const jitteredViewsBatch = applyJitter(viewsBatch, 0.15);
+  const jitteredViewsBatch = Math.max(100, applyJitter(viewsBatch, 0.15));
 
   let result = await placePanelOrder({
     apiUrl: panel.apiUrl,
@@ -132,7 +132,7 @@ async function handler(request: NextRequest) {
         apiKeyEncrypted: failoverPanel.apiKeyEncrypted,
         serviceId: foViewsSvcId,
         link: reelUrl,
-        quantity: viewsBatch,
+        quantity: Math.max(100, viewsBatch),
       });
       activePanel = failoverPanel;
       await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: failoverPanel.id } });
