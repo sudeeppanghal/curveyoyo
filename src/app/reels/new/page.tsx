@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets, DeliveryBatch } from "@/lib/delivery/curve";
@@ -473,21 +473,23 @@ function CurvePreview({
 // ── Mini Sparkline Curve Chart ──────────────────────────────────
 function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean }) {
   const info = CURVE_DESCRIPTIONS[style];
-  const batches = generateRawSchedule({
-    totalViews: 10000,
-    durationHours: 24,
-    warmupHours: info?.warmup ?? 4,
-    peakHours: info?.peak ?? 8,
-    style,
-    engagementEnabled: false,
-    tzOffsetHours: 0,
-  });
-
-  let runningSum = 0;
-  const points = batches.map((b) => {
-    runningSum += b.views;
-    return runningSum;
-  });
+  // Memoize so we only recompute when style changes — NOT on every parent re-render
+  const points = useMemo(() => {
+    const batches = generateRawSchedule({
+      totalViews: 10000,
+      durationHours: 24,
+      warmupHours: info?.warmup ?? 4,
+      peakHours: info?.peak ?? 8,
+      style,
+      engagementEnabled: false,
+      tzOffsetHours: 0,
+    });
+    let runningSum = 0;
+    return batches.map((b) => {
+      runningSum += b.views;
+      return runningSum;
+    });
+  }, [style]);
 
   const maxVal = Math.max(...points, 1);
   const width = 80;
@@ -495,7 +497,7 @@ function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean 
   const padding = 2;
 
   const pathD = points
-    .map((v, i) => {
+    .map((v: number, i: number) => {
       const x = padding + (i / (points.length - 1)) * (width - 2 * padding);
       const y = height - padding - (v / maxVal) * (height - 2 * padding);
       return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
