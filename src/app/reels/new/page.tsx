@@ -79,8 +79,6 @@ function CurvePreview({
   likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number;
   likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean; engEnabled: boolean;
 }) {
-  const [hoveredHour, setHoveredHour] = useState<number | null>(null);
-  const [activeMetric, setActiveMetric] = useState<"all" | "views" | "likes" | "saves" | "shares" | "comments">("all");
   const [isPlaying, setIsPlaying] = useState(false);
   const [playHour, setPlayHour] = useState(0);
   const playTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -109,7 +107,7 @@ function CurvePreview({
           }
           return h + 1;
         });
-      }, Math.max(80, 2000 / durationHours)); // target ~2 seconds for full simulation
+      }, Math.max(50, 3000 / durationHours)); // target ~3 seconds for full simulation
     } else {
       if (playTimerRef.current) clearInterval(playTimerRef.current);
     }
@@ -120,12 +118,8 @@ function CurvePreview({
 
   if (!batches.length) return null;
 
-  const W = 500, H = 150, pad = 12;
+  const W = 550, H = 200, pad = 30;
   const maxViews = Math.max(...batches.map((b) => b.views), 1);
-  const maxLikes = Math.max(...batches.map((b) => b.likes), 1);
-  const maxSaves = Math.max(...batches.map((b) => b.saves), 1);
-  const maxShares = Math.max(...batches.map((b) => b.shares), 1);
-  const maxComments = Math.max(...batches.map((b) => b.comments), 1);
 
   // Helper to map index & quantity to coordinates
   const getCoords = (val: number, max: number, idx: number) => {
@@ -135,10 +129,6 @@ function CurvePreview({
   };
 
   const viewsPts = batches.map((b, i) => getCoords(b.views, maxViews, i));
-  const likesPts = batches.map((b, i) => getCoords(b.likes, maxLikes, i));
-  const savesPts = batches.map((b, i) => getCoords(b.saves, maxSaves, i));
-  const sharesPts = batches.map((b, i) => getCoords(b.shares, maxShares, i));
-  const commentsPts = batches.map((b, i) => getCoords(b.comments, maxComments, i));
 
   const makePath = (pts: { x: number; y: number }[]) =>
     pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
@@ -149,167 +139,165 @@ function CurvePreview({
     `L ${pts[0].x.toFixed(1)} ${H - pad} Z`,
   ].join(" ");
 
-  const metrics = [
-    { key: "views", label: "Views", color: "#d97706", glow: "rgba(217,119,6,0.4)", active: true, pts: viewsPts, fillGrad: "vGrad" },
-    { key: "likes", label: "Likes", color: "#16a34a", glow: "rgba(22,163,74,0.4)", active: engEnabled && likesOn && maxLikes > 0, pts: likesPts, fillGrad: "lGrad" },
-    { key: "saves", label: "Saves", color: "#2563eb", glow: "rgba(37,99,235,0.4)", active: engEnabled && savesOn && maxSaves > 0, pts: savesPts, fillGrad: "saGrad" },
-    { key: "shares", label: "Shares", color: "#8b5cf6", glow: "rgba(139,92,246,0.4)", active: engEnabled && sharesOn && maxShares > 0, pts: sharesPts, fillGrad: "shGrad" },
-    { key: "comments", label: "Comments", color: "#ef4444", glow: "rgba(239,68,68,0.4)", active: engEnabled && commentsOn && maxComments > 0, pts: commentsPts, fillGrad: "cGrad" },
-  ];
+  const curveInfo = CURVE_DESCRIPTIONS[style];
 
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
-    if (isPlaying) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percent = Math.max(0, Math.min(1, (x - pad) / (rect.width - 2 * pad)));
-    const hourIdx = Math.round(percent * (batches.length - 1));
-    setHoveredHour(hourIdx);
-  };
-
-  const activeHoverData = hoveredHour !== null ? batches[hoveredHour] : isPlaying ? batches[playHour] : null;
-  const currentProgressHour = hoveredHour !== null ? hoveredHour : isPlaying ? playHour : null;
+  // Determine current active simulation batch
+  const currentBatchIdx = isPlaying ? playHour : (batches.length - 1);
+  const currentBatch = batches[currentBatchIdx];
+  const currentPt = viewsPts[currentBatchIdx];
+  const dispatchPct = Math.round((currentBatch.views / views) * 100);
 
   return (
-    <div style={{ marginTop:16, borderRadius:20, background:N.bg, padding:"16px", boxShadow:N.raised, display:"flex", flexDirection:"column", gap:14 }}>
-      {/* Chart Header Toolbar */}
-      <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <button onClick={() => { setIsPlaying(!isPlaying); setHoveredHour(null); }} className="neo-btn"
-            style={{ width:34, height:34, borderRadius:"50%", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", background:N.bg, color:N.accent, boxShadow:N.raisedSm, fontSize:12 }}>
-            {isPlaying ? "⏸" : "▶️"}
-          </button>
-          <span style={{ fontSize:12, fontWeight:850, color:N.text }}>Pacing Simulation</span>
+    <div style={{
+      borderRadius: 24,
+      padding: 24,
+      background: "#08010f",
+      border: "1px solid #1c0a35",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+      color: "#f3e8ff",
+      display: "flex",
+      flexDirection: "column",
+      gap: 16,
+      fontFamily: "inherit"
+    }}>
+      {/* Header Row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 16, color: "#a855f7" }}>📈</span>
+            <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: 0 }}>Live Growth Plot</h3>
+          </div>
+          <p style={{ fontSize: 12, color: "#c084fc", margin: 0, fontWeight: 550, maxWidth: 380, lineHeight: 1.4 }}>
+            {curveInfo.desc}
+          </p>
         </div>
-
-        {/* Metric Toggles */}
-        <div style={{ display:"flex", gap:4, overflowX:"auto", paddingBottom:2 }}>
-          <button onClick={() => { setActiveMetric("all"); }} className="neo-btn"
-            style={{ border:"none", padding:"5px 10px", borderRadius:8, fontSize:10, fontWeight:800, cursor:"pointer", background:N.bg,
-              color: activeMetric === "all" ? N.accent : N.muted,
-              boxShadow: activeMetric === "all" ? N.inset : N.raisedSm
-            }}>
-            All Metrics
-          </button>
-          {metrics.filter((m) => m.active).map((m) => (
-            <button key={m.key} onClick={() => { setActiveMetric(m.key as any); }} className="neo-btn"
-              style={{ border:"none", padding:"5px 10px", borderRadius:8, fontSize:10, fontWeight:800, cursor:"pointer", background:N.bg,
-                color: activeMetric === m.key ? m.color : N.muted,
-                boxShadow: activeMetric === m.key ? N.inset : N.raisedSm
-              }}>
-              {m.label}
-            </button>
-          ))}
+        <div style={{
+          fontSize: 11,
+          fontWeight: 800,
+          background: "rgba(168, 85, 247, 0.15)",
+          color: "#d946ef",
+          padding: "4px 10px",
+          borderRadius: 12,
+          border: "1px solid rgba(168, 85, 247, 0.3)",
+          letterSpacing: "0.05em"
+        }}>
+          Preset: {curveInfo.label}
         </div>
       </div>
 
-      {/* SVG Neon Chart wrapper */}
-      <div style={{ position:"relative", borderRadius:14, background:N.bg, boxShadow:N.inset, padding:"12px 6px" }}>
-        <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredHour(null)} style={{ overflow:"visible", cursor:"crosshair" }}>
+      {/* SVG Neon Chart */}
+      <div style={{ position: "relative", width: "100%", background: "#120324", borderRadius: 16, border: "1px solid #23083f", padding: "24px 8px 16px", overflow: "hidden" }}>
+        <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
           <defs>
-            {/* Gradients */}
-            <linearGradient id="vGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d97706" stopOpacity="0.25" /><stop offset="100%" stopColor="#d97706" stopOpacity="0" /></linearGradient>
-            <linearGradient id="lGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" /><stop offset="100%" stopColor="#16a34a" stopOpacity="0" /></linearGradient>
-            <linearGradient id="saGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" /><stop offset="100%" stopColor="#2563eb" stopOpacity="0" /></linearGradient>
-            <linearGradient id="shGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.25" /><stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" /></linearGradient>
-            <linearGradient id="cGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" /><stop offset="100%" stopColor="#ef4444" stopOpacity="0" /></linearGradient>
+            <linearGradient id="neonGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#d946ef" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+            </linearGradient>
 
-            {/* Neon Glow Filters */}
-            {metrics.map((m) => (
-              <filter key={m.key} id={`glow-${m.key}`} x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="3.5" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            ))}
+            <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
 
-          {/* Grid lines */}
-          {[0.25, 0.5, 0.75].map((val) => (
-            <line key={val} x1={pad} y1={H - pad - val * (H - 2 * pad)} x2={W - pad} y2={H - pad - val * (H - 2 * pad)}
-              stroke={N.border} strokeWidth="1" strokeDasharray="3 3" />
-          ))}
-
-          {/* Render lines and fills */}
-          {metrics.map((m) => {
-            const isFaded = activeMetric !== "all" && activeMetric !== m.key;
-            if (!m.active) return null;
+          {/* Grid lines (Y-axis percentages) */}
+          {[0, 0.25, 0.5, 0.75, 1].map((val) => {
+            const y = H - pad - val * (H - 2 * pad);
             return (
-              <g key={m.key} style={{ opacity: isFaded ? 0.08 : 1, transition:"all 0.3s ease" }}>
-                {activeMetric === m.key && (
-                  <path d={makeFill(m.pts)} fill={`url(#${m.fillGrad})`} style={{ transition:"all 0.5s ease" }} />
-                )}
-                <path d={makePath(m.pts)} fill="none" stroke={m.color} strokeWidth={activeMetric === m.key ? 3 : 2}
-                  strokeLinecap="round" strokeLinejoin="round" filter={`url(#glow-${m.key})`} style={{ transition:"all 0.5s ease" }} />
+              <g key={val}>
+                <line x1={pad} y1={y} x2={W - pad} y2={y} stroke="#230e3d" strokeWidth="1" strokeDasharray="3 3" />
+                <text x={pad - 8} y={y + 3} fill="#a78bfa" fontSize="9" fontWeight="700" textAnchor="end">
+                  {Math.round(val * 100)}
+                </text>
               </g>
             );
           })}
 
-          {/* Scrubber vertical line */}
-          {currentProgressHour !== null && (
-            <line
-              x1={pad + (currentProgressHour / (batches.length - 1)) * (W - 2 * pad)}
-              y1={pad}
-              x2={pad + (currentProgressHour / (batches.length - 1)) * (W - 2 * pad)}
-              y2={H - pad}
-              stroke={isPlaying ? "#d97706" : N.accent}
-              strokeWidth={isPlaying ? 2 : 1.5}
-              strokeDasharray={isPlaying ? "none" : "3 3"}
-              style={{ filter: isPlaying ? "drop-shadow(0 0 4px #d97706)" : "none" }}
-            />
+          {/* X-axis labels (S0 to S8) */}
+          {Array.from({ length: 9 }).map((_, i) => {
+            const x = pad + (i / 8) * (W - 2 * pad);
+            return (
+              <g key={i}>
+                <line x1={x} y1={H - pad} x2={x} y2={H - pad + 4} stroke="#3b1d60" strokeWidth="1" />
+                <text x={x} y={H - pad + 15} fill="#a78bfa" fontSize="9" fontWeight="750" textAnchor="middle">
+                  S{i}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Curve Area & Line */}
+          <g>
+            <path d={makeFill(viewsPts)} fill="url(#neonGrad)" style={{ transition: "all 0.5s ease" }} />
+            <path d={makePath(viewsPts)} fill="none" stroke="#d946ef" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonGlow)" style={{ transition: "all 0.5s ease" }} />
+          </g>
+
+          {/* Playhead vertical line & glowing node */}
+          {currentPt && (
+            <g>
+              <line x1={currentPt.x} y1={pad} x2={currentPt.x} y2={H - pad} stroke="#a78bfa" strokeWidth="1.5" strokeDasharray="2 2" opacity="0.6" />
+              <circle cx={currentPt.x} cy={currentPt.y} r="6" fill="#ffffff" stroke="#d946ef" strokeWidth="3" filter="drop-shadow(0 0 6px #d946ef)" />
+            </g>
           )}
         </svg>
 
-        {/* Hover / Simulation Tooltip details */}
-        {activeHoverData && currentProgressHour !== null && (
+        {/* Live playhead Tooltip box inside the SVG container */}
+        {currentPt && (
           <div style={{
-            position:"absolute", top:10, left: (currentProgressHour / (batches.length - 1)) > 0.5 ? "auto" : 20,
-            right: (currentProgressHour / (batches.length - 1)) > 0.5 ? 20 : "auto",
-            background:"rgba(238,242,247,0.92)", border:`1px solid ${N.border}`, borderRadius:10,
-            padding:"8px 12px", fontSize:11, pointerEvents:"none", boxShadow:N.raisedSm, display:"flex", flexDirection:"column", gap:4, backdropFilter:"blur(4px)"
+            position: "absolute",
+            left: `${((currentPt.x - pad) / (W - 2 * pad)) * 80 + 10}%`,
+            top: `${Math.min(70, ((currentPt.y - pad) / (H - 2 * pad)) * 80 + 10)}%`,
+            background: "#0c0217",
+            border: "1.5px solid #d946ef",
+            borderRadius: 12,
+            padding: "8px 12px",
+            boxShadow: "0 4px 15px rgba(217, 70, 239, 0.25)",
+            pointerEvents: "none",
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            minWidth: 100,
+            transform: "translate(-50%, -100%)",
+            transition: "all 0.1s linear"
           }}>
-            <div style={{ fontWeight:850, color:N.text, borderBottom:`1px solid ${N.border}`, paddingBottom:3, marginBottom:2 }}>
-              🕒 hour {activeHoverData.hour + 1} of {durationHours}h
-            </div>
-            <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
-              <span style={{ color:N.muted, fontWeight:700 }}>👁 Views</span>
-              <strong style={{ color:"#d97706" }}>{activeHoverData.views.toLocaleString()}</strong>
-            </div>
-            {engEnabled && likesOn && activeHoverData.likes > 0 && (
-              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
-                <span style={{ color:N.muted, fontWeight:700 }}>👍 Likes</span>
-                <strong style={{ color:"#16a34a" }}>{activeHoverData.likes.toLocaleString()}</strong>
-              </div>
-            )}
-            {engEnabled && savesOn && activeHoverData.saves > 0 && (
-              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
-                <span style={{ color:N.muted, fontWeight:700 }}>🔖 Saves</span>
-                <strong style={{ color:"#2563eb" }}>{activeHoverData.saves.toLocaleString()}</strong>
-              </div>
-            )}
-            {engEnabled && sharesOn && activeHoverData.shares > 0 && (
-              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
-                <span style={{ color:N.muted, fontWeight:700 }}>📤 Shares</span>
-                <strong style={{ color:"#8b5cf6" }}>{activeHoverData.shares.toLocaleString()}</strong>
-              </div>
-            )}
-            {engEnabled && commentsOn && activeHoverData.comments > 0 && (
-              <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
-                <span style={{ color:N.muted, fontWeight:700 }}>💬 Comments</span>
-                <strong style={{ color:"#ef4444" }}>{activeHoverData.comments.toLocaleString()}</strong>
-              </div>
-            )}
+            <span style={{ fontSize: 11, fontWeight: 900, color: "#f3e8ff" }}>
+              S{Math.round((currentBatchIdx / (batches.length - 1)) * 8)}
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#d946ef" }}>
+              DispatchPct : {dispatchPct}%
+            </span>
           </div>
         )}
       </div>
 
-      {/* Cumulative info bar */}
-      <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"space-between", gap:12, fontSize:11, color:N.muted, fontWeight:700, borderTop:`1px solid ${N.border}`, paddingTop:10 }}>
-        <span>Style: <strong style={{ color:N.text }}>{style}</strong></span>
-        <span>Warmup: <strong style={{ color:N.text }}>{warmup}h</strong></span>
-        <span>Peak: <strong style={{ color:N.text }}>{peak}h</strong></span>
-        <span>Decay: <strong style={{ color:N.text }}>{durationHours - warmup - peak}h</strong></span>
+      {/* Control bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #1c0a35", paddingTop: 14 }}>
+        <button onClick={() => setIsPlaying(!isPlaying)} className="neo-btn"
+          style={{
+            border: "none",
+            background: isPlaying ? "#ea580c" : "#a855f7",
+            color: "#ffffff",
+            padding: "8px 16px",
+            borderRadius: 12,
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(168, 85, 247, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6
+          }}>
+          <span>{isPlaying ? "⏸ Pause" : "▶️ Simulate"}</span>
+        </button>
+
+        <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#a78bfa", fontWeight: 700 }}>
+          <span>Duration: <strong style={{ color: "#f3e8ff" }}>{durationHours}h</strong></span>
+          <span>Batches: <strong style={{ color: "#f3e8ff" }}>{batches.length}</strong></span>
+          <span>Peak: <strong style={{ color: "#f3e8ff" }}>{peak}h</strong></span>
+        </div>
       </div>
     </div>
   );
