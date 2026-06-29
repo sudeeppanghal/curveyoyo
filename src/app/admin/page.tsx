@@ -160,6 +160,28 @@ export default function AdminPage() {
     loadAll();
   };
 
+  const impersonateUser = async (userId: string) => {
+    setSaved("Generating session…");
+    try {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.link) {
+        setSaved("Signing in…");
+        window.location.href = data.link;
+      } else {
+        setError(data.error ?? "Failed to impersonate");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
   // Auth Screen REDESIGNED
   if (!authed) return (
     <div style={{
@@ -575,6 +597,10 @@ export default function AdminPage() {
                                   Unsuspend
                                 </button>
                               )}
+                              <button onClick={() => impersonateUser(u.id)} className="neo-btn"
+                                style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#2563eb", boxShadow: N.raisedSm }}>
+                                Login As
+                              </button>
                             </div>
                           </td>
                         </tr>
