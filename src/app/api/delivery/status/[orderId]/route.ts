@@ -32,6 +32,7 @@ export async function GET(
           executedAt: true,
           status: true,
           errorMessage: true,
+          responseData: true,
         },
       },
     },
@@ -55,6 +56,7 @@ export async function GET(
       actual: e.status === "DONE" ? e.viewsBatch : 0,
       status: e.status,
       scheduledAt: e.scheduledAt,
+      responseData: e.responseData,
     };
   });
 

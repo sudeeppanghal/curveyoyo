@@ -681,7 +681,7 @@ export default function NewReelPage() {
   const customScheduleErrors = getCustomScheduleErrors();
   const hasCustomScheduleErrors = customScheduleErrors.length > 0;
 
-  const updateSelectedBatchField = (field: keyof DeliveryBatch, val: number) => {
+  const updateSelectedBatchField = (field: keyof DeliveryBatch, val: any) => {
     if (selectedBatchIndex === null) return;
     const newSchedule = [...customSchedule];
     newSchedule[selectedBatchIndex] = {
@@ -1149,7 +1149,10 @@ export default function NewReelPage() {
             </div>
             <button onClick={() => {
               if (!isCustomMode) {
-                setCustomSchedule([...schedule]);
+                setCustomSchedule(schedule.map(b => ({
+                  ...b,
+                  scheduledTime: new Date(Date.now() + b.hour * 60 * 60 * 1000).toISOString()
+                })));
                 setSelectedBatchIndex(0);
               }
               setIsCustomMode(!isCustomMode);
@@ -1202,7 +1205,13 @@ export default function NewReelPage() {
                       }}>
                       ⚖️ Scale Targets
                     </button>
-                    <button onClick={() => { setCustomSchedule([...schedule]); setSelectedBatchIndex(0); }} className="neo-btn"
+                    <button onClick={() => {
+                      setCustomSchedule(schedule.map(b => ({
+                        ...b,
+                        scheduledTime: new Date(Date.now() + b.hour * 60 * 60 * 1000).toISOString()
+                      })));
+                      setSelectedBatchIndex(0);
+                    }} className="neo-btn"
                       style={{
                         padding: "6px 12px",
                         borderRadius: 10,

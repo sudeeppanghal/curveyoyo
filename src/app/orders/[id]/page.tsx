@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 /* ── Types ── */
-interface ChartPoint { hour: number; planned: number; actual: number; status: string; scheduledAt?: string }
+interface ChartPoint { hour: number; planned: number; actual: number; status: string; scheduledAt?: string; responseData?: any }
 interface OrderStatus {
   order: {
     id: string; status: string; viewsTarget: number; viewsDelivered: number;
@@ -401,11 +401,32 @@ export default function OrderDetailPage() {
                     : `+${row.hour}h`;
 
                 // Calculate engagement values for this batch based on views proportion
-                const scale = order.viewsTarget > 0 ? row.planned / order.viewsTarget : 0;
-                const bLikes = order.likesTarget > 0 ? Math.round(order.likesTarget * scale) : 0;
-                const bSaves = order.savesTarget > 0 ? Math.round(order.savesTarget * scale) : 0;
-                const bShares = order.sharesTarget > 0 ? Math.round(order.sharesTarget * scale) : 0;
-                const bComments = order.commentsTarget > 0 ? Math.round(order.commentsTarget * scale) : 0;
+                let bLikes = 0;
+                let bSaves = 0;
+                let bShares = 0;
+                let bComments = 0;
+
+                const resData = row.responseData as any;
+                const isCustomOrder = !!(resData && (resData.customEngagement || resData.engagementFired));
+                
+                if (resData && resData.engagementFired) {
+                  bLikes = resData.engagementFired.likes ?? 0;
+                  bSaves = resData.engagementFired.saves ?? 0;
+                  bShares = resData.engagementFired.shares ?? 0;
+                  bComments = resData.engagementFired.comments ?? 0;
+                } else if (resData && resData.customEngagement) {
+                  bLikes = resData.customEngagement.likes ?? 0;
+                  bSaves = resData.customEngagement.saves ?? 0;
+                  bShares = resData.customEngagement.shares ?? 0;
+                  bComments = resData.customEngagement.comments ?? 0;
+                } else if (!isCustomOrder) {
+                  // Fallback for scheduled standard orders (not fired yet)
+                  const scale = order.viewsTarget > 0 ? row.planned / order.viewsTarget : 0;
+                  bLikes = order.likesTarget > 0 ? Math.round(order.likesTarget * scale) : 0;
+                  bSaves = order.savesTarget > 0 ? Math.round(order.savesTarget * scale) : 0;
+                  bShares = order.sharesTarget > 0 ? Math.round(order.sharesTarget * scale) : 0;
+                  bComments = order.commentsTarget > 0 ? Math.round(order.commentsTarget * scale) : 0;
+                }
 
                 return (
                   <tr key={i} style={{ borderBottom:`1px solid ${N.border}`, transition:"background 0.2s" }}>
@@ -441,6 +462,11 @@ export default function OrderDetailPage() {
             </tbody>
           </table>
         </div>
+        {!chartData.some(row => row.responseData?.customEngagement) && order.engagementEnabled && (
+          <div style={{ padding: "12px 16px", borderTop: `1px solid ${N.border}`, background: "rgba(200, 208, 231, 0.05)", fontSize: 11, color: N.muted, fontWeight: 600 }}>
+            * Note: For standard pacing campaigns, small engagements (e.g. less than 10) are accumulated and fired in organic-timed bursts once they reach the minimum panel limit.
+          </div>
+        )}
       </div>
 
       {/* ── Order info ── */}
