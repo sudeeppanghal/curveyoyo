@@ -49,58 +49,90 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string; la
 /* ── Dual-layer delivery chart ── */
 function DeliveryChart({ data }: { data: ChartPoint[] }) {
   if (!data.length) return null;
-  const W = 600, H = 160, pad = 16;
-  const maxPlanned = Math.max(...data.map((d) => d.planned), 1);
 
-  const toX = (i: number) => pad + (i / Math.max(data.length - 1, 1)) * (W - 2 * pad);
-  const toY = (v: number) => H - pad - (v / maxPlanned) * (H - 2 * pad);
+  // Calculate cumulative planned and actual views
+  let runningPlanned = 0;
+  let runningActual = 0;
+  const cumulativeData = data.map((d) => {
+    runningPlanned += d.planned;
+    runningActual += d.status === "DONE" ? d.planned : 0;
+    return {
+      ...d,
+      cumulativePlanned: runningPlanned,
+      cumulativeActual: runningActual,
+    };
+  });
 
-  const plannedPts = data.map((d, i) => ({ x: toX(i), y: toY(d.planned) }));
-  const actualPts  = data.map((d, i) => ({ x: toX(i), y: toY(d.actual) }));
+  const W = 600, H = 180, pad = 30;
+  const maxVal = Math.max(cumulativeData.at(-1)!.cumulativePlanned, 1);
+
+  const toX = (i: number) => pad + (i / Math.max(cumulativeData.length - 1, 1)) * (W - 2 * pad);
+  const toY = (v: number) => H - pad - (v / maxVal) * (H - 2 * pad);
+
+  const plannedPts = cumulativeData.map((d, i) => ({ x: toX(i), y: toY(d.cumulativePlanned) }));
+  
+  // Find the last executed batch index so actual line doesn't extend into future scheduled batches
+  const lastExecutedIdx = data.findLastIndex((d) => d.status === "DONE" || d.status === "FAILED");
+  const actualPts = cumulativeData
+    .slice(0, lastExecutedIdx !== -1 ? lastExecutedIdx + 1 : 0)
+    .map((d, i) => ({ x: toX(i), y: toY(d.cumulativeActual) }));
 
   const makePath = (pts: { x: number; y: number }[]) =>
     pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
 
-  const makeFill = (pts: { x: number; y: number }[]) => [
-    makePath(pts),
-    `L ${pts.at(-1)!.x.toFixed(1)} ${(H - pad).toFixed(1)}`,
-    `L ${pts[0].x.toFixed(1)} ${(H - pad).toFixed(1)} Z`,
-  ].join(" ");
+  const makeFill = (pts: { x: number; y: number }[]) => {
+    if (!pts.length) return "";
+    return [
+      makePath(pts),
+      `L ${pts.at(-1)!.x.toFixed(1)} ${(H - pad).toFixed(1)}`,
+      `L ${pts[0].x.toFixed(1)} ${(H - pad).toFixed(1)} Z`,
+    ].join(" ");
+  };
 
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:12, fontSize:11 }}>
-        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"rgba(217,119,6,0.5)" }} /> Planned</span>
-        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"#16a34a" }} /> Actual Delivered</span>
+        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"rgba(217,119,6,0.5)" }} /> Planned Growth</span>
+        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"#16a34a" }} /> Actual Growth</span>
         <span style={{ color:N.muted, marginLeft:"auto", fontWeight:600 }}>{data.length} batches</span>
       </div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ borderRadius:12 }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ borderRadius:12, background: "#120324", padding: "16px 0", overflow: "visible" }}>
         <defs>
           <linearGradient id="planGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d97706" stopOpacity="0.2" />
+            <stop offset="0%" stopColor="#d97706" stopOpacity="0.25" />
             <stop offset="100%" stopColor="#d97706" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" />
+            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.3" />
             <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* Grid */}
-        {[0.25, 0.5, 0.75, 1].map((f) => (
-          <line key={f} x1={pad} y1={H - pad - f * (H - 2 * pad)} x2={W - pad} y2={H - pad - f * (H - 2 * pad)}
-            stroke={N.border} strokeWidth="1" strokeDasharray="4 4" />
-        ))}
+        {/* Grid lines (Y-axis percentages) */}
+        {[0, 0.25, 0.5, 0.75, 1].map((val) => {
+          const y = H - pad - val * (H - 2 * pad);
+          return (
+            <line key={val} x1={pad} y1={y} x2={W - pad} y2={y} stroke="#230e3d" strokeWidth="1" strokeDasharray="3 3" />
+          );
+        })}
         {/* Planned fill + line */}
-        <path d={makeFill(plannedPts)} fill="url(#planGrad)" />
-        <path d={makePath(plannedPts)} fill="none" stroke="#d97706" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="6 3" />
+        {plannedPts.length > 0 && (
+          <g>
+            <path d={makeFill(plannedPts)} fill="url(#planGrad)" />
+            <path d={makePath(plannedPts)} fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 2" />
+          </g>
+        )}
         {/* Actual fill + line */}
-        <path d={makeFill(actualPts)} fill="url(#actGrad)" />
-        <path d={makePath(actualPts)} fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {actualPts.length > 0 && (
+          <g>
+            <path d={makeFill(actualPts)} fill="url(#actGrad)" />
+            <path d={makePath(actualPts)} fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+        )}
         {/* Hour x-labels */}
         {[0, Math.floor(data.length/4), Math.floor(data.length/2), Math.floor(3*data.length/4), data.length-1]
           .filter((v, i, a) => a.indexOf(v) === i)
           .map((i) => (
-          <text key={i} x={toX(i)} y={H - 2} fill={N.muted} fontSize="9" textAnchor="middle" fontWeight="700">h{data[i]?.hour ?? i}</text>
+          <text key={i} x={toX(i)} y={H - 8} fill="#a78bfa" fontSize="9" textAnchor="middle" fontWeight="700">Hour {data[i]?.hour ?? i}h</text>
         ))}
       </svg>
     </div>
@@ -318,32 +350,74 @@ export default function OrderDetailPage() {
 
       {/* ── Batch event table ── */}
       <div style={{ borderRadius:24, overflow:"hidden", background:N.bg, boxShadow:N.raised }}>
-        <div style={{ padding:20, borderBottom:`1px solid ${N.border}` }}>
-          <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:0 }}>Delivery Batches</h3>
+        <div style={{ padding:20, borderBottom:`1px solid ${N.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:0 }}>Delivery Batches Timeline</h3>
+            <p style={{ fontSize:11, color:N.muted, margin:"2px 0 0", fontWeight:600 }}>Detailed list of all scheduled events and engagement targets</p>
+          </div>
+          <span style={{ padding:"4px 10px", borderRadius:12, fontSize:11, fontWeight:750, color:N.accent, background:"rgba(217,119,6,0.1)", boxShadow:N.raisedSm }}>
+            Total: {chartData.length} Batches
+          </span>
         </div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", textAlign:"left", borderCollapse:"collapse", fontSize:13 }}>
+        <div style={{ overflowY:"auto", maxHeight: 400 }}>
+          <table style={{ width:"100%", textAlign:"left", borderCollapse:"collapse", fontSize:12 }}>
             <thead>
-              <tr style={{ color:N.muted, borderBottom:`1px solid ${N.border}`, fontWeight:850 }}>
-                <th style={{ padding:"10px 16px", textAlign:"left" }}>Hour</th>
-                <th style={{ padding:"10px 16px", textAlign:"left" }}>Views</th>
-                <th style={{ padding:"10px 16px", textAlign:"left" }}>Scheduled</th>
-                <th style={{ padding:"10px 16px", textAlign:"left" }}>Status</th>
+              <tr style={{ color:N.muted, borderBottom:`1px solid ${N.border}`, fontWeight:850, background:"rgba(200, 208, 231, 0.1)" }}>
+                <th style={{ padding:"12px 16px" }}>Batch</th>
+                <th style={{ padding:"12px 16px" }}>Scheduled Time</th>
+                <th style={{ padding:"12px 16px", textAlign:"right" }}>Views</th>
+                {order.engagementEnabled && (
+                  <>
+                    <th style={{ padding:"12px 16px", textAlign:"right" }}>Likes</th>
+                    <th style={{ padding:"12px 16px", textAlign:"right" }}>Saves</th>
+                    <th style={{ padding:"12px 16px", textAlign:"right" }}>Shares</th>
+                    <th style={{ padding:"12px 16px", textAlign:"right" }}>Comments</th>
+                  </>
+                )}
+                <th style={{ padding:"12px 16px", textAlign:"center" }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {chartData.slice(0, 24).map((row, i) => {
+              {chartData.map((row, i) => {
                 const evStyle: Record<string, string> = {
                   DONE:"#16a34a", FAILED:"#dc2626", EXECUTING:"#d97706",
                   SCHEDULED:"#718096", RETRYING:"#2563eb",
                 };
+                
+                const timeText = i === 0 ? "⚡ Instant" : `+${row.hour}h`;
+
+                // Calculate engagement values for this batch based on views proportion
+                const scale = order.viewsTarget > 0 ? row.planned / order.viewsTarget : 0;
+                const bLikes = order.likesTarget > 0 ? Math.round(order.likesTarget * scale) : 0;
+                const bSaves = order.savesTarget > 0 ? Math.round(order.savesTarget * scale) : 0;
+                const bShares = order.sharesTarget > 0 ? Math.round(order.sharesTarget * scale) : 0;
+                const bComments = order.commentsTarget > 0 ? Math.round(order.commentsTarget * scale) : 0;
+
                 return (
-                  <tr key={i} style={{ borderBottom:`1px solid ${N.border}` }}>
-                    <td style={{ padding:"10px 16px", color:N.muted }}>h{row.hour}</td>
-                    <td style={{ padding:"10px 16px", color:N.text, fontWeight:750 }}>{row.planned.toLocaleString()}</td>
-                    <td style={{ padding:"10px 16px", color:N.muted }}>+{row.hour}h</td>
-                    <td style={{ padding:"10px 16px" }}>
-                      <span style={{ fontSize:12, fontWeight:800, color: evStyle[row.status] ?? "#718096" }}>
+                  <tr key={i} style={{ borderBottom:`1px solid ${N.border}`, transition:"background 0.2s" }}>
+                    <td style={{ padding:"12px 16px", color:N.muted, fontWeight:700 }}>#{i + 1}</td>
+                    <td style={{ padding:"12px 16px", color:"#d97706", fontWeight:800 }}>{timeText}</td>
+                    <td style={{ padding:"12px 16px", textAlign:"right", fontWeight:800, color:N.text }}>
+                      {row.planned.toLocaleString()}
+                    </td>
+                    {order.engagementEnabled && (
+                      <>
+                        <td style={{ padding:"12px 16px", textAlign:"right", color: bLikes > 0 ? "#16a34a" : N.muted, fontWeight: bLikes > 0 ? 800 : 500 }}>
+                          {bLikes > 0 ? bLikes.toLocaleString() : "—"}
+                        </td>
+                        <td style={{ padding:"12px 16px", textAlign:"right", color: bSaves > 0 ? "#16a34a" : N.muted, fontWeight: bSaves > 0 ? 800 : 500 }}>
+                          {bSaves > 0 ? bSaves.toLocaleString() : "—"}
+                        </td>
+                        <td style={{ padding:"12px 16px", textAlign:"right", color: bShares > 0 ? "#16a34a" : N.muted, fontWeight: bShares > 0 ? 800 : 500 }}>
+                          {bShares > 0 ? bShares.toLocaleString() : "—"}
+                        </td>
+                        <td style={{ padding:"12px 16px", textAlign:"right", color: bComments > 0 ? "#16a34a" : N.muted, fontWeight: bComments > 0 ? 800 : 500 }}>
+                          {bComments > 0 ? bComments.toLocaleString() : "—"}
+                        </td>
+                      </>
+                    )}
+                    <td style={{ padding:"12px 16px", textAlign:"center" }}>
+                      <span style={{ fontSize:11, fontWeight:850, letterSpacing:"0.03em", color: evStyle[row.status] ?? "#718096" }}>
                         {row.status}
                       </span>
                     </td>
@@ -353,11 +427,6 @@ export default function OrderDetailPage() {
             </tbody>
           </table>
         </div>
-        {chartData.length > 24 && (
-          <div style={{ padding:16, textAlign:"center", fontSize:11, color:N.muted, fontWeight:600 }}>
-            Showing first 24 of {chartData.length} batches
-          </div>
-        )}
       </div>
 
       {/* ── Order info ── */}
