@@ -186,58 +186,160 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
   });
 
   const sum = raw.reduce((a, b) => a + b, 0);
-  let distributed = raw.map((v) => Math.max(0, Math.round((v / sum) * totalViews)));
+
+  let viewsAccumulated = 0;
+  let likesAccumulated = 0;
+  let savesAccumulated = 0;
+  let sharesAccumulated = 0;
+  let commentsAccumulated = 0;
+
+  const distributedViews: number[] = [];
+  const distributedLikes: number[] = [];
+  const distributedSaves: number[] = [];
+  const distributedShares: number[] = [];
+  const distributedComments: number[] = [];
+
+  for (let t = 0; t < totalSteps; t++) {
+    // 1. Calculate theoretical views for this step
+    const theoreticalViewsProgress = sum > 0 ? raw[t] / sum : 0;
+    const targetViewsForStep = totalViews * theoreticalViewsProgress;
+
+    // Apply random views jitter of ±12%
+    let jitteredViews = targetViewsForStep;
+    if (totalViews > 0 && t < totalSteps - 1) {
+      const jitterFactor = 1 + (Math.random() * 2 - 1) * 0.12; // ±12%
+      jitteredViews = targetViewsForStep * jitterFactor;
+    }
+
+    // Round to integer
+    let roundedViews = Math.round(jitteredViews);
+    
+    // Adjust to not exceed remaining target
+    const remainingViews = totalViews - viewsAccumulated;
+    if (t === totalSteps - 1) {
+      roundedViews = remainingViews;
+    } else {
+      roundedViews = Math.min(remainingViews, roundedViews);
+    }
+    roundedViews = Math.max(0, roundedViews);
+    viewsAccumulated += roundedViews;
+    distributedViews.push(roundedViews);
+
+    // 2. Calculate engagement targets for this step with separate random jitter
+    const ratio = totalViews > 0 ? roundedViews / totalViews : 0;
+
+    // Likes (±15% jitter)
+    const likesTarget = engagementEnabled ? (likesRatioPct / 100) * totalViews * ratio : 0;
+    let jitteredLikes = likesTarget;
+    if (likesTarget > 0 && t < totalSteps - 1) {
+      jitteredLikes = likesTarget * (1 + (Math.random() * 2 - 1) * 0.15);
+    }
+    let roundedLikes = Math.round(jitteredLikes);
+    const overallLikesTarget = engagementEnabled ? Math.round((likesRatioPct / 100) * totalViews) : 0;
+    const remainingLikes = overallLikesTarget - likesAccumulated;
+    roundedLikes = t === totalSteps - 1 ? remainingLikes : Math.max(0, Math.min(remainingLikes, roundedLikes));
+    likesAccumulated += roundedLikes;
+    distributedLikes.push(roundedLikes);
+
+    // Saves (±15% jitter)
+    const savesTarget = engagementEnabled ? (savesRatioPct / 100) * totalViews * ratio : 0;
+    let jitteredSaves = savesTarget;
+    if (savesTarget > 0 && t < totalSteps - 1) {
+      jitteredSaves = savesTarget * (1 + (Math.random() * 2 - 1) * 0.15);
+    }
+    let roundedSaves = Math.round(jitteredSaves);
+    const overallSavesTarget = engagementEnabled ? Math.round((savesRatioPct / 100) * totalViews) : 0;
+    const remainingSaves = overallSavesTarget - savesAccumulated;
+    roundedSaves = t === totalSteps - 1 ? remainingSaves : Math.max(0, Math.min(remainingSaves, roundedSaves));
+    savesAccumulated += roundedSaves;
+    distributedSaves.push(roundedSaves);
+
+    // Shares (±15% jitter)
+    const sharesTarget = engagementEnabled ? (sharesRatioPct / 100) * totalViews * ratio : 0;
+    let jitteredShares = sharesTarget;
+    if (sharesTarget > 0 && t < totalSteps - 1) {
+      jitteredShares = sharesTarget * (1 + (Math.random() * 2 - 1) * 0.15);
+    }
+    let roundedShares = Math.round(jitteredShares);
+    const overallSharesTarget = engagementEnabled ? Math.round((sharesRatioPct / 100) * totalViews) : 0;
+    const remainingShares = overallSharesTarget - sharesAccumulated;
+    roundedShares = t === totalSteps - 1 ? remainingShares : Math.max(0, Math.min(remainingShares, roundedShares));
+    sharesAccumulated += roundedShares;
+    distributedShares.push(roundedShares);
+
+    // Comments (±15% jitter)
+    const commentsTarget = engagementEnabled ? (commentsRatioPct / 100) * totalViews * ratio : 0;
+    let jitteredComments = commentsTarget;
+    if (commentsTarget > 0 && t < totalSteps - 1) {
+      jitteredComments = commentsTarget * (1 + (Math.random() * 2 - 1) * 0.15);
+    }
+    let roundedComments = Math.round(jitteredComments);
+    const overallCommentsTarget = engagementEnabled ? Math.round((commentsRatioPct / 100) * totalViews) : 0;
+    const remainingComments = overallCommentsTarget - commentsAccumulated;
+    roundedComments = t === totalSteps - 1 ? remainingComments : Math.max(0, Math.min(remainingComments, roundedComments));
+    commentsAccumulated += roundedComments;
+    distributedComments.push(roundedComments);
+  }
 
   // Enforce SMM minimum limit of 100 views per batch by merging smaller batches
   const SMM_MIN = 100;
   if (totalViews >= SMM_MIN) {
     while (true) {
-      const underMinIdx = distributed.findIndex((v) => v > 0 && v < SMM_MIN);
+      const underMinIdx = distributedViews.findIndex((v) => v > 0 && v < SMM_MIN);
       if (underMinIdx === -1) break;
 
-      const val = distributed[underMinIdx];
-      distributed[underMinIdx] = 0;
+      const val = distributedViews[underMinIdx];
+      distributedViews[underMinIdx] = 0;
 
       let targetIdx = -1;
       const leftIdx = underMinIdx - 1;
       const rightIdx = underMinIdx + 1;
 
-      if (leftIdx >= 0 && rightIdx < distributed.length) {
-        targetIdx = distributed[leftIdx] >= distributed[rightIdx] ? leftIdx : rightIdx;
+      if (leftIdx >= 0 && rightIdx < distributedViews.length) {
+        targetIdx = distributedViews[leftIdx] >= distributedViews[rightIdx] ? leftIdx : rightIdx;
       } else if (leftIdx >= 0) {
         targetIdx = leftIdx;
-      } else if (rightIdx < distributed.length) {
+      } else if (rightIdx < distributedViews.length) {
         targetIdx = rightIdx;
       }
 
       if (targetIdx !== -1) {
-        distributed[targetIdx] += val;
+        distributedViews[targetIdx] += val;
+        // Merge corresponding engagement metrics to keep ratios accurate
+        distributedLikes[targetIdx] += distributedLikes[underMinIdx];
+        distributedSaves[targetIdx] += distributedSaves[underMinIdx];
+        distributedShares[targetIdx] += distributedShares[underMinIdx];
+        distributedComments[targetIdx] += distributedComments[underMinIdx];
+
+        distributedLikes[underMinIdx] = 0;
+        distributedSaves[underMinIdx] = 0;
+        distributedShares[underMinIdx] = 0;
+        distributedComments[underMinIdx] = 0;
       } else {
-        distributed[underMinIdx] = val;
+        distributedViews[underMinIdx] = val;
         break;
       }
     }
   }
 
-  // Fix rounding drift
-  const actual = distributed.reduce((a, b) => a + b, 0);
-  const diff = totalViews - actual;
-  if (diff !== 0) {
-    const lastNonZero = distributed.reduceRight((found, v, i) => found === -1 && v > 0 ? i : found, -1);
-    if (lastNonZero >= 0) distributed[lastNonZero] = Math.max(0, distributed[lastNonZero] + diff);
+  // Fix rounding drift for views
+  const actualViews = distributedViews.reduce((a, b) => a + b, 0);
+  const diffViews = totalViews - actualViews;
+  if (diffViews !== 0) {
+    const lastNonZero = distributedViews.reduceRight((found, v, i) => found === -1 && v > 0 ? i : found, -1);
+    if (lastNonZero >= 0) distributedViews[lastNonZero] = Math.max(0, distributedViews[lastNonZero] + diffViews);
   }
 
-  return distributed.map((views, stepIdx) => {
-    const ratio = totalViews > 0 ? views / totalViews : 0;
+  return distributedViews.map((views, stepIdx) => {
     const stepHourTime = stepIdx / stepsPerHour;
     return {
       hour: stepHourTime,
       scheduledDelayMs: stepIdx * intervalMins * 60 * 1000,
       views,
-      likes:    engagementEnabled ? Math.round((likesRatioPct    / 100) * totalViews * ratio) : 0,
-      saves:    engagementEnabled ? Math.round((savesRatioPct    / 100) * totalViews * ratio) : 0,
-      shares:   engagementEnabled ? Math.round((sharesRatioPct   / 100) * totalViews * ratio) : 0,
-      comments: engagementEnabled ? Math.round((commentsRatioPct / 100) * totalViews * ratio) : 0,
+      likes: distributedLikes[stepIdx],
+      saves: distributedSaves[stepIdx],
+      shares: distributedShares[stepIdx],
+      comments: distributedComments[stepIdx],
     };
   });
 }

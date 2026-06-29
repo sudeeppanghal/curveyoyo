@@ -239,6 +239,13 @@ function CurvePreview({
           {currentPt && (
             <g>
               <line x1={currentPt.x} y1={pad} x2={currentPt.x} y2={H - pad} stroke="#a78bfa" strokeWidth="1.5" strokeDasharray="2 2" opacity="0.6" />
+              <circle cx={currentPt.x} cy={currentPt.y} r="14" fill="none" stroke="#d946ef" strokeWidth="1.5" opacity="0.8">
+                <animate attributeName="r" values="6;22;6" dur="2.4s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8;0;0.8" dur="2.4s" repeatCount="indefinite" />
+              </circle>
+              <circle cx={currentPt.x} cy={currentPt.y} r="6" fill="rgba(217, 70, 239, 0.4)" opacity="0.6">
+                <animate attributeName="r" values="6;14;6" dur="1.8s" repeatCount="indefinite" />
+              </circle>
               <circle cx={currentPt.x} cy={currentPt.y} r="6" fill="#ffffff" stroke="#d946ef" strokeWidth="3" filter="drop-shadow(0 0 6px #d946ef)" />
             </g>
           )}
@@ -376,13 +383,13 @@ function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean 
       <path
         d={pathD}
         fill="none"
-        stroke={active ? N.accent : "#94a3b8"}
-        strokeWidth="2"
+        stroke={active ? "#d946ef" : "#3f1b6d"}
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         style={{
-          filter: active ? `drop-shadow(0 0 3px ${N.accent}80)` : "none",
-          transition: "stroke 0.2s"
+          filter: active ? "drop-shadow(0 0 4px #d946ef)" : "none",
+          transition: "all 0.25s ease"
         }}
       />
     </svg>
@@ -822,51 +829,77 @@ export default function NewReelPage() {
             </div>
           )}
 
-          <div>
-            <p style={{ fontSize:13, fontWeight:700, color:N.text, marginBottom:12 }}>Delivery Style</p>
-            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              {["Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized"].map((cat) => {
-                const catStyles = (Object.keys(CURVE_DESCRIPTIONS) as CurveStyle[]).filter(s => CURVE_DESCRIPTIONS[s].category === cat);
-                if (catStyles.length === 0) return null;
-                return (
-                  <div key={cat}>
-                    <p style={{ fontSize:10, fontWeight:900, color:N.muted, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>{cat}</p>
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))", gap:10 }}>
-                      {catStyles.map((s) => (
-                        <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }} className="neo-btn"
-                          style={{ padding:"14px 6px", borderRadius:14, border:"none", cursor:"pointer", transition:"all 0.2s", display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                            background: N.bg,
-                            color: style === s ? N.accent : N.muted,
-                            boxShadow: style === s ? N.inset : N.raisedSm,
-                          }}>
-                          <span style={{ fontSize:11, fontWeight:805, textAlign:"center" }}>{CURVE_DESCRIPTIONS[s].label}</span>
-                          <MiniCurveChart style={s} active={style === s} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p style={{ fontSize:12, color:N.muted, marginTop:14, fontWeight:600, lineHeight:1.5 }}>{curveInfo.desc}</p>
-          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 32, alignItems: "start", marginTop: 8 }}>
+            {/* Left Column: Delivery Style Grid */}
+            <div style={{
+              background: "#08010f",
+              border: "1px solid #1c0a35",
+              borderRadius: 24,
+              padding: 24,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+              color: "#f3e8ff",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16
+            }}>
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0" }}>3. Drip Pacing & Flow Settings</h3>
+                <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select Organic Pacing Growth Graph</p>
+              </div>
 
-          <CurvePreview
-            views={views}
-            durationHours={durationHours}
-            style={style}
-            warmup={curveInfo.warmup}
-            peak={curveInfo.peak}
-            likesRatio={likesRatio}
-            savesRatio={savesRatio}
-            sharesRatio={sharesRatio}
-            commentsRatio={commentsRatio}
-            likesOn={likesOn}
-            savesOn={savesOn}
-            sharesOn={sharesOn}
-            commentsOn={commentsOn}
-            engEnabled={engEnabled}
-          />
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {["Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized"].map((cat) => {
+                  const catStyles = (Object.keys(CURVE_DESCRIPTIONS) as CurveStyle[]).filter(s => CURVE_DESCRIPTIONS[s].category === cat);
+                  if (catStyles.length === 0) return null;
+                  return (
+                    <div key={cat}>
+                      <p style={{ fontSize: 10, fontWeight: 900, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{cat}</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
+                        {catStyles.map((s) => (
+                          <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }}
+                            style={{
+                              padding: "14px 6px",
+                              borderRadius: 14,
+                              cursor: "pointer",
+                              transition: "all 0.25s ease",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: 6,
+                              background: style === s ? "#1a0636" : "#0c0218",
+                              border: style === s ? "2.5px solid #d946ef" : "1.5px solid #1c0a35",
+                              boxShadow: style === s ? "0 0 15px rgba(217, 70, 239, 0.35)" : "none",
+                              color: style === s ? "#ffffff" : "#a78bfa",
+                            }}>
+                            <span style={{ fontSize: 11, fontWeight: 805, textAlign: "center" }}>{CURVE_DESCRIPTIONS[s].label}</span>
+                            <MiniCurveChart style={s} active={style === s} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right Column: Live Growth Plot */}
+            <CurvePreview
+              views={views}
+              durationHours={durationHours}
+              style={style}
+              warmup={curveInfo.warmup}
+              peak={curveInfo.peak}
+              likesRatio={likesRatio}
+              savesRatio={savesRatio}
+              sharesRatio={sharesRatio}
+              commentsRatio={commentsRatio}
+              likesOn={likesOn}
+              savesOn={savesOn}
+              sharesOn={sharesOn}
+              commentsOn={commentsOn}
+              engEnabled={engEnabled}
+            />
+          </div>
 
           <div style={{ fontSize:12, color:N.muted, textAlign:"center", fontWeight:600 }}>
             ≈ {Math.round(views / durationDays).toLocaleString()} views/day · {durationHours} hourly batches (with ±15m time jitter)
