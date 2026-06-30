@@ -514,6 +514,7 @@ export default function AdminPage() {
 
 
   const [tab, setTab] = useState<AdminTab>("settings");
+  const [panelSubTab, setPanelSubTab] = useState<"defaults" | "accounts">("defaults");
 
 
 
@@ -7997,7 +7998,54 @@ export default function AdminPage() {
 
 
 
-                {/* Form to add admin panel */}
+                
+                <div style={{ display: "flex", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
+                  <button onClick={() => setPanelSubTab("defaults")} style={{ background: panelSubTab === "defaults" ? N.accentBg : "transparent", color: panelSubTab === "defaults" ? "#fff" : N.muted, border: "none", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>⚙️ Default Configurations</button>
+                  <button onClick={() => setPanelSubTab("accounts")} style={{ background: panelSubTab === "accounts" ? N.accentBg : "transparent", color: panelSubTab === "accounts" ? "#fff" : N.muted, border: "none", padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>🔑 API Keys & Accounts</button>
+                </div>
+
+                {panelSubTab === "defaults" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>⚙️ Global SMM Provider Defaults</p>
+                    {adminPanels.length === 0 ? (
+                      <div style={{ padding: "20px 0", textAlign: "center", color: N.muted, fontSize: 12, fontWeight: 700 }}>No providers found. Add an API Key first.</div>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                              {["Provider API URL", "Active API Keys", "Actions"].map((h) => (
+                                <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from(new Set(adminPanels.map(p => p.apiUrl))).map(apiUrl => {
+                              const panelsForUrl = adminPanels.filter(p => p.apiUrl === apiUrl);
+                              const p = panelsForUrl[0]; // First panel to use for configuration ID
+                              return (
+                                <tr key={apiUrl} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
+                                  <td style={{ padding: "12px 16px", fontSize: 12, color: N.text, fontFamily: "monospace", fontWeight: 700 }}>{apiUrl}</td>
+                                  <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: N.accent }}>{panelsForUrl.length} active keys</td>
+                                  <td style={{ padding: "12px 16px" }}>
+                                    <button onClick={() => handleLoadServices(p.id)} className="neo-btn"
+                                      style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
+                                      ⚙️ Configure Default Services
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {panelSubTab === "accounts" && (
+                  <>
+{/* Form to add admin panel */}
 
 
 
@@ -8521,31 +8569,7 @@ export default function AdminPage() {
                                   style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: verifyingPanelId === p.id ? N.muted : "#16a34a", boxShadow: N.raisedSm, cursor: "pointer", opacity: verifyingPanelId === p.id ? 0.7 : 1 }}>
                                   {verifyingPanelId === p.id ? "⏳ Verifying..." : "⚡ Verify Connection"}
                                 </button>
-                                <button onClick={() => handleLoadServices(p.id)} className="neo-btn"
-
-
-
-
-
-
-
-                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
-
-
-
-
-
-
-
-                                  ⚙️ Configure Pricing
-
-
-
-
-
-
-
-                                </button>
+                                
 
 
 
@@ -8649,7 +8673,12 @@ export default function AdminPage() {
 
 
 
+              
+                  </>
+                )}
               </div>
+
+
 
 
 
