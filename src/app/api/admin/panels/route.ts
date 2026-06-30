@@ -9,10 +9,42 @@ function verifyAdmin(request: NextRequest) {
   return request.headers.get("x-admin-secret") === ADMIN_SECRET;
 }
 
-// GET all admin panels (userId = null)
+// GET all admin panels or test connection
 export async function GET(request: NextRequest) {
   if (!verifyAdmin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get("action");
+
+  if (action === "test") {
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    const panel = await prisma.panel.findUnique({ where: { id } });
+    if (!panel) {
+      return NextResponse.json({ error: "Panel not found" }, { status: 404 });
+    }
+
+    const start = Date.now();
+    const res = await getPanelServices(panel.apiUrl, panel.apiKeyEncrypted);
+    const responseMs = Date.now() - start;
+
+    const status = res.ok ? (responseMs > 5000 ? "SLOW" : "ONLINE") : "OFFLINE";
+
+    await prisma.panel.update({
+      where: { id },
+      data: { status: status as any, lastCheckedAt: new Date(), lastResponseMs: responseMs },
+    });
+
+    return NextResponse.json({
+      ok: res.ok,
+      status,
+      error: res.ok ? null : (res.error ?? "Failed to connect to SMM panel API. Please check your API URL and Key."),
+    });
   }
 
   const panels = await prisma.panel.findMany({
