@@ -31,11 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
-    const settings = await prisma.adminSettings.findUnique({ where: { id: "global" } });
-    const minDeposit = settings?.minDeposit ?? 500.0;
-    if (amount < minDeposit) {
-      return NextResponse.json({ error: `Minimum deposit is ₹${minDeposit}` }, { status: 400 });
-    }
+
 
     // Check duplicate UTR
     const existing = await prisma.upiPayment.findUnique({ where: { utr: cleanUtr } });

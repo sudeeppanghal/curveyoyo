@@ -24,11 +24,13 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ users });
 }
 
-/** PATCH /api/admin/users — upgrade or suspend a user */
+/** PATCH /api/admin/users — upgrade, suspend, toggle wallet mode, or update balance */
 export async function PATCH(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { userId, action } = await request.json() as { userId: string; action: "upgrade" | "suspend" | "unsuspend" };
+  const body = await request.json();
+  const { userId, action, balance } = body as { userId: string; action: "upgrade" | "suspend" | "unsuspend" | "toggleWalletMode" | "updateBalance"; balance?: number };
+  
   if (!userId || !action) return NextResponse.json({ error: "userId and action required" }, { status: 400 });
 
   if (action === "upgrade") {
@@ -42,8 +44,25 @@ export async function PATCH(request: NextRequest) {
     ]);
   } else if (action === "suspend") {
     await prisma.user.update({ where: { id: userId }, data: { plan: "SUSPENDED" as Plan } });
-  } else {
+  } else if (action === "unsuspend") {
     await prisma.user.update({ where: { id: userId }, data: { plan: Plan.TRIAL } });
+  } else if (action === "toggleWalletMode") {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { walletMode: !user.walletMode }
+    });
+  } else if (action === "updateBalance") {
+    if (balance === undefined || isNaN(Number(balance))) {
+      return NextResponse.json({ error: "Valid balance amount required" }, { status: 400 });
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { balance: parseFloat(Number(balance).toFixed(2)) }
+    });
+  } else {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });

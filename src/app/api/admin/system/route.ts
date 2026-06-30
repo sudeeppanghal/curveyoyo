@@ -53,10 +53,56 @@ export async function GET(request: NextRequest) {
     _count: { id: true },
   });
 
+  // 4. Calculate Total Deposit (INR)
+  const totalDepositInrRes = await prisma.upiPayment.aggregate({
+    where: { status: "CONFIRMED" },
+    _sum: { amount: true },
+  });
+  const totalDepositInr = totalDepositInrRes._sum.amount ?? 0;
+
+  // 5. Calculate Total Profit and Revenue (INR)
+  const allOrders = await prisma.order.findMany({
+    include: {
+      reel: { select: { platform: true } }
+    }
+  });
+
+  const adminServices = await prisma.adminService.findMany();
+  const rateMap = new Map<string, number>();
+  adminServices.forEach(s => {
+    rateMap.set(`${s.panelId}:${s.platform}:${s.type}`, s.originalRate);
+  });
+
+  let totalProfitInr = 0;
+  let totalRevenueInr = 0;
+
+  for (const order of allOrders) {
+    totalRevenueInr += order.priceCharged;
+    
+    let providerCostUsd = 0;
+    const panelId = order.panelId;
+    const platform = order.reel?.platform;
+    
+    if (panelId && platform) {
+      const getOriginalRate = (type: string) => rateMap.get(`${panelId}:${platform}:${type}`) ?? 0;
+      providerCostUsd += (order.viewsTarget / 1000) * getOriginalRate("views");
+      providerCostUsd += (order.likesTarget / 1000) * getOriginalRate("likes");
+      providerCostUsd += (order.savesTarget / 1000) * getOriginalRate("saves");
+      providerCostUsd += (order.sharesTarget / 1000) * getOriginalRate("shares");
+      providerCostUsd += (order.commentsTarget / 1000) * getOriginalRate("comments");
+    }
+    
+    const providerCostInr = providerCostUsd * 83;
+    totalProfitInr += (order.priceCharged - providerCostInr);
+  }
+
   return NextResponse.json({
     events,
     panels,
     orderStats: orderStats.map((s) => ({ status: s.status, count: s._count.id })),
     eventStats: eventStats.map((s) => ({ status: s.status, count: s._count.id })),
+    totalDepositInr,
+    totalRevenueInr,
+    totalProfitInr,
   });
 }

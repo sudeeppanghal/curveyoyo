@@ -207,6 +207,9 @@ interface User {
 
 
   subscription: { status: string; paidAt: string } | null;
+  walletMode: boolean;
+  balance: number;
+
 
 
 
@@ -678,7 +681,31 @@ export default function AdminPage() {
 
 
 
-  }>({ events: [], panels: [], orderStats: [], eventStats: [] });
+    totalDepositInr?: number;
+
+
+
+
+
+
+
+    totalRevenueInr?: number;
+
+
+
+
+
+
+
+    totalProfitInr?: number;
+
+
+
+
+
+
+
+  }>({ events: [], panels: [], orderStats: [], eventStats: [], totalDepositInr: 0, totalRevenueInr: 0, totalProfitInr: 0 });
 
 
 
@@ -3094,7 +3121,7 @@ export default function AdminPage() {
 
 
 
-  const userAction = async (userId: string, action: "upgrade" | "suspend" | "unsuspend") => {
+  const userAction = async (userId: string, action: string, extra?: any) => {
 
 
 
@@ -3102,7 +3129,7 @@ export default function AdminPage() {
 
 
 
-    await fetch("/api/admin/users", { method: "PATCH", headers, body: JSON.stringify({ userId, action }) });
+    await fetch("/api/admin/users", { method: "PATCH", headers, body: JSON.stringify({ userId, action, ...extra }) });
 
 
 
@@ -4718,7 +4745,7 @@ export default function AdminPage() {
 
 
 
-            ["💎", "Lifetime Users", users.filter((u) => u.plan === "LIFETIME").length],
+            ["💎", "Total Deposit", `₹ ${(systemData.totalDepositInr ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`],
 
 
 
@@ -4726,7 +4753,7 @@ export default function AdminPage() {
 
 
 
-            ["🔄", "Free Trial Users", users.filter((u) => u.plan === "FREE" || u.plan === "TRIAL").length],
+            ["📈", "Total Revenue", `₹ ${(systemData.totalRevenueInr ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`],
 
 
 
@@ -4734,7 +4761,7 @@ export default function AdminPage() {
 
 
 
-            ["💰", "Platform Revenue", `$${payments.filter((p) => p.status === "CONFIRMED").reduce((a, p) => a + (p.amountUsdt ?? 0), 0).toFixed(0)} USDT`],
+            ["💰", "Total Profit", `₹ ${(systemData.totalProfitInr ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`],
 
 
 
@@ -6470,7 +6497,7 @@ export default function AdminPage() {
 
 
 
-                        {["Email", "Created At", "Plan Status", "Connected Panels", "Campaigns Count", "Actions"].map((h) => (
+                        {["Email", "Created At", "Wallet Mode", "Wallet Balance", "Plan Status", "Connected Panels", "Campaigns Count", "Actions"].map((h) => (
 
 
 
@@ -6550,7 +6577,63 @@ export default function AdminPage() {
 
 
 
+                          
+                          {/* Wallet Mode Toggle */}
                           <td style={{ padding: "14px 24px" }}>
+                            <button
+                              onClick={() => userAction(u.id, "toggleWalletMode")}
+                              className="neo-btn"
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: 8,
+                                border: "none",
+                                background: u.walletMode ? "rgba(168,85,247,0.15)" : N.bg,
+                                color: u.walletMode ? "#a855f7" : N.muted,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                boxShadow: N.raisedSm,
+                                cursor: "pointer"
+                              }}
+                            >
+                              {u.walletMode ? "✓ Wallet ON" : "Wallet OFF"}
+                            </button>
+                          </td>
+
+                          {/* Wallet Balance Edit */}
+                          <td style={{ padding: "14px 24px" }}>
+                            {u.walletMode ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>
+                                  ₹ {(u.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    const newBal = prompt(`Enter new balance for ${u.email}:`, String(u.balance ?? 0));
+                                    if (newBal !== null && !isNaN(Number(newBal))) {
+                                      userAction(u.id, "updateBalance", { balance: Number(newBal) });
+                                    }
+                                  }}
+                                  className="neo-btn"
+                                  style={{
+                                    border: "none",
+                                    background: N.bg,
+                                    padding: "3px 6px",
+                                    borderRadius: 6,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: N.accent,
+                                    boxShadow: N.raisedSm,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: 12, color: N.muted, fontWeight: 600 }}>—</span>
+                            )}
+                          </td>
+<td style={{ padding: "14px 24px" }}>
 
 
 
