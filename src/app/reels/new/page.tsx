@@ -905,25 +905,9 @@ export default function NewReelPage() {
     customSchedule.forEach((batch, idx) => {
       const batchNum = idx + 1;
       const minV = getMinLimit("views");
-      const minL = getMinLimit("likes");
-      const minSa = getMinLimit("saves");
-      const minSh = getMinLimit("shares");
-      const minC = getMinLimit("comments");
 
       if (batch.views > 0 && batch.views < minV) {
         errors.push(`Batch #${batchNum}: Views (${batch.views}) is below service minimum (${minV})`);
-      }
-      if (batch.likes > 0 && batch.likes < minL) {
-        errors.push(`Batch #${batchNum}: Likes (${batch.likes}) is below service minimum (${minL})`);
-      }
-      if (batch.saves > 0 && batch.saves < minSa) {
-        errors.push(`Batch #${batchNum}: Saves (${batch.saves}) is below service minimum (${minSa})`);
-      }
-      if (batch.shares > 0 && batch.shares < minSh) {
-        errors.push(`Batch #${batchNum}: Shares (${batch.shares}) is below service minimum (${minSh})`);
-      }
-      if (batch.comments > 0 && batch.comments < minC) {
-        errors.push(`Batch #${batchNum}: Comments (${batch.comments}) is below service minimum (${minC})`);
       }
     });
     return errors;
