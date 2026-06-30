@@ -10723,7 +10723,8 @@ export default function AdminPage() {
 
 
 
-                              <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
+                              <p style={{ fontSize: 10, fontFamily: "monospace", color: N.muted, margin: "2px 0" }}>ID: {o.id}</p>
+                               <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
 
 
 

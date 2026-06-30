@@ -262,7 +262,7 @@ export default function DashboardPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Target reel URL */}
               <div style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600 }}>
-                🎬 {runningCampaign.order.reel.platform} ·{" "}
+                🎬 {runningCampaign.order.reel.platform} · ID: <span style={{ fontFamily: "monospace", color: "#f3e8ff", userSelect: "all" }}>{runningCampaign.order.id}</span> ·{" "}
                 <span style={{ color: "#f3e8ff", fontWeight: 700 }}>
                   {runningCampaign.order.reel.url.length > 50
                     ? runningCampaign.order.reel.url.slice(0, 50) + "..."
@@ -364,8 +364,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Connected SMM Panels Widget */}
-      {panels.length > 0 && (
+      {/* Connected SMM Panels Widget */}
+      {!walletMode && panels.length > 0 && (
         <div style={{ animation: "fadeUp 0.3s ease" }}>
           <p style={{ fontSize:11, fontWeight:800, color:N.muted, textTransform:"uppercase", letterSpacing:"0.12em", margin:"0 0 14px" }}>🔋 Connected SMM Panels</p>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:16 }}>

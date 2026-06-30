@@ -184,7 +184,7 @@ export default function OrdersPage() {
                         {o.reel.url.length > 36 ? o.reel.url.slice(0, 36) + "…" : o.reel.url}
                       </a>
                       <p style={{ fontSize: 11, color: N.muted, margin: "2px 0 0", fontWeight: 600 }}>
-                        {new Date(o.createdAt).toLocaleDateString()} · {CURVE_LABELS[o.curveStyle] ?? o.curveStyle}
+                        ID: <span style={{ fontFamily: "monospace", color: N.text, userSelect: "all" }}>{o.id}</span> · {new Date(o.createdAt).toLocaleDateString()} · {CURVE_LABELS[o.curveStyle] ?? o.curveStyle}
                       </p>
                     </div>
                   </div>
