@@ -313,7 +313,7 @@ interface Payment {
 
 
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets";
 
 
 
@@ -618,6 +618,7 @@ export default function AdminPage() {
 
 
   const [users, setUsers] = useState<User[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
 
 
 
@@ -1240,62 +1241,14 @@ export default function AdminPage() {
 
 
 
-      const [uRes, pRes, oRes, sysRes, upiRes, apRes] = await Promise.all([
-
-
-
-
-
-
-
+      const [uRes, pRes, oRes, sysRes, upiRes, apRes, tRes] = await Promise.all([
         fetch("/api/admin/users",    { headers }),
-
-
-
-
-
-
-
         fetch("/api/admin/payments", { headers }),
-
-
-
-
-
-
-
         fetch("/api/admin/orders",   { headers }),
-
-
-
-
-
-
-
         fetch("/api/admin/system",   { headers }),
-
-
-
-
-
-
-
         fetch("/api/admin/upi-payments", { headers }),
-
-
-
-
-
-
-
         fetch("/api/admin/panels",   { headers }),
-
-
-
-
-
-
-
+        fetch("/api/tickets",        { headers }),
       ]);
 
 
@@ -1329,6 +1282,7 @@ export default function AdminPage() {
 
 
       if (sysRes.ok) { const sys = await sysRes.json(); setSystemData(sys ?? { events: [], panels: [], orderStats: [], eventStats: [] }); }
+      if (tRes && tRes.ok) { const tData = await tRes.json(); setTickets(tData.tickets ?? []); }
 
 
 
@@ -5017,7 +4971,7 @@ export default function AdminPage() {
 
 
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets"] as AdminTab[]).map((t) => {
 
 
 
@@ -5081,14 +5035,8 @@ export default function AdminPage() {
 
 
 
-              system: "⚡ "
-
-
-
-
-
-
-
+              system: "⚡ ",
+              tickets: "✉️ "
             };
 
 
@@ -11938,6 +11886,91 @@ export default function AdminPage() {
 
 
 
+          )}
+
+          {tab === "tickets" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Support Tickets Inbox</h2>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Inspect and resolve user support tickets</p>
+              </div>
+
+              {tickets.length === 0 ? (
+                <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No support tickets submitted</div>
+              ) : (
+                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                        {["Ticket ID", "User Email", "Subject", "Message Detail", "Status", "Actions"].map((h) => (
+                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tickets.map((t) => {
+                        const badgeColor = t.status === "OPEN" ? "#d97706" : t.status === "RESOLVED" ? "#16a34a" : "#718096";
+                        return (
+                          <tr key={t.id} style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                            <td style={{ padding: "14px 24px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text }}>{t.id}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{t.user?.email || "Unknown"}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: N.text }}>{t.subject}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, maxWidth: 300, whiteSpace: "pre-wrap" }}>{t.message}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: badgeColor, background: `${badgeColor}10`, padding: "4px 8px", borderRadius: 12, border: `1px solid ${badgeColor}20` }}>
+                                {t.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "14px 24px" }}>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                {t.status === "OPEN" && (
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm("Mark this ticket as resolved?")) return;
+                                      const res = await fetch("/api/admin/tickets", {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+                                        body: JSON.stringify({ id: t.id, status: "RESOLVED" }),
+                                      });
+                                      if (res.ok) {
+                                        setTickets(prev => prev.map(pt => pt.id === t.id ? { ...pt, status: "RESOLVED" } : pt));
+                                      }
+                                    }}
+                                    className="neo-btn"
+                                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#ffffff", background: "#16a34a", border: "none", cursor: "pointer" }}
+                                  >
+                                    Resolve
+                                  </button>
+                                )}
+                                {t.status !== "CLOSED" && (
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm("Close this ticket?")) return;
+                                      const res = await fetch("/api/admin/tickets", {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+                                        body: JSON.stringify({ id: t.id, status: "CLOSED" }),
+                                      });
+                                      if (res.ok) {
+                                        setTickets(prev => prev.map(pt => pt.id === t.id ? { ...pt, status: "CLOSED" } : pt));
+                                      }
+                                    }}
+                                    className="neo-btn"
+                                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#ffffff", background: "#dc2626", border: "none", cursor: "pointer" }}
+                                  >
+                                    Close
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
 
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { triggerMidwayRefund } from "@/lib/delivery/refund";
 
 /**
  * GET /api/delivery/status/[orderId]
@@ -117,6 +118,10 @@ export async function PATCH(
     where: { orderId, status: "SCHEDULED" },
     data: { status: "FAILED", errorMessage: `Order ${newStatus.toLowerCase()} by user` },
   });
+
+  if (action === "cancel") {
+    await triggerMidwayRefund(orderId);
+  }
 
   return NextResponse.json({ ok: true, status: newStatus });
 }

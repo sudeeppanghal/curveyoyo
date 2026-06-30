@@ -37,6 +37,7 @@ model User {
   serviceConfigs  ServiceConfig[]
   curveTemplates  CurveTemplate[]
   upiPayments     UpiPayment[]
+  supportTickets  SupportTicket[]
 
   @@map("users")
 }
@@ -385,6 +386,20 @@ model AdminService {
 
   @@unique([panelId, platform, type])
   @@map("admin_services")
+}
+
+// ─────────────── SUPPORT TICKET ───────────────────────────────
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  message   String
+  status    String   @default("OPEN") // "OPEN", "RESOLVED", "CLOSED"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("support_tickets")
 }
 
 
