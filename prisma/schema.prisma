@@ -130,7 +130,7 @@ model Order {
   reelId          String   @map("reel_id")
   reel            Reel     @relation(fields: [reelId], references: [id])
   panelId         String?  @map("panel_id")
-  panel           Panel?   @relation(fields: [panelId], references: [id])
+  panel           Panel?   @relation(fields: [panelId], references: [id], onDelete: SetNull)
 
   // View targets
   viewsTarget       Int      @map("views_target")
@@ -204,8 +204,8 @@ model DeliveryEvent {
   id              String   @id @default(cuid())
   orderId         String   @map("order_id")
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  panelId         String   @map("panel_id")
-  panel           Panel    @relation(fields: [panelId], references: [id])
+  panelId         String?  @map("panel_id")
+  panel           Panel?   @relation(fields: [panelId], references: [id], onDelete: SetNull)
 
   viewsBatch      Int      @map("views_batch")
   scheduledAt     DateTime @map("scheduled_at")

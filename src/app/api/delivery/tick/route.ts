@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 interface TickPayload {
   eventId: string;
   orderId: string;
-  panelId: string;
+  panelId: string | null;
   viewsBatch: number;
   reelUrl: string;
   platform?: string; // "instagram" | "tiktok" | "youtube"
@@ -66,7 +66,7 @@ async function handler(request: NextRequest) {
   const body = await request.json() as TickPayload;
   const { eventId, orderId, panelId, viewsBatch, reelUrl, platform = "instagram" } = body;
 
-  if (!eventId || !orderId || !panelId || !viewsBatch || !reelUrl) {
+  if (!eventId || !orderId || !viewsBatch || !reelUrl) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -76,18 +76,34 @@ async function handler(request: NextRequest) {
     data: { status: "EXECUTING", executedAt: new Date() },
   });
 
-  // Load panel
-  const panel = await prisma.panel.findUnique({ where: { id: panelId } });
-  if (!panel) {
-    await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: "Panel not found" } });
-    return NextResponse.json({ ok: false, error: "Panel not found" }, { status: 404 });
-  }
-
   // Load order with current delivery state
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { reel: true, user: true } });
   if (!order) {
     await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: "Order not found" } });
     return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 });
+  }
+
+  // Load panel or find failover immediately if panelId is missing
+  let panel = panelId ? await prisma.panel.findUnique({ where: { id: panelId } }) : null;
+  if (!panel) {
+    // Jump straight to failover if panel was deleted or missing
+    const isWallet = order.user.walletMode;
+    panel = await prisma.panel.findFirst({
+      where: {
+        userId: isWallet ? null : order.userId,
+        isActive: true,
+        status: { not: "OFFLINE" }
+      },
+      orderBy: { priority: "asc" },
+    });
+    
+    if (!panel) {
+      await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: "No active panel available" } });
+      return NextResponse.json({ ok: false, error: "No active panel available" }, { status: 404 });
+    }
+    
+    // Update the event to point to the failover panel
+    await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: panel.id } });
   }
 
   const svcIds = panel.serviceIds as ServiceIds | null;
@@ -114,9 +130,9 @@ async function handler(request: NextRequest) {
   // ── Failover if primary panel fails ──────────────────────────
   let activePanel = panel;
   if (!result.ok) {
-    await cachePanelStatus(panelId, "OFFLINE");
+    await cachePanelStatus(panel.id, "OFFLINE");
     await prisma.panel.update({
-      where: { id: panelId },
+      where: { id: panel.id },
       data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
     });
 
@@ -125,7 +141,7 @@ async function handler(request: NextRequest) {
       where: {
         userId: isWallet ? null : order.userId,
         isActive: true,
-        id: { not: panelId },
+        id: { not: panel.id },
         status: { not: "OFFLINE" }
       },
       orderBy: { priority: "asc" },
@@ -253,7 +269,7 @@ async function handler(request: NextRequest) {
   }
 
   // ── 3. Record success in DB ───────────────────────────────────
-  await cachePanelStatus(panelId, responseMs > 5000 ? "SLOW" : "ONLINE");
+  await cachePanelStatus(panel.id, responseMs > 5000 ? "SLOW" : "ONLINE");
 
   const engPanelOrderIds = (engagementDelivered as any).engagementPanelOrderIds || {};
   const cleanedEngagementFired = {
@@ -316,7 +332,7 @@ async function handler(request: NextRequest) {
   }
 
   await prisma.panel.update({
-    where: { id: panelId },
+    where: { id: panel.id },
     data: { status: responseMs > 5000 ? "SLOW" : "ONLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
   });
 

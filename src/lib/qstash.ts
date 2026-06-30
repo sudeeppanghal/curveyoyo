@@ -16,7 +16,7 @@ export function getQStashClient(): Client {
 export async function scheduleDeliveryTick(payload: {
   eventId: string;
   orderId: string;
-  panelId: string;
+  panelId: string | null;
   viewsBatch: number;
   reelUrl: string;
 }, delaySeconds: number): Promise<{ messageId: string }> {
