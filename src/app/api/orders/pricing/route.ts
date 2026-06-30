@@ -17,8 +17,8 @@ export async function GET() {
     return NextResponse.json({ walletMode: false });
   }
 
-  // Fetch active admin panel
-  const adminPanel = await prisma.panel.findFirst({
+  // Fetch active admin panels
+  const activeAdminPanels = await prisma.panel.findMany({
     where: { userId: null, isActive: true },
     orderBy: { priority: "asc" },
   });
@@ -29,10 +29,21 @@ export async function GET() {
     YOUTUBE: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
   };
 
-  if (adminPanel) {
-    const adminServices = await prisma.adminService.findMany({
-      where: { panelId: adminPanel.id },
+  let adminPanel = activeAdminPanels[0];
+  let adminServices: any[] = [];
+
+  for (const p of activeAdminPanels) {
+    const svcs = await prisma.adminService.findMany({
+      where: { panelId: p.id },
     });
+    if (svcs.length > 0) {
+      adminPanel = p;
+      adminServices = svcs;
+      break;
+    }
+  }
+
+  if (adminPanel && adminServices.length > 0) {
 
     for (const s of adminServices) {
       const platform = s.platform;

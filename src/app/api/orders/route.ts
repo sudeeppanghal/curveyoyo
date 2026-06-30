@@ -82,20 +82,30 @@ export async function POST(request: NextRequest) {
     : { likesTarget: 0, savesTarget: 0, sharesTarget: 0, commentsTarget: 0 };
 
   if (isWalletUser) {
-    // 1. Fetch active admin panel
-    const adminPanel = await prisma.panel.findFirst({
+    // 1. Fetch active admin panels in priority order
+    const activeAdminPanels = await prisma.panel.findMany({
       where: { userId: null, isActive: true },
       orderBy: { priority: "asc" },
     });
-    if (!adminPanel) {
+    if (activeAdminPanels.length === 0) {
       return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
     }
-    primaryPanel = adminPanel;
 
-    // 2. Fetch admin services custom rates
-    const adminServices = await prisma.adminService.findMany({
-      where: { panelId: adminPanel.id, platform: (platform as string).toUpperCase() as any },
-    });
+    // Find the first panel that has mapped admin services configured for this platform
+    let adminPanel = activeAdminPanels[0];
+    let adminServices: any[] = [];
+    for (const p of activeAdminPanels) {
+      const svcs = await prisma.adminService.findMany({
+        where: { panelId: p.id, platform: (platform as string).toUpperCase() as any },
+      });
+      if (svcs.length > 0) {
+        adminPanel = p;
+        adminServices = svcs;
+        break;
+      }
+    }
+
+    primaryPanel = adminPanel;
 
     const getRate = (type: string, fallback: number) => {
       const s = adminServices.find(x => x.type === type);
@@ -139,18 +149,7 @@ export async function POST(request: NextRequest) {
       if (batch.views > 0 && batch.views < 100) {
         return NextResponse.json({ error: "Each batch must have at least 100 views, or 0 to skip" }, { status: 400 });
       }
-      if (batch.likes > 0 && batch.likes < 10) {
-        return NextResponse.json({ error: "Likes on each dot must be at least 10, or 0 to skip" }, { status: 400 });
-      }
-      if (batch.saves > 0 && batch.saves < 10) {
-        return NextResponse.json({ error: "Saves on each dot must be at least 10, or 0 to skip" }, { status: 400 });
-      }
-      if (batch.shares > 0 && batch.shares < 10) {
-        return NextResponse.json({ error: "Shares on each dot must be at least 10, or 0 to skip" }, { status: 400 });
-      }
-      if (batch.comments > 0 && batch.comments < 5) {
-        return NextResponse.json({ error: "Comments on each dot must be at least 5, or 0 to skip" }, { status: 400 });
-      }
+
     }
   }
 
