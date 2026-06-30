@@ -6,7 +6,7 @@
 
 
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 
 
@@ -753,6 +753,7 @@ export default function AdminPage() {
   const [adminPanels, setAdminPanels] = useState<any[]>([]);
   const [verifyingPanelId, setVerifyingPanelId] = useState<string | null>(null);
   const [verificationResult, setVerificationResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
 
 
 
@@ -1252,7 +1253,7 @@ export default function AdminPage() {
 
 
 
-        fetch("/api/admin/payments", { headers }), // will fetch UPI payments if we routing correctly, wait we create /api/admin/payments as GET
+        fetch("/api/admin/upi-payments", { headers }),
 
 
 
@@ -1748,7 +1749,7 @@ export default function AdminPage() {
 
 
 
-      const res = await fetch("/api/admin/payments", {
+      const res = await fetch("/api/admin/upi-payments", {
 
 
 
@@ -7205,7 +7206,7 @@ export default function AdminPage() {
 
 
 
-                              <code style={{ fontSize: 12, fontWeight: 700, color: N.accent }}>{p.txHash.slice(0, 20)}…</code>
+                              <code style={{ fontSize: 12, fontWeight: 700, color: N.accent }}>{p.txHash ? `${p.txHash.slice(0, 20)}…` : "—"}</code>
 
 
 
@@ -11680,261 +11681,139 @@ export default function AdminPage() {
 
 
                   <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-
-
-
-
-
-
-
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-
-
-
-
-
-
-
-                      <thead>
-
-
-
-
-
-
-
-                        <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
-
-
-
-
-
-
-
-                          {["Campaign User / Reel", "Batch Size", "Panel Provider", "Scheduled", "Status", "Diagnostics"].map((h) => (
-
-
-
-
-
-
-
-                            <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-
-
-
-
-
-
-
-                          ))}
-
-
-
-
-
-
-
-                        </tr>
-
-
-
-
-
-
-
-                      </thead>
-
-
-
-
-
-
-
-                      <tbody>
-
-
-
-
-
-
-
-                        {systemData.events.map((e) => {
-
-
-
-
-
-
-
-                          const statusColors: Record<string, string> = { DONE: "#16a34a", FAILED: "#dc2626", SCHEDULED: "#718096", EXECUTING: "#d97706", RETRYING: "#4f46e5" };
-
-
-
-
-
-
-
-                          return (
-
-
-
-
-
-
-
-                            <tr key={e.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-
-
-
-
-
-
-
-                              <td style={{ padding: "12px 24px" }}>
-
-
-
-
-
-
-
-                                <p style={{ fontSize: 13, fontWeight: 700, color: N.text, margin: 0 }}>{e.order?.user?.email}</p>
-
-
-
-
-
-
-
-                                <p style={{ fontSize: 11, color: N.muted, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>{e.order?.reel?.url}</p>
-
-
-
-
-
-
-
-                              </td>
-
-
-
-
-
-
-
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 750, color: N.text }}>{(e.viewsBatch ?? 0).toLocaleString()} views</td>
-
-
-
-
-
-
-
-                              <td style={{ padding: "12px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{e.panel?.name}</td>
-
-
-
-
-
-
-
-                              <td style={{ padding: "12px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(e.scheduledAt).toLocaleTimeString()}</td>
-
-
-
-
-
-
-
-                              <td style={{ padding: "12px 24px" }}>
-
-
-
-
-
-
-
-                                <strong style={{ fontSize: 12, color: statusColors[e.status] ?? N.muted }}>{e.status}</strong>
-
-
-
-
-
-
-
-                              </td>
-
-
-
-
-
-
-
-                              <td style={{ padding: "12px 24px", fontSize: 12, color: "#dc2626", fontWeight: 700, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.errorMessage ?? ""}>
-
-
-
-
-
-
-
-                                {e.errorMessage ?? "—"}
-
-
-
-
-
-
-
-                              </td>
-
-
-
-
-
-
-
+                    {(() => {
+                      const groupedOrders: Record<string, {
+                        orderId: string;
+                        email: string;
+                        url: string;
+                        events: any[];
+                      }> = {};
+
+                      systemData.events.forEach((e) => {
+                        const orderId = e.orderId || e.order?.id || "unknown";
+                        if (!groupedOrders[orderId]) {
+                          groupedOrders[orderId] = {
+                            orderId,
+                            email: e.order?.user?.email || "Unknown User",
+                            url: e.order?.reel?.url || "No URL",
+                            events: []
+                          };
+                        }
+                        groupedOrders[orderId].events.push(e);
+                      });
+
+                      const groupedList = Object.values(groupedOrders);
+
+                      return (
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                          <thead>
+                            <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
+                              {["Order ID", "Campaign User", "Reel / Video URL", "Total Ticks", "Last Run Status", "Actions"].map((h) => (
+                                <th key={h} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                              ))}
                             </tr>
+                          </thead>
+                          <tbody>
+                            {groupedList.map((g) => {
+                              const isExpanded = expandedOrders[g.orderId] || false;
+                              const lastEvent = g.events[0];
+                              const statusColors: Record<string, string> = { DONE: "#16a34a", FAILED: "#dc2626", SCHEDULED: "#718096", EXECUTING: "#d97706", RETRYING: "#4f46e5" };
 
-
-
-
-
-
-
-                          );
-
-
-
-
-
-
-
-                        })}
-
-
-
-
-
-
-
-                      </tbody>
-
-
-
-
-
-
-
-                    </table>
-
-
-
-
-
-
-
+                              return (
+                                <React.Fragment key={g.orderId}>
+                                  <tr className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                                    <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 900, color: N.text }}>
+                                      <span
+                                        onClick={() => setExpandedOrders(prev => ({ ...prev, [g.orderId]: !isExpanded }))}
+                                        style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, color: N.accent }}
+                                      >
+                                        {isExpanded ? "▼" : "▶"} {g.orderId}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{g.email}</td>
+                                    <td style={{ padding: "14px 24px" }}>
+                                      {g.url && g.url !== "No URL" ? (
+                                        <a href={g.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
+                                          {g.url.length > 50 ? `${g.url.slice(0, 50)}…` : g.url}
+                                        </a>
+                                      ) : (
+                                        <span style={{ fontSize: 12, color: N.muted }}>No URL</span>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>
+                                      {g.events.length} ticks
+                                    </td>
+                                    <td style={{ padding: "14px 24px" }}>
+                                      {lastEvent ? (
+                                        <strong style={{ fontSize: 12, color: statusColors[lastEvent.status] ?? N.muted }}>
+                                          {lastEvent.status}
+                                        </strong>
+                                      ) : "—"}
+                                    </td>
+                                    <td style={{ padding: "14px 24px" }}>
+                                      <button
+                                        onClick={() => setExpandedOrders(prev => ({ ...prev, [g.orderId]: !isExpanded }))}
+                                        className="neo-btn"
+                                        style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: N.text, boxShadow: N.raisedSm, cursor: "pointer" }}
+                                      >
+                                        {isExpanded ? "Hide Details" : "Show Details"}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                  {isExpanded && (
+                                    <tr style={{ background: "rgba(8,1,15,0.4)" }}>
+                                      <td colSpan={6} style={{ padding: "16px 24px" }}>
+                                        <div style={{ border: `1.5px solid #1c0a35`, borderRadius: 16, padding: 20, background: "#0c0218", boxShadow: N.inset }}>
+                                          <h4 style={{ margin: "0 0 12px 0", color: "#f3e8ff", fontSize: 13, fontWeight: 900 }}>
+                                            📋 Webhook Delivery Ticks Log for Order ID: <span style={{ color: N.accent }}>{g.orderId}</span>
+                                          </h4>
+                                          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                            <thead>
+                                              <tr style={{ borderBottom: `1px solid #1c0a35`, color: "#a78bfa" }}>
+                                                <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>Tick Scheduled Time</th>
+                                                <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>Batch Views</th>
+                                                <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>SMM Provider</th>
+                                                <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>Status</th>
+                                                <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>Diagnostics / Failure Reason</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {g.events.map((evt) => {
+                                                return (
+                                                  <tr key={evt.id} style={{ borderBottom: `1px solid rgba(28,10,53,0.3)` }}>
+                                                    <td style={{ padding: "8px 12px", fontSize: 12, color: "#f3e8ff" }}>
+                                                      {new Date(evt.scheduledAt).toLocaleString()}
+                                                    </td>
+                                                    <td style={{ padding: "8px 12px", fontSize: 12, fontWeight: 700, color: "#f3e8ff" }}>
+                                                      {(evt.viewsBatch ?? 0).toLocaleString()} views
+                                                    </td>
+                                                    <td style={{ padding: "8px 12px", fontSize: 12, color: "#a78bfa" }}>
+                                                      {evt.panel?.name || "Unknown"}
+                                                    </td>
+                                                    <td style={{ padding: "8px 12px", fontSize: 12 }}>
+                                                      <strong style={{ color: statusColors[evt.status] ?? N.muted }}>
+                                                        {evt.status}
+                                                      </strong>
+                                                    </td>
+                                                    <td style={{ padding: "8px 12px", fontSize: 12, color: evt.status === "FAILED" ? "#dc2626" : "#f3e8ff", fontWeight: 600, maxWidth: 350, wordBreak: "break-word", whiteSpace: "normal" }}>
+                                                      {evt.errorMessage || "—"}
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      );
+                    })()}
                   </div>
 
 

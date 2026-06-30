@@ -3,17 +3,12 @@ import { prisma } from "@/lib/prisma";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
-function verifyAdmin(request: NextRequest) {
-  return request.headers.get("x-admin-secret") === ADMIN_SECRET;
-}
-
-// GET all UPI payments
 export async function GET(request: NextRequest) {
-  if (!verifyAdmin(request)) {
+  if (request.headers.get("x-admin-secret") !== ADMIN_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const payments = await prisma.upiPayment.findMany({
+  const payments = await prisma.cryptoPayment.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       user: {
@@ -23,77 +18,8 @@ export async function GET(request: NextRequest) {
         },
       },
     },
-    take: 200,
+    take: 500,
   });
 
   return NextResponse.json({ payments });
-}
-
-// POST approve/reject a UPI payment
-export async function POST(request: NextRequest) {
-  if (!verifyAdmin(request)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const body = await request.json();
-  const { paymentId, action, rejectedReason } = body as { paymentId: string; action: "approve" | "reject"; rejectedReason?: string };
-
-  if (!paymentId || !action) {
-    return NextResponse.json({ error: "paymentId and action are required" }, { status: 400 });
-  }
-
-  const payment = await prisma.upiPayment.findUnique({
-    where: { id: paymentId },
-    include: { user: true },
-  });
-
-  if (!payment) {
-    return NextResponse.json({ error: "Payment record not found" }, { status: 404 });
-  }
-
-  if (payment.status !== "PENDING") {
-    return NextResponse.json({ error: `Payment is already ${payment.status}` }, { status: 400 });
-  }
-
-  if (action === "approve") {
-    // Approve: increment user balance + set payment status CONFIRMED
-    await prisma.$transaction([
-      prisma.upiPayment.update({
-        where: { id: paymentId },
-        data: { status: "CONFIRMED" },
-      }),
-      prisma.user.update({
-        where: { id: payment.userId },
-        data: { balance: { increment: payment.amount } },
-      }),
-      prisma.auditLog.create({
-        data: {
-          userId: payment.userId,
-          action: "UPI_DEPOSIT_APPROVED",
-          metadata: { paymentId, amount: payment.amount, utr: payment.utr },
-        },
-      }),
-    ]);
-
-    return NextResponse.json({ ok: true, status: "CONFIRMED" });
-  } else if (action === "reject") {
-    // Reject: set payment status REJECTED
-    await prisma.$transaction([
-      prisma.upiPayment.update({
-        where: { id: paymentId },
-        data: { status: "REJECTED", rejectedReason: rejectedReason ?? "Rejected by admin" },
-      }),
-      prisma.auditLog.create({
-        data: {
-          userId: payment.userId,
-          action: "UPI_DEPOSIT_REJECTED",
-          metadata: { paymentId, amount: payment.amount, utr: payment.utr, reason: rejectedReason },
-        },
-      }),
-    ]);
-
-    return NextResponse.json({ ok: true, status: "REJECTED" });
-  } else {
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  }
 }

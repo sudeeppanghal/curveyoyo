@@ -1469,6 +1469,267 @@ export default function NewReelPage() {
                   <p style={{margin:0,fontSize:10,color:'#6b21a8',fontWeight:600}}>{customSchedule.filter(b=>b.views>0).length} active batches</p>
                 </div>
               </div>
+
+              {/* Manual Batch Details Editor */}
+              <div style={{
+                background: "#08010f",
+                border: "1.5px solid #1c0a35",
+                borderRadius: 20,
+                padding: 20,
+                marginTop: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 900, color: "#f3e8ff" }}>✏️ Edit Batch Details Manually</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#a78bfa", fontWeight: 600 }}>Modify views, delay time, or date for any specific batch</p>
+                  </div>
+                  <select
+                    value={selectedBatchIndex !== null && selectedBatchIndex < customSchedule.length ? selectedBatchIndex : 0}
+                    onChange={(e) => setSelectedBatchIndex(Number(e.target.value))}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 8,
+                      background: "#120324",
+                      border: "1px solid #2d0a52",
+                      color: "#c084fc",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      outline: "none",
+                      cursor: "pointer"
+                    }}
+                  >
+                    {customSchedule.map((b, idx) => (
+                      <option key={idx} value={idx}>
+                        Batch #{idx + 1} (Offset: {Math.round(b.hour * 10) / 10}h - {b.views.toLocaleString()} views)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {customSchedule.length > 0 && (() => {
+                  const activeIdx = selectedBatchIndex !== null && selectedBatchIndex < customSchedule.length ? selectedBatchIndex : 0;
+                  const batch = customSchedule[activeIdx];
+                  if (!batch) return null;
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Views</label>
+                        <input
+                          type="number"
+                          value={batch.views}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            const newSchedule = [...customSchedule];
+                            newSchedule[activeIdx] = {
+                              ...newSchedule[activeIdx],
+                              views: val,
+                            };
+                            setCustomSchedule(newSchedule);
+                          }}
+                          style={{
+                            padding: "8px",
+                            borderRadius: 8,
+                            background: "#120324",
+                            border: "1px solid #2d0a52",
+                            color: "#f3e8ff",
+                            fontSize: 12,
+                            fontWeight: 750,
+                            outline: "none"
+                          }}
+                        />
+                      </div>
+
+                      {likesOn && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Likes</label>
+                          <input
+                            type="number"
+                            value={batch.likes}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value));
+                              const newSchedule = [...customSchedule];
+                              newSchedule[activeIdx] = {
+                                ...newSchedule[activeIdx],
+                                likes: val,
+                              };
+                              setCustomSchedule(newSchedule);
+                            }}
+                            style={{
+                              padding: "8px",
+                              borderRadius: 8,
+                              background: "#120324",
+                              border: "1px solid #2d0a52",
+                              color: "#f3e8ff",
+                              fontSize: 12,
+                              fontWeight: 750,
+                              outline: "none"
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {savesOn && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Saves</label>
+                          <input
+                            type="number"
+                            value={batch.saves}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value));
+                              const newSchedule = [...customSchedule];
+                              newSchedule[activeIdx] = {
+                                ...newSchedule[activeIdx],
+                                saves: val,
+                              };
+                              setCustomSchedule(newSchedule);
+                            }}
+                            style={{
+                              padding: "8px",
+                              borderRadius: 8,
+                              background: "#120324",
+                              border: "1px solid #2d0a52",
+                              color: "#f3e8ff",
+                              fontSize: 12,
+                              fontWeight: 750,
+                              outline: "none"
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {sharesOn && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Shares</label>
+                          <input
+                            type="number"
+                            value={batch.shares}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value));
+                              const newSchedule = [...customSchedule];
+                              newSchedule[activeIdx] = {
+                                ...newSchedule[activeIdx],
+                                shares: val,
+                              };
+                              setCustomSchedule(newSchedule);
+                            }}
+                            style={{
+                              padding: "8px",
+                              borderRadius: 8,
+                              background: "#120324",
+                              border: "1px solid #2d0a52",
+                              color: "#f3e8ff",
+                              fontSize: 12,
+                              fontWeight: 750,
+                              outline: "none"
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {commentsOn && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Comments</label>
+                          <input
+                            type="number"
+                            value={batch.comments}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value));
+                              const newSchedule = [...customSchedule];
+                              newSchedule[activeIdx] = {
+                                ...newSchedule[activeIdx],
+                                comments: val,
+                              };
+                              setCustomSchedule(newSchedule);
+                            }}
+                            style={{
+                              padding: "8px",
+                              borderRadius: 8,
+                              background: "#120324",
+                              border: "1px solid #2d0a52",
+                              color: "#f3e8ff",
+                              fontSize: 12,
+                              fontWeight: 750,
+                              outline: "none"
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Delay (Hours)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={Math.round(batch.hour * 10) / 10}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            const newSchedule = [...customSchedule];
+                            const targetBatch = {
+                              ...newSchedule[activeIdx],
+                              hour: val,
+                              scheduledTime: new Date(Date.now() + val * 60 * 60 * 1000).toISOString(),
+                            };
+                            newSchedule[activeIdx] = targetBatch;
+                            
+                            const sorted = [...newSchedule].sort((a, b) => a.hour - b.hour);
+                            const newIdx = sorted.findIndex(b => b.scheduledTime === targetBatch.scheduledTime);
+                            setCustomSchedule(sorted);
+                            if (newIdx !== -1) setSelectedBatchIndex(newIdx);
+                          }}
+                          style={{
+                            padding: "8px",
+                            borderRadius: 8,
+                            background: "#120324",
+                            border: "1px solid #2d0a52",
+                            color: "#f3e8ff",
+                            fontSize: 12,
+                            fontWeight: 750,
+                            outline: "none"
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Scheduled Time</label>
+                        <input
+                          type="datetime-local"
+                          value={formatDateForInput(new Date(batch.scheduledTime || Date.now()))}
+                          onChange={(e) => {
+                            const dateVal = new Date(e.target.value);
+                            const diffMs = dateVal.getTime() - Date.now();
+                            const diffHours = Math.max(0, diffMs / (60 * 60 * 1000));
+                            const newSchedule = [...customSchedule];
+                            const targetBatch = {
+                              ...newSchedule[activeIdx],
+                              hour: diffHours,
+                              scheduledTime: dateVal.toISOString(),
+                            };
+                            newSchedule[activeIdx] = targetBatch;
+                            
+                            const sorted = [...newSchedule].sort((a, b) => a.hour - b.hour);
+                            const newIdx = sorted.findIndex(b => b.scheduledTime === targetBatch.scheduledTime);
+                            setCustomSchedule(sorted);
+                            if (newIdx !== -1) setSelectedBatchIndex(newIdx);
+                          }}
+                          style={{
+                            padding: "8px",
+                            borderRadius: 8,
+                            background: "#120324",
+                            border: "1px solid #2d0a52",
+                            color: "#f3e8ff",
+                            fontSize: 12,
+                            fontWeight: 750,
+                            outline: "none"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           ) : (
             /* Standard Mode: two-column preset picker + chart */

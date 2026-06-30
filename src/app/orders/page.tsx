@@ -215,7 +215,7 @@ export default function OrdersPage() {
                     fontSize: 12,
                     fontWeight: 700
                   }}>
-                    ⚠️ Campaign Failure: {o.failReason}
+                    ⚠️ Campaign Delivery Failed (Please check if your profile/post is public, or contact support if the problem persists)
                   </div>
                 )}
 
