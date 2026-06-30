@@ -92,6 +92,10 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       where: { id: eventId },
       data: { status: "FAILED", errorMessage: result.error },
     });
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "FAILED", failReason: result.error },
+    });
     return { ok: false, error: result.error };
   }
 

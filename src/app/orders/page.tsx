@@ -14,6 +14,7 @@ interface Order {
   savesTarget: number; savesDelivered: number;
   sharesTarget: number; sharesDelivered: number;
   commentsTarget: number; commentsDelivered: number;
+  failReason?: string | null;
 }
 
 const N = {
@@ -203,6 +204,20 @@ export default function OrdersPage() {
                     </span>
                   </div>
                 </div>
+
+                {o.failReason && (
+                  <div style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    background: "rgba(220,38,38,0.06)",
+                    border: "1px solid rgba(220,38,38,0.15)",
+                    color: "#dc2626",
+                    fontSize: 12,
+                    fontWeight: 700
+                  }}>
+                    ⚠️ Campaign Failure: {o.failReason}
+                  </div>
+                )}
 
                 {/* Progress bar */}
                 <div>

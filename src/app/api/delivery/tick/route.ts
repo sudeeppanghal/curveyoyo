@@ -147,6 +147,10 @@ async function handler(request: NextRequest) {
 
   if (!result.ok) {
     await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: result.error } });
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status: "FAILED", failReason: result.error },
+    });
     return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
   }
 

@@ -35,7 +35,8 @@ export async function GET() {
 
 /* ── POST /api/orders ── */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -265,6 +266,10 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({ orderId: order.id }),
   }).catch(console.error);
 
-  return NextResponse.json({ orderId: order.id, order, message: "Order created and delivery scheduled!" }, { status: 201 });
+    return NextResponse.json({ orderId: order.id, order, message: "Order created and delivery scheduled!" }, { status: 201 });
+  } catch (err: any) {
+    console.error("[ORDERS API CREATE ERROR]", err);
+    return NextResponse.json({ error: err.message || "An unexpected error occurred while placing your order. Please try again." }, { status: 500 });
+  }
 }
 
