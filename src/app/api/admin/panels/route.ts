@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
+import { getPanelServices } from "@/lib/delivery/panel-client";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -37,6 +38,22 @@ export async function POST(request: NextRequest) {
 
   const apiKeyEncrypted = encrypt(apiKey);
 
+  // Ping provider to get initial status
+  let initialStatus = "UNKNOWN";
+  let responseMs = null;
+  try {
+    const start = Date.now();
+    const res = await getPanelServices(apiUrl.trim().replace(/\/$/, ""), apiKeyEncrypted);
+    responseMs = Date.now() - start;
+    if (res.ok) {
+      initialStatus = responseMs > 5000 ? "SLOW" : "ONLINE";
+    } else {
+      initialStatus = "OFFLINE";
+    }
+  } catch {
+    initialStatus = "OFFLINE";
+  }
+
   const panel = await prisma.panel.create({
     data: {
       userId: null, // Admin panel
@@ -45,6 +62,9 @@ export async function POST(request: NextRequest) {
       apiKeyEncrypted,
       priority: parseInt(priority) || 1,
       loadPercentage: parseInt(loadPercentage) || 100,
+      status: initialStatus as any,
+      lastCheckedAt: new Date(),
+      lastResponseMs: responseMs,
     },
   });
 

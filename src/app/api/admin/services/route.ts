@@ -32,10 +32,25 @@ export async function GET(request: NextRequest) {
 
   if (action === "fetch") {
     // Fetch live list of services from SMM API
+    const start = Date.now();
     const res = await getPanelServices(panel.apiUrl, panel.apiKeyEncrypted);
+    const responseMs = Date.now() - start;
     if (!res.ok) {
+      // If it fails, update status to OFFLINE
+      await prisma.panel.update({
+        where: { id: panelId },
+        data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
+      });
       return NextResponse.json({ error: res.error ?? "Failed to fetch services from SMM API" }, { status: 502 });
     }
+
+    // If it succeeds, update status to ONLINE
+    const status = responseMs > 5000 ? "SLOW" : "ONLINE";
+    await prisma.panel.update({
+      where: { id: panelId },
+      data: { status, lastCheckedAt: new Date(), lastResponseMs: responseMs },
+    });
+
     return NextResponse.json({ services: res.services });
   }
 
