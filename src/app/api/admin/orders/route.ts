@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
 import { OrderStatus } from "@prisma/client";
+import { triggerMidwayRefund } from "@/lib/delivery/refund";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -73,6 +74,9 @@ export async function PATCH(request: NextRequest) {
       where: { orderId, status: "SCHEDULED" },
       data: { status: "FAILED", errorMessage: `Order ${action}d by administrator` },
     });
+    if (action === "cancel") {
+      await triggerMidwayRefund(orderId);
+    }
   } else if (action === "resume") {
     // Re-schedule failed/paused events that are scheduled for the future
     await prisma.deliveryEvent.updateMany({

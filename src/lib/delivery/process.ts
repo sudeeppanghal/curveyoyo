@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { placePanelOrder } from "@/lib/delivery/panel-client";
 import { calculateEngagementDue, applyJitter } from "@/lib/delivery/curve";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
+import { triggerMidwayRefund } from "@/lib/delivery/refund";
 
 type ServiceIds = Record<string, Record<string, string>>;
 
@@ -92,10 +93,15 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       where: { id: eventId },
       data: { status: "FAILED", errorMessage: result.error },
     });
+    await prisma.deliveryEvent.updateMany({
+      where: { orderId: order.id, status: "SCHEDULED" },
+      data: { status: "FAILED", errorMessage: "Order failed midway" },
+    });
     await prisma.order.update({
       where: { id: order.id },
       data: { status: "FAILED", failReason: result.error },
     });
+    await triggerMidwayRefund(order.id);
     return { ok: false, error: result.error };
   }
 

@@ -86,19 +86,63 @@ export async function POST(request: NextRequest) {
     initialStatus = "OFFLINE";
   }
 
+  const cleanApiUrl = apiUrl.trim().replace(/\/$/, "");
+  const existingPanelWithSameUrl = await prisma.panel.findFirst({
+    where: { userId: null, apiUrl: cleanApiUrl },
+    orderBy: { createdAt: "asc" }
+  });
+
+  const serviceIdsCopy = existingPanelWithSameUrl ? (existingPanelWithSameUrl.serviceIds || undefined) : undefined;
+
   const panel = await prisma.panel.create({
     data: {
       userId: null, // Admin panel
       name,
-      apiUrl: apiUrl.trim().replace(/\/$/, ""),
+      apiUrl: cleanApiUrl,
       apiKeyEncrypted,
       priority: parseInt(priority) || 1,
       loadPercentage: parseInt(loadPercentage) || 100,
       status: initialStatus as any,
       lastCheckedAt: new Date(),
       lastResponseMs: responseMs,
+      serviceIds: serviceIdsCopy
     },
   });
+
+  if (existingPanelWithSameUrl) {
+    const existingServices = await prisma.adminService.findMany({
+      where: { panelId: existingPanelWithSameUrl.id }
+    });
+
+    for (const s of existingServices) {
+      await prisma.adminService.upsert({
+        where: {
+          panelId_platform_type: {
+            panelId: panel.id,
+            platform: s.platform,
+            type: s.type
+          }
+        },
+        create: {
+          panelId: panel.id,
+          platform: s.platform,
+          type: s.type,
+          serviceId: s.serviceId,
+          originalRate: s.originalRate,
+          customRate: s.customRate,
+          name: s.name,
+          minQuantity: s.minQuantity
+        },
+        update: {
+          serviceId: s.serviceId,
+          originalRate: s.originalRate,
+          customRate: s.customRate,
+          name: s.name,
+          minQuantity: s.minQuantity
+        }
+      });
+    }
+  }
 
   return NextResponse.json({ panel }, { status: 201 });
 }

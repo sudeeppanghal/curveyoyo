@@ -45,15 +45,23 @@ export async function POST(request: NextRequest) {
 
   const apiKeyEncrypted = encrypt(apiKey);
 
+  const cleanApiUrl = apiUrl.trim().replace(/\/$/, "");
+  const existingPanelWithSameUrl = await prisma.panel.findFirst({
+    where: { userId: dbUser.id, apiUrl: cleanApiUrl },
+    orderBy: { createdAt: "asc" }
+  });
+
+  const finalServiceIds = serviceIds || (existingPanelWithSameUrl ? existingPanelWithSameUrl.serviceIds : null);
+
   const panel = await prisma.panel.create({
     data: {
       userId: dbUser.id,
       name,
-      apiUrl: apiUrl.trim().replace(/\/$/, ""),
+      apiUrl: cleanApiUrl,
       apiKeyEncrypted,
       priority: parseInt(priority) || 1,
       loadPercentage: parseInt(loadPercentage) || 100,
-      serviceIds: serviceIds ?? null,
+      serviceIds: finalServiceIds ?? undefined,
     },
     select: {
       id: true, name: true, apiUrl: true, priority: true,

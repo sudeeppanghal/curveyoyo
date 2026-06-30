@@ -4,6 +4,7 @@ import { placePanelOrder } from "@/lib/delivery/panel-client";
 import { cachePanelStatus } from "@/lib/redis";
 import { calculateEngagementDue, applyJitter } from "@/lib/delivery/curve";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
+import { triggerMidwayRefund } from "@/lib/delivery/refund";
 
 // Force dynamic so Next.js never tries to statically analyse this route
 // (prevents build-time crash when QSTASH env vars are not present during build)
@@ -147,10 +148,15 @@ async function handler(request: NextRequest) {
 
   if (!result.ok) {
     await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: result.error } });
+    await prisma.deliveryEvent.updateMany({
+      where: { orderId, status: "SCHEDULED" },
+      data: { status: "FAILED", errorMessage: "Order failed midway" }
+    });
     await prisma.order.update({
       where: { id: orderId },
       data: { status: "FAILED", failReason: result.error },
     });
+    await triggerMidwayRefund(orderId);
     return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
   }
 
