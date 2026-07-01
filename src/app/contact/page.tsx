@@ -6,78 +6,118 @@ export const metadata: Metadata = {
   description: "Get in touch with the YoyoSMM support team. We are here to help you scale your organic pacing campaigns.",
 };
 
-const C = {
+const N = {
   bg:       "#eef2f7",
-  text:     "#2d3748",
-  textMuted:"#718096",
-  amber:    "#d97706",
-  amberLight: "rgba(217, 119, 6, 0.08)",
   raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
   raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
   inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  grad:     "linear-gradient(135deg, #d97706 0%, #ea580c 100%)",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
 };
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen text-slate-800" style={{ background: C.bg, fontFamily: "sans-serif" }}>
+    <div style={{ background: N.bg, color: N.text, minHeight: "100vh", fontFamily: "'Inter', -apple-system, sans-serif" }}>
       <style>{`
-        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
-        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
+        .neo-btn { transition: all 0.2s ease; cursor: pointer; text-decoration: none; display: inline-flex; items-center; justify-content: center; }
+        .neo-btn:hover { transform: translateY(-1px); box-shadow: 10px 10px 20px #c8d0e7, -10px -10px 20px #ffffff !important; }
+        .neo-btn:active { transform: translateY(0); box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important; }
+        @media (min-width: 768px) {
+          .contact-grid { display: grid !important; grid-template-columns: 1fr 1.2fr !important; gap: 32px !important; }
+        }
       `}</style>
-
-      {/* Nav */}
-      <nav className="border-b" style={{ background: "rgba(238,242,247,0.95)", borderColor: "rgba(200, 208, 231, 0.4)" }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 no-underline">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white" style={{ background: C.grad, boxShadow: C.raisedSm }}>Y</div>
-            <span className="font-extrabold text-slate-800">YoyoSMM</span>
+      
+      {/* Navigation */}
+      <nav style={{ borderBottom: `1px solid ${N.border}`, background: "rgba(238,242,247,0.95)", position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(12px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
+            <span style={{ fontWeight: 800, fontSize: 20, color: N.text, letterSpacing: "-0.5px" }}>YoyoSMM</span>
           </Link>
-          <Link href="/signup" className="px-5 py-2.5 rounded-full font-bold text-sm text-white no-underline neo-btn" style={{ background: C.grad, boxShadow: C.raisedSm }}>Get started →</Link>
+          <Link href="/signup" className="neo-btn" style={{ padding: "10px 24px", borderRadius: 999, fontWeight: 800, fontSize: 14, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
+            Get Started →
+          </Link>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-20">
-        <h1 className="text-5xl font-black mb-6 leading-tight" style={{ color: C.text, letterSpacing: "-1.5px" }}>Contact Us</h1>
-        <p className="text-xl font-medium mb-12" style={{ color: C.textMuted }}>Have questions or need assistance? Reach out to our support team.</p>
+      {/* Main Content Container */}
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "60px 24px 100px", display: "flex", flexDirection: "column", gap: 40 }}>
+        
+        {/* Header Section */}
+        <div>
+          <div style={{ display: "inline-block", padding: "6px 16px", borderRadius: 999, fontSize: 12, fontWeight: 800, background: "rgba(217,119,6,0.1)", color: N.accent, border: `1px solid rgba(217,119,6,0.3)`, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
+            ◆ We Are Here To Help
+          </div>
+          <h1 style={{ fontSize: 44, fontWeight: 900, color: N.text, letterSpacing: "-1.5px", margin: "0 0 12px", lineHeight: 1.2 }}>
+            Contact Us
+          </h1>
+          <p style={{ fontSize: 16, fontWeight: 600, color: N.muted, margin: 0 }}>
+            Have questions about S-curve timing or need custom API integration assistance? Reach out to our 24/7 team.
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-12">
+        {/* Grid Container */}
+        <div className="contact-grid" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          
           {/* Card 1: Support channels */}
-          <div className="p-8 rounded-2xl" style={{ background: C.bg, boxShadow: C.raised }}>
-            <h2 className="text-2xl font-black mb-6" style={{ color: C.text }}>Support Channel</h2>
+          <div style={{ padding: 36, borderRadius: 28, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 24 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: N.text, margin: 0 }}>Support Channels</h2>
             
-            <div className="mb-6">
-              <p style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>📧 Support Email</p>
-              <a href="mailto:support@yoyosmm.online" className="text-lg font-bold no-underline hover:underline" style={{ color: C.amber }}>support@yoyosmm.online</a>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>📧 General Inquiries</div>
+              <a href="mailto:hello@yoyosmm.online" style={{ fontSize: 16, fontWeight: 800, color: N.accent, textDecoration: "none" }}>hello@yoyosmm.online</a>
             </div>
 
             <div>
-              <p style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>⚡ Average Response Time</p>
-              <p className="text-lg font-bold" style={{ color: C.text, margin: 0 }}>Under 2 hours (24/7 Support)</p>
+              <div style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>⚡ Technical Support</div>
+              <a href="mailto:support@yoyosmm.online" style={{ fontSize: 16, fontWeight: 800, color: N.accent, textDecoration: "none" }}>support@yoyosmm.online</a>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>🐛 Bug & Security Reports</div>
+              <a href="mailto:bugs@yoyosmm.online" style={{ fontSize: 16, fontWeight: 800, color: N.accent, textDecoration: "none" }}>bugs@yoyosmm.online</a>
+            </div>
+
+            <div style={{ padding: 20, borderRadius: 16, background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.2)" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: N.accent, marginBottom: 4 }}>⚡ Average Response Time</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: N.text }}>Under 2 hours (24/7 Global Support)</div>
             </div>
           </div>
 
           {/* Card 2: Interactive Contact Form */}
-          <div className="p-8 rounded-2xl" style={{ background: C.bg, boxShadow: C.raised }}>
-            <h2 className="text-2xl font-black mb-6" style={{ color: C.text }}>Send a Message</h2>
-            <form style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ padding: 36, borderRadius: 28, background: N.bg, boxShadow: N.raised }}>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: N.text, margin: "0 0 20px" }}>Send a Direct Message</h2>
+            <form style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Your Name</label>
-                <input type="text" placeholder="John Doe" required style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: C.bg, boxShadow: C.inset, fontSize: 14, color: C.text, outline: "none" }} />
+                <label style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase", display: "block", marginBottom: 8 }}>Your Name</label>
+                <input type="text" placeholder="John Doe" required style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: N.bg, boxShadow: N.inset, fontSize: 14, fontWeight: 600, color: N.text, outline: "none", boxSizing: "border-box" }} />
               </div>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Your Email</label>
-                <input type="email" placeholder="john@example.com" required style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: C.bg, boxShadow: C.inset, fontSize: 14, color: C.text, outline: "none" }} />
+                <label style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase", display: "block", marginBottom: 8 }}>Your Email</label>
+                <input type="email" placeholder="john@example.com" required style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: N.bg, boxShadow: N.inset, fontSize: 14, fontWeight: 600, color: N.text, outline: "none", boxSizing: "border-box" }} />
               </div>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Message</label>
-                <textarea rows={4} placeholder="How can we help you?" required style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: C.bg, boxShadow: C.inset, fontSize: 14, color: C.text, outline: "none", resize: "none" }} />
+                <label style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase", display: "block", marginBottom: 8 }}>Message</label>
+                <textarea rows={4} placeholder="How can we help you scale your campaigns?" required style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: N.bg, boxShadow: N.inset, fontSize: 14, fontWeight: 600, color: N.text, outline: "none", resize: "none", boxSizing: "border-box" }} />
               </div>
-              <button type="submit" className="neo-btn" style={{ padding: 14, border: "none", borderRadius: 12, background: C.grad, color: "#ffffff", fontSize: 14, fontWeight: 800, cursor: "pointer", boxShadow: C.raisedSm, transition: "all 0.2s", marginTop: 8 }}>Send Message →</button>
+              <button type="submit" className="neo-btn" style={{ padding: 16, border: "none", borderRadius: 14, background: N.accentBg, color: "#ffffff", fontSize: 15, fontWeight: 800, cursor: "pointer", boxShadow: N.raisedSm, marginTop: 8 }}>
+                Send Message →
+              </button>
             </form>
           </div>
+
         </div>
+
+        {/* Navigation Buttons */}
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 10 }}>
+          <Link href="/" className="neo-btn" style={{ padding: "16px 32px", borderRadius: 16, fontWeight: 700, fontSize: 15, color: N.text, background: N.bg, boxShadow: N.raised }}>
+            ← Back to Home
+          </Link>
+        </div>
+
       </div>
     </div>
   );

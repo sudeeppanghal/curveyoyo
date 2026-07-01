@@ -3,70 +3,105 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — YoyoSMM",
-  description: "Read the Privacy Policy for using YoyoSMM. Details on how we secure your account details and campaign link inputs.",
+  description: "Privacy policy and data protection guidelines for YoyoSMM users.",
 };
 
-const C = {
+const N = {
   bg:       "#eef2f7",
-  text:     "#2d3748",
-  textMuted:"#718096",
-  amber:    "#d97706",
   raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
   raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
   inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  grad:     "linear-gradient(135deg, #d97706 0%, #ea580c 100%)",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
 };
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen text-slate-800" style={{ background: C.bg, fontFamily: "sans-serif" }}>
+    <div style={{ background: N.bg, color: N.text, minHeight: "100vh", fontFamily: "'Inter', -apple-system, sans-serif" }}>
       <style>{`
-        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
-        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
+        .neo-btn { transition: all 0.2s ease; cursor: pointer; text-decoration: none; display: inline-flex; items-center; justify-content: center; }
+        .neo-btn:hover { transform: translateY(-1px); box-shadow: 10px 10px 20px #c8d0e7, -10px -10px 20px #ffffff !important; }
+        .neo-btn:active { transform: translateY(0); box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important; }
       `}</style>
-
-      {/* Nav */}
-      <nav className="border-b" style={{ background: "rgba(238,242,247,0.95)", borderColor: "rgba(200, 208, 231, 0.4)" }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 no-underline">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white" style={{ background: C.grad, boxShadow: C.raisedSm }}>Y</div>
-            <span className="font-extrabold text-slate-800">YoyoSMM</span>
+      
+      {/* Navigation */}
+      <nav style={{ borderBottom: `1px solid ${N.border}`, background: "rgba(238,242,247,0.95)", position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(12px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
+            <span style={{ fontWeight: 800, fontSize: 20, color: N.text, letterSpacing: "-0.5px" }}>YoyoSMM</span>
           </Link>
-          <Link href="/signup" className="px-5 py-2.5 rounded-full font-bold text-sm text-white no-underline neo-btn" style={{ background: C.grad, boxShadow: C.raisedSm }}>Get started →</Link>
+          <Link href="/signup" className="neo-btn" style={{ padding: "10px 24px", borderRadius: 999, fontWeight: 800, fontSize: 14, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
+            Get Started →
+          </Link>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 py-20">
-        <h1 className="text-5xl font-black mb-6 leading-tight" style={{ color: C.text, letterSpacing: "-1.5px" }}>Privacy Policy</h1>
-        <p className="text-xl font-medium mb-12" style={{ color: C.textMuted }}>Last updated: June 29, 2026</p>
+      {/* Main Content Container */}
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 100px", display: "flex", flexDirection: "column", gap: 36 }}>
+        
+        {/* Header Section */}
+        <div>
+          <div style={{ display: "inline-block", padding: "6px 16px", borderRadius: 999, fontSize: 12, fontWeight: 800, background: "rgba(217,119,6,0.1)", color: N.accent, border: `1px solid rgba(217,119,6,0.3)`, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
+            ◆ Privacy & Security
+          </div>
+          <h1 style={{ fontSize: 44, fontWeight: 900, color: N.text, letterSpacing: "-1.5px", margin: "0 0 12px", lineHeight: 1.2 }}>
+            Privacy Policy
+          </h1>
+          <p style={{ fontSize: 16, fontWeight: 600, color: N.muted, margin: 0 }}>
+            Last updated: July 2026
+          </p>
+        </div>
 
-        <div className="space-y-10">
-          <section className="p-8 rounded-2xl" style={{ background: C.bg, boxShadow: C.raised }}>
-            <h2 className="text-2xl font-black mb-4" style={{ color: C.text }}>1. Information We Collect</h2>
-            <p className="leading-relaxed font-medium mb-4" style={{ color: C.textMuted }}>We collect only the essential details needed to operate your pacing campaigns and secure your wallet account:</p>
-            <ul className="space-y-2 font-medium" style={{ paddingLeft: 0, listStyle: "none", color: C.textMuted }}>
-              <li><strong style={{ color: C.text }}>• Account Data:</strong> Email, username, and password hashes for authentication.</li>
-              <li><strong style={{ color: C.text }}>• Campaign Inputs:</strong> Social media links (Instagram, TikTok, YouTube, Telegram, Facebook, Twitter) provided to track campaign delivery.</li>
-              <li><strong style={{ color: C.text }}>• Billing Logs:</strong> UPI deposit reference numbers and transaction ledger logs.</li>
-            </ul>
+        {/* Sections */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <section style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 16 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0 }}>1. Information We Collect</h2>
+            <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
+              We collect only the essential details needed to operate your pacing campaigns and secure your wallet account:
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 15, fontWeight: 500, color: N.muted }}>
+              <div><strong style={{ color: N.text }}>• Account Data:</strong> Email, username, and password hashes for authentication.</div>
+              <div><strong style={{ color: N.text }}>• Campaign Inputs:</strong> Social media links (Instagram, TikTok, YouTube, Telegram, Facebook, Twitter) provided to track campaign delivery.</div>
+              <div><strong style={{ color: N.text }}>• Billing Logs:</strong> UPI deposit reference numbers and transaction ledger logs.</div>
+            </div>
           </section>
 
-          <section className="p-8 rounded-2xl" style={{ background: C.bg, boxShadow: C.raised }}>
-            <h2 className="text-2xl font-black mb-4" style={{ color: C.text }}>2. How We Use Information</h2>
-            <p className="leading-relaxed font-medium" style={{ color: C.textMuted }}>Your campaign URLs are used solely to forward views and engagement pacing tasks to SMM provider networks. We do not sell, rent, or profile your personal data or campaign targets.</p>
+          <section style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 12 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0 }}>2. How We Use Information</h2>
+            <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
+              Your campaign URLs are used solely to execute views and engagement pacing tasks through our independent S-curve delivery network. We never sell, rent, or profile your personal data or campaign targets.
+            </p>
           </section>
 
-          <section className="p-8 rounded-2xl" style={{ background: C.bg, boxShadow: C.raised }}>
-            <h2 className="text-2xl font-black mb-4" style={{ color: C.text }}>3. Data Security</h2>
-            <p className="leading-relaxed font-medium" style={{ color: C.textMuted }}>All database inputs (including passwords and transactions) are stored securely in PostgreSQL using cryptographic hashing. Communication with delivery routers runs via encrypted TLS protocols.</p>
+          <section style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 12 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0 }}>3. Data Security & Encryption</h2>
+            <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
+              All database inputs (including passwords and wallet transactions) are stored securely in PostgreSQL using cryptographic hashing and strict row-level security. Communication with delivery routers runs via encrypted TLS protocols.
+            </p>
           </section>
 
-          <section className="p-8 rounded-2xl" style={{ background: C.bg, boxShadow: C.raised }}>
-            <h2 className="text-2xl font-black mb-4" style={{ color: C.text }}>4. Policy Updates</h2>
-            <p className="leading-relaxed font-medium" style={{ color: C.textMuted }}>We may update our Privacy Policy periodically. Continued use of the platform constitutes agreement to the current policies.</p>
+          <section style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 12 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0 }}>4. Policy Updates</h2>
+            <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
+              We may update our Privacy Policy periodically to reflect infrastructure enhancements or regulatory guidelines. Continued use of the platform constitutes agreement to the current policies.
+            </p>
           </section>
         </div>
+
+        {/* Navigation Buttons */}
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 16 }}>
+          <Link href="/terms" className="neo-btn" style={{ padding: "16px 32px", borderRadius: 16, fontWeight: 800, fontSize: 15, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
+            Terms of Service →
+          </Link>
+          <Link href="/" className="neo-btn" style={{ padding: "16px 32px", borderRadius: 16, fontWeight: 700, fontSize: 15, color: N.text, background: N.bg, boxShadow: N.raised }}>
+            ← Back to Home
+          </Link>
+        </div>
+
       </div>
     </div>
   );

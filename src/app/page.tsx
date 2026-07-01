@@ -126,7 +126,7 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
 
     bestFor: "Picksart designers & creative portfolios",
 
-    why: "Tailored to creative traffic, peaking in the afternoon with custom engagement rates matching peak creative hours.",
+    why: "Tailored to creative traffic, peaking in the afternoon with dynamic engagement pacing matching peak creative hours.",
 
     duration: "24h - 72h",
 
@@ -214,7 +214,7 @@ const FEATURES = [
 
   {
 
-    id:"agency", icon:"🏢", label:"Reseller",
+    id:"agency", icon:"🏢", label:"Agencies & Scale",
 
     title:"Built for operators running at scale",
 
@@ -444,7 +444,7 @@ export default function Home() {
 
             ["⚡","Fail-Safe Infrastructure","Multi-path routing prevents delays"],
 
-            ["💰","No Upfront Fees","Free account, pay custom SMM rates"],
+            ["💰","No Upfront Fees","Free wallet account, pay per order on-demand"],
 
           ].map(([icon,title,desc]) => (
 
@@ -830,7 +830,7 @@ export default function Home() {
 
             {[
 
-              ["Do I need to deposit funds to start?","Yes. To launch campaign pacing, you add funds to your wallet using UPI (minimum ₹500). Your charges are calculated per order on-demand, according to our competitive custom pricing rates."],
+              ["Do I need to deposit funds to start?","Yes. To launch campaign pacing, you add funds to your wallet using UPI (minimum ₹500). Your charges are calculated per order on-demand, according to our transparent direct pricing."],
 
               ["Which platforms are supported?","We currently support organic views and engagement (likes, saves, shares, comments, followers, subscribers, members) across Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter, with full S-curve timing options."],
 

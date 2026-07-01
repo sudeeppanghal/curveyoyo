@@ -1,19 +1,35 @@
 import Link from "next/link";
 
+const N = {
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+};
+
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#0B0B0F" }}>
-      <div className="text-center">
-        <p className="text-8xl font-black mb-4" style={{ background: "linear-gradient(135deg, #F59E0B, #F97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: N.bg, fontFamily: "'Inter', -apple-system, sans-serif", padding: 24 }}>
+      <style>{`
+        .neo-btn { transition: all 0.2s ease; cursor: pointer; text-decoration: none; display: inline-flex; items-center; justify-content: center; }
+        .neo-btn:hover { transform: translateY(-1px); box-shadow: 10px 10px 20px #c8d0e7, -10px -10px 20px #ffffff !important; }
+        .neo-btn:active { transform: translateY(0); box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important; }
+      `}</style>
+      <div style={{ padding: 48, borderRadius: 32, background: N.bg, boxShadow: N.raised, textAlign: "center", maxWidth: 480, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+        <div style={{ fontSize: 72, fontWeight: 900, background: N.accentBg, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1, letterSpacing: "-3px" }}>
           404
-        </p>
-        <h1 className="text-2xl font-bold text-white mb-2">Page not found</h1>
-        <p className="text-gray-500 mb-8">This page doesn&apos;t exist or you don&apos;t have access.</p>
-        <div className="flex gap-3 justify-center">
-          <Link href="/dashboard" className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B0B0F] hover:opacity-90 transition" style={{ background: "#F59E0B" }}>
-            Dashboard
+        </div>
+        <h1 style={{ fontSize: 24, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>Page Not Found</h1>
+        <p style={{ fontSize: 15, fontWeight: 600, color: N.muted, margin: "0 0 12px", lineHeight: 1.6 }}>This page doesn&apos;t exist or has been moved to a new route in our organic pacing engine.</p>
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", width: "100%" }}>
+          <Link href="/dashboard" className="neo-btn" style={{ padding: "14px 28px", borderRadius: 16, fontWeight: 800, fontSize: 14, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
+            Dashboard →
           </Link>
-          <Link href="/" className="px-5 py-2.5 rounded-xl text-sm text-gray-400 border hover:bg-white/5 transition" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <Link href="/" className="neo-btn" style={{ padding: "14px 28px", borderRadius: 16, fontWeight: 700, fontSize: 14, color: N.text, background: N.bg, boxShadow: N.raisedSm }}>
             Home
           </Link>
         </div>

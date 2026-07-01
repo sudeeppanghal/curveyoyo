@@ -1,84 +1,117 @@
-import Link from "next/link";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "About — YoyoSMM",
-  description: "The story behind YoyoSMM — the premium organic pacing SMM panel.",
-};
-
-const N = {
-  bg:       "#eef2f7",
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  accent:   "#d97706",
-  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
-  text:     "#2d3748",
-  muted:    "#718096",
-  border:   "rgba(200, 208, 231, 0.4)",
-};
-
-export default function AboutPage() {
-  return (
-    <div className="min-h-screen text-slate-800" style={{ background: N.bg }}>
-      <style>{`
-        .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
-        .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
-      `}</style>
-      
-      {/* Navigation */}
-      <nav className="border-b" style={{ background: "rgba(238,242,247,0.95)", borderColor: N.border }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 no-underline">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
-            <span className="font-extrabold text-slate-800">YoyoSMM</span>
-          </Link>
-          <Link href="/signup" className="px-5 py-2.5 rounded-full font-bold text-sm text-white no-underline neo-btn" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Get started →</Link>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <div className="max-w-3xl mx-auto px-6 py-20 space-y-12">
-        <div>
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-6" style={{ background: "rgba(217,119,6,0.1)", color: N.accent, border: `1px solid ${N.accent}40` }}>◆ Our Story</div>
-          <h1 className="text-5xl font-black mb-6 leading-tight" style={{ color: N.text, letterSpacing: "-1.5px" }}>Built by operators, for operators</h1>
-          <p className="text-xl leading-relaxed font-medium" style={{ color: N.muted }}>
-            YoyoSMM was born to solve standard SMM delivery limitations. Traditional panels deliver engagement in flat, artificial bursts that harm algorithmic performance and flag security layers. We set out to build a platform that delivers engagement organically with natural timing.
-          </p>
-        </div>
-
-        <div className="space-y-6 leading-relaxed font-medium" style={{ color: N.muted }}>
-          <p>We built YoyoSMM as an independent, premium SMM panel with built-in organic timing layers. We provide premium engagement (views, likes, saves, shares, and comments) that matches your selected pacing schedules perfectly.</p>
-          <p>Our S-curve pacing engine is modeled after the natural logistic growth of real viral content. When a post goes viral, engagement builds slowly, reaches a peak, and then decays naturally. We replicate this exact flow to make your campaigns look completely organic.</p>
-          <p>Our fail-safe routing infrastructure guarantees that your campaigns execute with zero drops. If any delivery path experiences network latency, our system automatically redirects the batch instantly — guaranteeing 99.98% uptime with zero lost orders.</p>
-        </div>
-
-        <div className="rounded-2xl p-8" style={{ background: N.bg, boxShadow: N.inset }}>
-          <h2 className="text-2xl font-black mb-4" style={{ color: N.text, letterSpacing: "-0.5px" }}>Our Mission</h2>
-          <p className="leading-relaxed font-medium" style={{ color: N.muted }}>To give creators, agencies, and businesses access to a premium, timed delivery layer that matches real viral pacing. Our easy wallet-based pricing means you only pay for what you deliver, with no monthly fees or hidden markups.</p>
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-6">
-          {[["100%","Automated Pacing"],["50k+","Active campaigns"],["Sub-1s","Path routing latency"]].map(([val, label]) => (
-            <div key={label} className="text-center p-6 rounded-2xl" style={{ background: N.bg, boxShadow: N.raised }}>
-              <p className="text-3xl font-black mb-1" style={{ color: N.accent }}>{val}</p>
-              <p className="text-xs font-bold uppercase tracking-wide mt-1" style={{ color: N.muted, margin: 0 }}>{label}</p>
-            </div>
-          ))}
-        </div>
-
-        <div>
-          <h2 className="text-2xl font-black mb-4" style={{ color: N.text, letterSpacing: "-0.5px" }}>Contact</h2>
-          <p className="mb-2 font-medium" style={{ color: N.muted }}>General: <a href="mailto:hello@yoyosmm.online" className="hover:underline font-bold" style={{ color: N.accent }}>hello@yoyosmm.online</a></p>
-          <p className="mb-2 font-medium" style={{ color: N.muted }}>Support: <a href="mailto:support@yoyosmm.online" className="hover:underline font-bold" style={{ color: N.accent }}>support@yoyosmm.online</a></p>
-          <p className="font-medium" style={{ color: N.muted }}>Bugs: <a href="mailto:bugs@yoyosmm.online" className="hover:underline font-bold" style={{ color: N.accent }}>bugs@yoyosmm.online</a></p>
-        </div>
-
-        <div className="flex gap-4">
-          <Link href="/signup" className="px-6 py-3 rounded-xl font-bold text-white no-underline neo-btn" style={{ background: N.accentBg, boxShadow: N.raisedSm }}>Get Started →</Link>
-          <Link href="/" className="px-6 py-3 rounded-xl font-bold no-underline neo-btn" style={{ background: N.bg, color: N.muted, boxShadow: N.raisedSm }}>← Back to Home</Link>
-        </div>
-      </div>
-    </div>
-  );
-}
+import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About — YoyoSMM",
+  description: "The story behind YoyoSMM — the world's #1 organic pacing SMM panel.",
+};
+
+const N = {
+  bg:       "#eef2f7",
+  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
+  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
+  accent:   "#d97706",
+  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
+  text:     "#2d3748",
+  muted:    "#718096",
+  border:   "rgba(200, 208, 231, 0.4)",
+};
+
+export default function AboutPage() {
+  return (
+    <div style={{ background: N.bg, color: N.text, minHeight: "100vh", fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      <style>{`
+        .neo-btn { transition: all 0.2s ease; cursor: pointer; text-decoration: none; display: inline-flex; items-center; justify-content: center; }
+        .neo-btn:hover { transform: translateY(-1px); box-shadow: 10px 10px 20px #c8d0e7, -10px -10px 20px #ffffff !important; }
+        .neo-btn:active { transform: translateY(0); box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important; }
+      `}</style>
+      
+      {/* Navigation */}
+      <nav style={{ borderBottom: `1px solid ${N.border}`, background: "rgba(238,242,247,0.95)", position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(12px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
+            <span style={{ fontWeight: 800, fontSize: 20, color: N.text, letterSpacing: "-0.5px" }}>YoyoSMM</span>
+          </Link>
+          <Link href="/signup" className="neo-btn" style={{ padding: "10px 24px", borderRadius: 999, fontWeight: 800, fontSize: 14, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
+            Get Started →
+          </Link>
+        </div>
+      </nav>
+
+      {/* Main Content Container */}
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 100px", display: "flex", flexDirection: "column", gap: 40 }}>
+        
+        {/* Header Section */}
+        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "inline-block", padding: "6px 16px", borderRadius: 999, fontSize: 12, fontWeight: 800, background: "rgba(217,119,6,0.1)", color: N.accent, border: `1px solid rgba(217,119,6,0.3)`, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            ◆ Our Story
+          </div>
+          <h1 style={{ fontSize: 44, fontWeight: 900, color: N.text, letterSpacing: "-1.5px", margin: 0, lineHeight: 1.2 }}>
+            Built by operators, for independent creators
+          </h1>
+          <p style={{ fontSize: 18, fontWeight: 600, color: N.muted, maxWidth: 680, margin: 0, lineHeight: 1.6 }}>
+            YoyoSMM was born to solve standard SMM delivery limitations. Traditional panels deliver engagement in flat, artificial bursts that harm algorithmic performance. We set out to build the world&apos;s most organic pacing platform.
+          </p>
+        </div>
+
+        {/* Story Card */}
+        <div style={{ padding: 40, borderRadius: 28, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 20, fontSize: 16, fontWeight: 500, color: N.muted, lineHeight: 1.8 }}>
+          <p style={{ margin: 0 }}>
+            We built YoyoSMM as an <strong style={{ color: N.text }}>independent, premium SMM panel</strong> with built-in organic timing layers. We provide high-retention views and engagement (likes, saves, shares, comments, followers, subscribers, members, retweets, and reactions) that match your selected pacing schedules perfectly.
+          </p>
+          <p style={{ margin: 0 }}>
+            Our S-curve pacing engine is modeled after the natural logistic growth of real viral content across Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter. When a post goes viral, engagement builds slowly, reaches a peak, and then decays naturally. We replicate this exact flow.
+          </p>
+          <p style={{ margin: 0 }}>
+            Our fail-safe routing infrastructure guarantees zero drops. If any delivery path experiences network latency, our system automatically redirects the batch instantly — guaranteeing 99.98% uptime with zero lost orders.
+          </p>
+        </div>
+
+        {/* 3 Stats Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+          {[
+            ["100%", "Automated Pacing"],
+            ["10k+", "Active Campaigns"],
+            ["Sub-1s", "Routing Latency"],
+          ].map(([val, label]) => (
+            <div key={label} style={{ padding: 28, borderRadius: 24, background: N.bg, boxShadow: N.raised, textAlign: "center" }}>
+              <div style={{ fontSize: 36, fontWeight: 900, color: N.accent, marginBottom: 6, letterSpacing: "-1px" }}>{val}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: N.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Mission Card */}
+        <div style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 12 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>Our Mission</h2>
+          <p style={{ fontSize: 15, fontWeight: 600, color: N.muted, margin: 0, lineHeight: 1.7 }}>
+            To give creators, agencies, and brands access to a premium, timed delivery layer that matches real viral pacing. Our easy wallet-based pricing means you only pay for what you order on-demand, with no monthly subscriptions or hidden markups.
+          </p>
+        </div>
+
+        {/* Contact Info Card */}
+        <div style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 16 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: N.text, margin: 0, letterSpacing: "-0.5px" }}>Get In Touch</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 15, fontWeight: 600, color: N.muted }}>
+            <div>General Inquiries: <a href="mailto:hello@yoyosmm.online" style={{ color: N.accent, fontWeight: 700, textDecoration: "none" }}>hello@yoyosmm.online</a></div>
+            <div>Technical Support: <a href="mailto:support@yoyosmm.online" style={{ color: N.accent, fontWeight: 700, textDecoration: "none" }}>support@yoyosmm.online</a></div>
+            <div>Security & Bug Reports: <a href="mailto:bugs@yoyosmm.online" style={{ color: N.accent, fontWeight: 700, textDecoration: "none" }}>bugs@yoyosmm.online</a></div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 10 }}>
+          <Link href="/signup" className="neo-btn" style={{ padding: "16px 36px", borderRadius: 16, fontWeight: 800, fontSize: 16, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
+            Launch Your First Campaign →
+          </Link>
+          <Link href="/" className="neo-btn" style={{ padding: "16px 32px", borderRadius: 16, fontWeight: 700, fontSize: 16, color: N.text, background: N.bg, boxShadow: N.raised }}>
+            ← Back to Home
+          </Link>
+        </div>
+
+      </div>
+    </div>
+  );
+}
