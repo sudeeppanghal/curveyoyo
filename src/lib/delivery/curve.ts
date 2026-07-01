@@ -296,23 +296,38 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
   // Enforce SMM minimum limit of 100 views per batch by merging smaller batches
   const SMM_MIN = 100;
   if (totalViews >= SMM_MIN) {
-    while (true) {
+    let loopCount = 0;
+    while (loopCount++ < 1000) {
       const underMinIdx = distributedViews.findIndex((v) => v > 0 && v < SMM_MIN);
       if (underMinIdx === -1) break;
 
       const val = distributedViews[underMinIdx];
       distributedViews[underMinIdx] = 0;
 
+      // Prefer merging into nearest existing non-zero neighbor to prevent ping-ponging between zeros
       let targetIdx = -1;
-      const leftIdx = underMinIdx - 1;
-      const rightIdx = underMinIdx + 1;
+      let minDist = Infinity;
+      for (let i = 0; i < distributedViews.length; i++) {
+        if (i !== underMinIdx && distributedViews[i] > 0) {
+          const dist = Math.abs(i - underMinIdx);
+          if (dist < minDist) {
+            minDist = dist;
+            targetIdx = i;
+          }
+        }
+      }
 
-      if (leftIdx >= 0 && rightIdx < distributedViews.length) {
-        targetIdx = distributedViews[leftIdx] >= distributedViews[rightIdx] ? leftIdx : rightIdx;
-      } else if (leftIdx >= 0) {
-        targetIdx = leftIdx;
-      } else if (rightIdx < distributedViews.length) {
-        targetIdx = rightIdx;
+      // If no non-zero neighbor found, fall back to immediate neighbor
+      if (targetIdx === -1) {
+        const leftIdx = underMinIdx - 1;
+        const rightIdx = underMinIdx + 1;
+        if (leftIdx >= 0 && rightIdx < distributedViews.length) {
+          targetIdx = distributedViews[leftIdx] >= distributedViews[rightIdx] ? leftIdx : rightIdx;
+        } else if (leftIdx >= 0) {
+          targetIdx = leftIdx;
+        } else if (rightIdx < distributedViews.length) {
+          targetIdx = rightIdx;
+        }
       }
 
       if (targetIdx !== -1) {

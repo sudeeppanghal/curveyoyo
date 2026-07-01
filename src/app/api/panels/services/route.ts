@@ -26,14 +26,23 @@ export async function GET(request: NextRequest) {
   });
 
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (!dbUser.panels.length) {
+  
+  let panels = dbUser.panels;
+  if (dbUser.walletMode || panels.length === 0) {
+    panels = await prisma.panel.findMany({
+      where: { userId: null, isActive: true },
+      orderBy: { priority: "asc" },
+    });
+  }
+
+  if (!panels.length) {
     return NextResponse.json({
       limits: { views: null, likes: null, saves: null, shares: null, comments: null }
     });
   }
 
   // Look at the primary panel config
-  const panel = dbUser.panels[0];
+  const panel = panels[0];
   const serviceIds = panel.serviceIds as Record<string, Record<string, string>> | null;
   if (!serviceIds || !serviceIds[platform]) {
     return NextResponse.json({
