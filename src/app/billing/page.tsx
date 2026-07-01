@@ -148,13 +148,12 @@ export default function BillingPage() {
     </div>
   );
 
-  /* ── Wallet Mode UI ── */
-  if (data?.walletMode) {
-    const upiId = data.wallet.upiId;
-    const upiQrCode = data.wallet.upiQrCode;
-    const minDeposit = data.wallet.minDeposit;
+  /* ── Wallet Mode UI (Universal for all users) ── */
+  const upiId = data?.wallet?.upiId || "";
+  const upiQrCode = data?.wallet?.upiQrCode || "";
+  const minDeposit = data?.wallet?.minDeposit || 500;
 
-    return (
+  return (
       <div style={{ maxWidth:920, display:"flex", flexDirection:"column", gap:24 }}>
         <style>{`
           @keyframes spin{to{transform:rotate(360deg)}}
@@ -406,23 +405,5 @@ export default function BillingPage() {
         </div>
       </div>
     );
-  }
-
-  /* ── Legacy Own API Mode UI ── */
-  return (
-    <div style={{ maxWidth:620, display:"flex", flexDirection:"column", gap:20 }}>
-      <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:0 }}>Billing</h1>
-      <div style={{ borderRadius:24, padding:"48px 32px", background:N.bg, boxShadow:N.raised, textAlign:"center" }}>
-        <div style={{ fontSize:48, marginBottom:16 }}>🔌</div>
-        <h2 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 10px" }}>Independent SMM Panel Mode</h2>
-        <p style={{ fontSize:14, color:N.muted, margin:"0 0 24px", fontWeight:600 }}>
-          You are operating in developer mode. Your account has free unlimited access to the automated timing layer API controls.
-        </p>
-        <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:20, fontSize:13, fontWeight:800, color:N.accent, background:N.bg, boxShadow:N.inset }}>
-          💎 FREE UNLIMITED LIFETIME ACCESS
-        </div>
-      </div>
-    </div>
-  );
 }
 

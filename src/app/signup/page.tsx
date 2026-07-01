@@ -83,8 +83,8 @@ export default function SignupPage() {
                 <div style={{ width:44, height:44, borderRadius:14, background:"linear-gradient(135deg,#d97706,#ea580c)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:18, color:"#ffffff", boxShadow:N.raised }}>Y</div>
                 <span style={{ fontWeight:800, fontSize:20, color:N.text }}>YoyoSMM</span>
               </Link>
-              <h1 style={{ fontSize:26, fontWeight:800, color:N.text, margin:"0 0 6px", letterSpacing:"-0.5px" }}>Start for free</h1>
-              <p style={{ fontSize:14, color:N.muted, margin:0, fontWeight:500 }}>1-day trial · No credit card required</p>
+              <h1 style={{ fontSize:26, fontWeight:800, color:N.text, margin:"0 0 6px", letterSpacing:"-0.5px" }}>Create Free Account</h1>
+              <p style={{ fontSize:14, color:N.muted, margin:0, fontWeight:500 }}>Instant setup · Pay as you go with wallet balance</p>
             </div>
 
             {/* Card */}
@@ -92,7 +92,7 @@ export default function SignupPage() {
 
               {/* Features */}
               <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:24, padding:"16px", borderRadius:14, boxShadow:N.inset }}>
-                {["✅ S-curve organic delivery", "✅ Multi-panel failover", "✅ Engagement automation"].map(f => (
+                {["✅ S-curve organic pacing delivery", "✅ Pay per order from wallet", "✅ Automated engagement schedules"].map(f => (
                   <p key={f} style={{ fontSize:12, color:N.text, margin:0, fontWeight:700 }}>{f}</p>
                 ))}
               </div>
@@ -116,7 +116,7 @@ export default function SignupPage() {
                 </div>
                 <button type="submit" disabled={loading} className="neo-btn"
                   style={{ width:"100%", padding:"14px", borderRadius:14, fontSize:14, fontWeight:800, cursor:"pointer", border:"none", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, marginTop:4, transition:"all 0.2s", opacity: loading ? 0.7 : 1 }}>
-                  {loading ? "Creating account…" : "Start Free Trial →"}
+                  {loading ? "Creating account…" : "Create Free Account →"}
                 </button>
               </form>
 

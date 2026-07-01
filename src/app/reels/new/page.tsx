@@ -5,7 +5,7 @@ import Link from "next/link";
 import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets, DeliveryBatch } from "@/lib/delivery/curve";
 
 // ── Types ───────────────────────────────────────────────────────
-type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
+type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE" | "TELEGRAM" | "FACEBOOK" | "TWITTER";
 type CurveStyle = "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"
   | "LINEAR" | "EXPONENTIAL" | "S_CURVE" | "BELL_CURVE" | "LOGARITHMIC" | "QUADRATIC" | "CUBIC"
   | "SINE_WAVE" | "COSINE_WAVE" | "SAWTOOTH" | "CHAOTIC" | "DOUBLE_BELL" | "STEP_LADDER"
@@ -32,7 +32,7 @@ const N = {
 };
 
 const PLATFORM_ICONS: Record<Platform, string> = {
-  INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️",
+  INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️", TELEGRAM: "✈️", FACEBOOK: "📘", TWITTER: "🐦",
 };
 const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warmup: number; peak: number; icon: string; category: string }> = {
   ORGANIC:       { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic" },
@@ -1131,7 +1131,7 @@ export default function NewReelPage() {
           rowObj.viewsVal = parseInt(rowObj.views) || 0;
           rowObj.durDays = parseInt(rowObj.duration_days) || 7;
           rowObj.styleVal = (rowObj.curve_style || "ORGANIC").toUpperCase();
-          rowObj.isValid = rowObj.url && ["INSTAGRAM", "TIKTOK", "YOUTUBE"].includes((rowObj.platform || "").toUpperCase()) && rowObj.viewsVal >= 100 && rowObj.durDays >= 1;
+          rowObj.isValid = rowObj.url && ["INSTAGRAM", "TIKTOK", "YOUTUBE", "TELEGRAM", "FACEBOOK", "TWITTER"].includes((rowObj.platform || "").toUpperCase()) && rowObj.viewsVal >= 100 && rowObj.durDays >= 1;
           return rowObj;
         });
 
@@ -1215,7 +1215,7 @@ export default function NewReelPage() {
 
   const calculateTotalCost = () => {
     if (!pricingInfo || !pricingInfo.walletMode) return 0;
-    const rates = pricingInfo.rates[platform] || { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 };
+    const rates = pricingInfo.rates[platform] || { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, followers: 10.0, subscribers: 15.0, members: 8.0, reactions: 4.0, retweets: 6.0 };
 
     const totalViews = isCustomMode ? customSchedule.reduce((a, b) => a + b.views, 0) : views;
     const totalLikes = engEnabled && likesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget) : 0;
@@ -1320,7 +1320,7 @@ export default function NewReelPage() {
           <div>
             <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Select Platform</label>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-              {(["INSTAGRAM", "TIKTOK", "YOUTUBE"] as Platform[]).map((p) => (
+              {(["INSTAGRAM", "TIKTOK", "YOUTUBE", "TELEGRAM", "FACEBOOK", "TWITTER"] as Platform[]).map((p) => (
                 <button key={p} onClick={() => setPlatform(p)} className="neo-btn"
                   style={{ padding:"12px 6px", borderRadius:12, border:"none", cursor:"pointer", transition:"all 0.2s",
                     background: N.bg,

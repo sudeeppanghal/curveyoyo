@@ -203,23 +203,6 @@ export default function PanelsPage() {
     fetchPanels();
   };
 
-  if (walletMode) {
-    return (
-      <div style={{ borderRadius:24, padding:40, background:N.bg, boxShadow:N.raised, textAlign:"center", maxWidth:640, margin:"40px auto", display:"flex", flexDirection:"column", alignItems:"center", gap:16, animation:"fadeUp 0.4s ease-out" }}>
-        <style>{`
-          @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        `}</style>
-        <span style={{ fontSize:48 }}>🛡️</span>
-        <h2 style={{ fontSize:20, fontWeight:900, color:N.text, margin:0, letterSpacing:"-0.5px" }}>Automated Pacing Infrastructure</h2>
-        <p style={{ fontSize:13, color:N.muted, fontWeight:600, lineHeight:1.5, margin:0 }}>
-          Your account is operating in Wallet Mode. You do not need to configure or connect SMM panels.
-          All orders are automatically pacing through our premium timing network and fail-safe delivery nodes.
-          Your charges are calculated per order and deducted directly from your wallet balance.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div style={{ maxWidth:860, display:"flex", flexDirection:"column", gap:24 }}>
       <style>{`
@@ -232,153 +215,14 @@ export default function PanelsPage() {
         .panel-card:hover{box-shadow:10px 10px 24px #c8d0e7,-5px -5px 14px #ffffff !important}
       `}</style>
 
-      {/* Header */}
-      <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
-        <div>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:0, letterSpacing:"-0.5px" }}>SMM Panels</h1>
-            <button onClick={checkHealth} disabled={checkingHealth || panels.length === 0} className="neo-btn"
-              style={{
-                width:28, height:28, borderRadius:8, border:"none", cursor:"pointer", background:N.bg, boxShadow:N.raisedSm,
-                display:"flex", alignItems:"center", justifyContent:"center", padding:0, opacity: (checkingHealth || panels.length === 0) ? 0.5 : 1
-              }}
-              title="Refresh all panels health & balances">
-              <span style={{ display:"inline-block", fontSize:13, animation: checkingHealth ? "spin 1s linear infinite" : "none" }}>🔄</span>
-            </button>
-          </div>
-          <p style={{ fontSize:13, color:N.muted, margin:"4px 0 0", fontWeight:600 }}>Connect providers — we handle routing, failover & engagement</p>
-        </div>
-        <button onClick={openAdd} className="neo-btn"
-          style={{ padding:"10px 20px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, transition:"all 0.2s" }}>
-          + Add Panel
-        </button>
+      {/* Infrastructure Note */}
+      <div style={{ borderRadius:24, padding:32, background:N.bg, boxShadow:N.raised, textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12, animation:"fadeUp 0.4s ease-out" }}>
+        <span style={{ fontSize:32 }}>🛡️</span>
+        <h2 style={{ fontSize:18, fontWeight:900, color:N.text, margin:0, letterSpacing:"-0.5px" }}>Automated Pacing Infrastructure</h2>
+        <p style={{ fontSize:13, color:N.muted, fontWeight:600, lineHeight:1.5, margin:0, maxWidth:500 }}>
+          All orders are automatically paced through our premium timing network and fail-safe delivery nodes. Your charges are calculated per order and deducted directly from your wallet balance.
+        </p>
       </div>
-
-      {/* Panel list */}
-      {loading ? (
-        <div style={{ display:"flex", justifyContent:"center", padding:"80px 0" }}>
-          <div style={{ width:36, height:36, borderRadius:"50%", border:"3px solid rgba(217,119,6,0.15)", borderTopColor:N.accent, animation:"spin 0.8s linear infinite" }} />
-        </div>
-      ) : panels.length === 0 ? (
-        <div style={{ borderRadius:20, padding:"64px 24px", background:N.bg, boxShadow:N.raised, textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-          <div style={{ fontSize:40, marginBottom:4 }}>🔌</div>
-          <p style={{ fontSize:15, fontWeight:800, color:N.text, margin:0 }}>No panels connected</p>
-          <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Connect your first SMM panel to start delivering views + engagement</p>
-          <button onClick={openAdd} style={{ marginTop:8, padding:"11px 24px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm }} className="neo-btn">
-            Add First Panel →
-          </button>
-        </div>
-      ) : (
-        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          {panels.map((p, idx) => {
-            const st = STATUS_STYLES[p.status];
-            const hasServiceIds = p.serviceIds && Object.values(p.serviceIds).some(plat => Object.values(plat ?? {}).some(Boolean));
-            return (
-              <div key={p.id} className="panel-card"
-                style={{ borderRadius:20, padding:"20px 22px", background:N.bg, boxShadow:N.raised, display:"flex", alignItems:"flex-start", gap:16, transition:"all 0.2s", animation:`fadeUp ${0.1 + idx * 0.07}s ease` }}>
-                {/* Priority circle */}
-                <div style={{ width:40, height:40, borderRadius:"50%", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:900, color: idx === 0 ? "#ffffff" : N.muted, background: idx === 0 ? "linear-gradient(135deg,#d97706,#ea580c)" : N.bg, boxShadow: idx === 0 ? N.raisedSm : N.inset }}>
-                  {p.priority}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-                    <p style={{ fontWeight:800, fontSize:14, color:N.text, margin:0 }}>{p.name}</p>
-                    <span style={{ padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:800, color:st.color, background:N.bg, boxShadow:N.inset }}>
-                      {st.label}
-                    </span>
-                    {!p.isActive && <span style={{ fontSize:11, color:N.muted, background:N.bg, padding:"3px 8px", borderRadius:20, boxShadow:N.inset, fontWeight:700 }}>Paused</span>}
-                  </div>
-                  <p style={{ fontSize:12, color:N.muted, margin:"0 0 10px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontWeight:600 }}>{p.apiUrl}</p>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:14, fontSize:11 }}>
-                    <span style={{ color:N.muted, fontWeight:700 }}>Priority: <span style={{ color:N.text, fontWeight:800 }}>{p.priority}</span></span>
-                    <span style={{ color:N.muted, fontWeight:700 }}>Load: <span style={{ color:N.text, fontWeight:800 }}>{p.loadPercentage}%</span></span>
-                    {p.lastResponseMs && <span style={{ color:N.muted, fontWeight:700 }}>Response: <span style={{ color: p.lastResponseMs > 5000 ? "#d97706" : "#16a34a", fontWeight:800 }}>{p.lastResponseMs}ms</span></span>}
-                    {p.balance !== undefined ? (
-                      <span style={{ color:N.muted, fontWeight:700 }}>
-                        Balance: <span style={{ color: "#16a34a", fontWeight:900 }}>${p.balance.toFixed(2)} {p.currency ?? "USD"}</span>
-                      </span>
-                    ) : (
-                      checkingHealth && <span style={{ color:N.muted, fontWeight:700, animation: "pulse 1.5s infinite" }}>Checking balance…</span>
-                    )}
-                    <span>{hasServiceIds ? <span style={{ color:"#16a34a", fontWeight:800 }}>✓ IDs set</span> : <span style={{ color:"#d97706", fontWeight:800 }}>⚠ No service IDs</span>}</span>
-                  </div>
-                </div>
-                <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-                  <button onClick={() => openEdit(p)} style={{ padding:"8px 16px", borderRadius:10, fontSize:12, fontWeight:700, cursor:"pointer", border:"none", color:N.text, background:N.bg, boxShadow:N.raisedSm, transition:"all 0.15s" }} className="neo-btn">Edit</button>
-                  <button onClick={() => deletePanel(p.id)} style={{ padding:"8px 16px", borderRadius:10, fontSize:12, fontWeight:700, cursor:"pointer", border:"none", color:"#dc2626", background:N.bg, boxShadow:N.raisedSm, transition:"all 0.15s" }} className="neo-btn">Remove</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* How-to tip */}
-      <div style={{ borderRadius:16, padding:"16px 20px", background:N.bg, boxShadow:N.inset, display:"flex", flexDirection:"column", gap:5 }}>
-        <p style={{ fontSize:12, fontWeight:800, color:N.text, margin:0 }}>💡 How to find Service IDs</p>
-        {["1. Log into your SMM panel (e.g. SMMKings, Peakerr, JustAnotherPanel)", "2. Go to Services tab → search Instagram Reels Views → note the ID (e.g. 1234)", "3. Do the same for Likes, Saves, Shares, Comments — enter each above", "4. Panel priority 1 = primary, 2 = first failover (failover is automatic, sub-1s)"].map((t, i) => (
-          <p key={i} style={{ fontSize:12, color:N.muted, margin:0, fontWeight:600 }}>{t}</p>
-        ))}
-      </div>
-
-      {/* Add/Edit Drawer */}
-      {showForm && (
-        <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:"16px", background:"rgba(0,0,0,0.3)", backdropFilter:"blur(8px)" }}>
-          <div style={{ width:"100%", maxWidth:680, borderRadius:24, background:N.bg, boxShadow:"16px 16px 40px rgba(163,177,198,0.5),-8px -8px 24px #ffffff", maxHeight:"90vh", display:"flex", flexDirection:"column", overflow:"hidden" }}>
-            {/* Drawer header */}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px", boxShadow:"0 4px 20px rgba(200,208,231,0.2)" }}>
-              <h2 style={{ fontSize:16, fontWeight:800, color:N.text, margin:0 }}>{editPanel ? "Edit Panel" : "Add Panel"}</h2>
-              <button onClick={() => setShowForm(false)} style={{ width:32, height:32, borderRadius:10, border:"none", cursor:"pointer", background:N.bg, boxShadow:N.raisedSm, color:N.muted, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }} className="neo-btn">×</button>
-            </div>
-
-            {/* Drawer body */}
-            <div style={{ flex:1, overflowY:"auto", padding:"24px", display:"flex", flexDirection:"column", gap:20 }}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                <NeoInput label="Panel Name" value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="e.g. SMMKings Primary"/>
-                <NeoInput label="API URL" value={form.apiUrl} onChange={v=>setForm(f=>({...f,apiUrl:v}))} placeholder="https://panel.com/api/v2"/>
-              </div>
-
-              <div>
-                <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>
-                  API Key {editPanel && <span style={{ color:N.muted, textTransform:"none", fontWeight:600 }}>(leave blank to keep current)</span>}
-                </label>
-                <div style={{ display:"flex", gap:10 }}>
-                  <input type="password" value={form.apiKey} onChange={e=>setForm(f=>({...f,apiKey:e.target.value}))} placeholder={editPanel ? "••••••••" : "Paste your API key"}
-                    style={{ flex:1, padding:"11px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset, fontFamily:"monospace" }}
-                    className="neo-input"/>
-                  <button onClick={testConnection} disabled={!form.apiUrl || (!form.apiKey && !editPanel) || testing === "testing"} className="neo-btn"
-                    style={{ padding:"11px 20px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, transition:"all 0.2s", opacity: (!form.apiUrl || (!form.apiKey && !editPanel)) ? 0.4 : 1 }}>
-                    {testing === "testing" ? "Testing…" : "Test"}
-                  </button>
-                </div>
-                {testResult && (
-                  <p style={{ marginTop:8, fontSize:12, fontWeight:800, color: testResult.ok ? "#16a34a" : "#dc2626" }}>{testResult.msg}</p>
-                )}
-              </div>
-
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                <NeoInput label="Priority (1 = primary)" type="number" value={form.priority} onChange={v=>setForm(f=>({...f,priority:parseInt(v)||1}))}/>
-                <NeoInput label="Load % (100 = all traffic)" type="number" value={form.loadPercentage} onChange={v=>setForm(f=>({...f,loadPercentage:parseInt(v)||100}))}/>
-              </div>
-
-              <div style={{ borderRadius:16, padding:"20px", background:N.bg, boxShadow:N.inset }}>
-                <ServiceIdConfig svcIds={form.serviceIds} onChange={s=>setForm(f=>({...f,serviceIds:s}))}/>
-              </div>
-
-              {error && <p style={{ fontSize:13, color:"#dc2626", margin:0, fontWeight:700 }}>{error}</p>}
-            </div>
-
-            {/* Drawer footer */}
-            <div style={{ display:"flex", gap:12, padding:"16px 24px", boxShadow:"0 -4px 20px rgba(200,208,231,0.2)" }}>
-              <button onClick={() => setShowForm(false)} style={{ flex:1, padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"none", cursor:"pointer", color:N.muted, background:N.bg, boxShadow:N.raisedSm }} className="neo-btn">Cancel</button>
-              <button onClick={savePanel} disabled={saving || !form.name || !form.apiUrl} className="neo-btn"
-                style={{ flex:1, padding:"12px", borderRadius:12, fontSize:13, fontWeight:800, border:"none", cursor:"pointer", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, transition:"all 0.2s", opacity: (saving || !form.name || !form.apiUrl) ? 0.5 : 1 }}>
-                {saving ? "Saving…" : editPanel ? "Save Changes" : "Add Panel"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

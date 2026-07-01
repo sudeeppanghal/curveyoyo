@@ -22,21 +22,17 @@ export async function GET(request: Request) {
         });
 
         if (!dbUser) {
-          const trialEndsAt = new Date();
-          trialEndsAt.setDate(trialEndsAt.getDate() + 1); // 1-day trial
-
           await prisma.user.create({
             data: {
               supabaseId: user.id,
               email: user.email!,
               name: user.user_metadata?.name || user.email?.split("@")[0] || "User",
-              plan: "TRIAL",
-              trialEndsAt,
+              plan: "FREE",
+              trialEndsAt: null,
               walletMode: true,
               balance: 0.0,
             }
           });
-
         }
       }
 

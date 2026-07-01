@@ -130,7 +130,7 @@ function LoginForm() {
 
           <p style={{ textAlign:"center", fontSize:13, color:N.muted, marginTop:22, fontWeight:600 }}>
             No account?{" "}
-            <Link href="/signup" style={{ color:N.accent, textDecoration:"none", fontWeight:800 }}>Start free trial →</Link>
+            <Link href="/signup" style={{ color:N.accent, textDecoration:"none", fontWeight:800 }}>Create free account →</Link>
           </p>
         </div>
 

@@ -12,21 +12,20 @@ export async function GET() {
   const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  // If not wallet user, rates are not applicable
-  if (!dbUser.walletMode) {
-    return NextResponse.json({ walletMode: false });
-  }
-
   // Fetch active admin panels
   const activeAdminPanels = await prisma.panel.findMany({
     where: { userId: null, isActive: true },
     orderBy: { priority: "asc" },
   });
 
+  const defaultServices = { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, followers: 10.0, subscribers: 15.0, members: 8.0, reactions: 4.0, retweets: 6.0 };
   const rates: Record<string, Record<string, number>> = {
-    INSTAGRAM: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
-    TIKTOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
-    YOUTUBE: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
+    INSTAGRAM: { ...defaultServices },
+    TIKTOK: { ...defaultServices },
+    YOUTUBE: { ...defaultServices },
+    TELEGRAM: { ...defaultServices },
+    FACEBOOK: { ...defaultServices },
+    TWITTER: { ...defaultServices },
   };
 
   let adminPanel = activeAdminPanels[0];
@@ -44,13 +43,13 @@ export async function GET() {
   }
 
   if (adminPanel && adminServices.length > 0) {
-
     for (const s of adminServices) {
       const platform = s.platform;
       const type = s.type.toLowerCase();
-      if (rates[platform]) {
-        rates[platform][type] = s.customRate;
+      if (!rates[platform]) {
+        rates[platform] = { ...defaultServices };
       }
+      rates[platform][type] = s.customRate;
     }
   }
 

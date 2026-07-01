@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
 
   let primaryPanel: any = null;
   let totalPrice = 0.0;
-  const isWalletUser = dbUser.walletMode;
 
   // Calculate engagement targets from ratios (or use submitted values)
   const engTargets = engagementEnabled
@@ -83,67 +82,55 @@ export async function POST(request: NextRequest) {
       )
     : { likesTarget: 0, savesTarget: 0, sharesTarget: 0, commentsTarget: 0 };
 
-  if (isWalletUser) {
-    // 1. Fetch active admin panels in priority order
-    const activeAdminPanels = await prisma.panel.findMany({
-      where: { userId: null, isActive: true },
-      orderBy: { priority: "asc" },
+  // 1. Fetch active admin panels in priority order
+  const activeAdminPanels = await prisma.panel.findMany({
+    where: { userId: null, isActive: true },
+    orderBy: { priority: "asc" },
+  });
+  if (activeAdminPanels.length === 0) {
+    return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
+  }
+
+  // Find all panels that have mapped admin services configured for this platform
+  const validAdminPanels: { panel: any; services: any[] }[] = [];
+  for (const p of activeAdminPanels) {
+    const svcs = await prisma.adminService.findMany({
+      where: { panelId: p.id, platform: (platform as string).toUpperCase() as any },
     });
-    if (activeAdminPanels.length === 0) {
-      return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
+    if (svcs.length > 0) {
+      validAdminPanels.push({ panel: p, services: svcs });
     }
+  }
+  if (validAdminPanels.length === 0) {
+    return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
+  }
 
-    // Find all panels that have mapped admin services configured for this platform
-    const validAdminPanels: { panel: any; services: any[] }[] = [];
-    for (const p of activeAdminPanels) {
-      const svcs = await prisma.adminService.findMany({
-        where: { panelId: p.id, platform: (platform as string).toUpperCase() as any },
-      });
-      if (svcs.length > 0) {
-        validAdminPanels.push({ panel: p, services: svcs });
-      }
-    }
-    if (validAdminPanels.length === 0) {
-      return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
-    }
+  // Auto distribute randomly across available online admin panels for load distribution
+  const onlineAdminPanels = validAdminPanels.filter(x => x.panel.status !== "OFFLINE");
+  const adminPool = onlineAdminPanels.length > 0 ? onlineAdminPanels : validAdminPanels;
+  const selected = adminPool[Math.floor(Math.random() * adminPool.length)];
+  const adminPanel = selected.panel;
+  const adminServices = selected.services;
 
-    // Auto distribute round-robin across available online panels
-    const onlineAdminPanels = validAdminPanels.filter(x => x.panel.status !== "OFFLINE");
-    const adminPool = onlineAdminPanels.length > 0 ? onlineAdminPanels : validAdminPanels;
-    const totalOrdersCount = await prisma.order.count();
-    const selected = adminPool[totalOrdersCount % adminPool.length];
-    const adminPanel = selected.panel;
-    const adminServices = selected.services;
+  primaryPanel = adminPanel;
 
-    primaryPanel = adminPanel;
+  const getRate = (type: string, fallback: number) => {
+    const s = adminServices.find(x => x.type === type);
+    return s ? s.customRate : fallback;
+  };
 
-    const getRate = (type: string, fallback: number) => {
-      const s = adminServices.find(x => x.type === type);
-      return s ? s.customRate : fallback;
-    };
+  const viewsCost = (views / 1000) * getRate("views", 3.0);
+  const likesCost = (engTargets.likesTarget / 1000) * getRate("likes", 5.0);
+  const savesCost = (engTargets.savesTarget / 1000) * getRate("saves", 5.0);
+  const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
+  const commentsCost = (engTargets.commentsTarget / 1000) * getRate("comments", 15.0);
 
-    const viewsCost = (views / 1000) * getRate("views", 3.0);
-    const likesCost = (engTargets.likesTarget / 1000) * getRate("likes", 5.0);
-    const savesCost = (engTargets.savesTarget / 1000) * getRate("saves", 5.0);
-    const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
-    const commentsCost = (engTargets.commentsTarget / 1000) * getRate("comments", 15.0);
+  totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost).toFixed(2));
 
-    totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost).toFixed(2));
-
-    if (dbUser.balance < totalPrice) {
-      return NextResponse.json({
-        error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your balance is ₹${dbUser.balance.toFixed(2)}.`
-      }, { status: 400 });
-    }
-  } else {
-    if (dbUser.panels.length === 0) {
-      return NextResponse.json({ error: "Connect at least one active delivery provider on the Panels page before placing an order." }, { status: 400 });
-    }
-    // Auto distribute round-robin across available online SMM panels according to availability
-    const onlinePanels = dbUser.panels.filter((p: any) => p.status !== "OFFLINE");
-    const pool = onlinePanels.length > 0 ? onlinePanels : dbUser.panels;
-    const userOrderCount = await prisma.order.count({ where: { userId: dbUser.id } });
-    primaryPanel = pool[userOrderCount % pool.length];
+  if (dbUser.balance < totalPrice) {
+    return NextResponse.json({
+      error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your balance is ₹${dbUser.balance.toFixed(2)}.`
+    }, { status: 400 });
   }
 
   const allowed = await checkRateLimit(dbUser.id, 50);
@@ -174,11 +161,11 @@ export async function POST(request: NextRequest) {
     where: { id: reelId },
     create: {
       id: reelId, userId: dbUser.id, url: reelUrl,
-      platform: (platform as string).toUpperCase() as "INSTAGRAM" | "TIKTOK" | "YOUTUBE",
+      platform: (platform as string).toUpperCase() as any,
     },
     update: {
       url: reelUrl,
-      platform: (platform as string).toUpperCase() as "INSTAGRAM" | "TIKTOK" | "YOUTUBE",
+      platform: (platform as string).toUpperCase() as any,
     },
   });
 
@@ -186,12 +173,10 @@ export async function POST(request: NextRequest) {
   const defDuration = curveStyle === "AGGRESSIVE" ? 6 : curveStyle === "FAST" ? 12 : 24;
 
   const order = await prisma.$transaction(async (tx) => {
-    if (isWalletUser) {
-      await tx.user.update({
-        where: { id: dbUser.id },
-        data: { balance: { decrement: totalPrice } },
-      });
-    }
+    await tx.user.update({
+      where: { id: dbUser.id },
+      data: { balance: { decrement: totalPrice } },
+    });
 
     return tx.order.create({
       data: {

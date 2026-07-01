@@ -2350,6 +2350,12 @@ export default function AdminPage() {
 
                           <option value="YOUTUBE">YouTube</option>
 
+                          <option value="TELEGRAM">Telegram</option>
+
+                          <option value="FACEBOOK">Facebook</option>
+
+                          <option value="TWITTER">Twitter (X)</option>
+
                         </select>
 
                       </div>
@@ -2371,6 +2377,16 @@ export default function AdminPage() {
                           <option value="shares">Shares</option>
 
                           <option value="comments">Comments</option>
+
+                          <option value="followers">Followers</option>
+
+                          <option value="subscribers">Subscribers</option>
+
+                          <option value="members">Members</option>
+
+                          <option value="reactions">Reactions</option>
+
+                          <option value="retweets">Retweets</option>
 
                         </select>
 

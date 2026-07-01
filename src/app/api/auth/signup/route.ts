@@ -37,17 +37,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
     }
 
-    // 2. Create user record in Prisma (with 1-day trial)
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 1); // 1-day trial
-
+    // 2. Create user record in Prisma (Wallet Mode)
     await prisma.user.create({
       data: {
         supabaseId: authData.user.id,
         email: authData.user.email!,
         name,
-        plan: "TRIAL",
-        trialEndsAt,
+        plan: "FREE",
+        trialEndsAt: null,
         walletMode: true,
         balance: 0.0,
       },

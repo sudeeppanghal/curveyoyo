@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const uppercasePlatform = String(platform).toUpperCase() as "INSTAGRAM" | "TIKTOK" | "YOUTUBE";
+  const uppercasePlatform = String(platform).toUpperCase() as any;
 
   const adminService = await prisma.adminService.upsert({
     where: {
