@@ -832,7 +832,7 @@ export default function Home() {
 
               ["Do I need to deposit funds to start?","Yes. To launch campaign pacing, you add funds to your wallet using UPI (minimum ₹500). Your charges are calculated per order on-demand, according to our competitive custom pricing rates."],
 
-              ["Which platforms are supported?","We currently support organic views and engagement (likes, saves, shares, comments) for Instagram, TikTok, and YouTube, with full S-curve timing options."],
+              ["Which platforms are supported?","We currently support organic views and engagement (likes, saves, shares, comments, followers, subscribers, members) across Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter, with full S-curve timing options."],
 
               ["How does your fail-safe delivery network work?","Our engine utilizes multiple redundant delivery routes. If any route experiences network delay, the system redirects the batch to an active backup path instantly (in under a second) ensuring zero drops."],
 

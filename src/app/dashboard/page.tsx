@@ -202,7 +202,7 @@ export default function DashboardPage() {
 
   const steps = [
     { num:"01", label:"Deposit Funds",   desc:"Add wallet balance via UPI or Crypto",     href:"/billing",   done: (stats.totalOrders ?? 0) > 0 },
-    { num:"02", label:"Import a Reel",   desc:"Paste any Instagram or TikTok reel URL",   href:"/reels/new", done: (stats.totalReels ?? 0) > 0 },
+    { num:"02", label:"Import a Campaign", desc:"Paste any IG, TikTok, YT, TG, FB, or X link", href:"/reels/new", done: (stats.totalReels ?? 0) > 0 },
     { num:"03", label:"Create an Order", desc:"Set views, curve shape, and run campaign", href:"/reels/new", done: (stats.totalOrders ?? 0) > 0 },
   ];
 

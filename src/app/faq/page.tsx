@@ -30,7 +30,7 @@ const FAQ_SECTIONS = [
   {
     title: "Platform Features",
     items: [
-      ["Which platforms are supported?", "We currently support high-retention views and organic engagement (likes, saves, comments, and shares) for Instagram, TikTok, and YouTube."],
+      ["Which platforms are supported?", "We currently support high-retention views and organic engagement (likes, saves, comments, shares, followers, subscribers, and members) for Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter."],
       ["Are my campaign links secure?", "Yes. All campaign targets, video links, and transaction logs are fully private and encrypted. We never share your order details."],
       ["How is the pacing system different from normal panels?", "Normal SMM panels deliver engagement in one flat spike, which looks artificial. Our timing layer distributes delivery over your chosen duration, mimicking viral spread."],
     ],

@@ -40,7 +40,7 @@ const STATUS: Record<string, { color: string; bg: string; dot?: boolean }> = {
   PENDING:    { color: "#4b5563", bg: "rgba(75, 85, 99, 0.12)" },
 };
 
-const PLATFORM_ICON: Record<string, string> = { INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️" };
+const PLATFORM_ICON: Record<string, string> = { INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️", TELEGRAM: "✈️", FACEBOOK: "📘", TWITTER: "🐦" };
 const FILTERS: OrderStatus[] = ["All", "DELIVERING", "COMPLETED", "QUEUED", "PAUSED", "FAILED", "CANCELLED"];
 const CURVE_LABELS: Record<string, string> = {
   ORGANIC: "🌱 Organic", FAST: "⚡ Fast", AGGRESSIVE: "🔥 Aggressive",

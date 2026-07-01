@@ -27,7 +27,7 @@ export default async function ReelsPage() {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
           <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px", letterSpacing:"-0.5px" }}>Reels</h1>
-          <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Manage your Instagram, TikTok, and YouTube reels.</p>
+          <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Manage your campaigns across Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter.</p>
         </div>
         <Link href="/reels/new" className="neo-btn" style={{
           padding:"10px 22px", borderRadius:12, fontSize:13, fontWeight:800, textDecoration:"none", color:"#ffffff",
@@ -46,10 +46,10 @@ export default async function ReelsPage() {
         <div style={{ fontSize:48, marginBottom:8 }}>🎬</div>
         <h3 style={{ fontSize:18, fontWeight:800, color:N.text, margin:0 }}>No reels added yet</h3>
         <p style={{ fontSize:13, color:N.muted, maxWidth:420, margin:"0 0 12px", lineHeight:1.7, fontWeight:600 }}>
-          Paste an Instagram Reel, TikTok, or YouTube Shorts URL to get started. We detect the platform automatically.
+          Paste an Instagram, TikTok, YouTube, Telegram, Facebook, or Twitter link to get started. We detect the platform automatically.
         </p>
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:10, marginBottom:16 }}>
-          {[["📷","Instagram"],["🎵","TikTok"],["▶️","YouTube"]].map(([icon,name])=>(
+          {[["📷","Instagram"],["🎵","TikTok"],["▶️","YouTube"],["✈️","Telegram"],["📘","Facebook"],["🐦","Twitter"]].map(([icon,name])=>(
             <span key={name} style={{
               padding:"6px 14px", borderRadius:20, fontSize:11, fontWeight:800, color:"#16a34a",
               background: N.bg,

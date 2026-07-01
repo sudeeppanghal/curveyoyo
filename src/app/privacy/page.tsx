@@ -47,7 +47,7 @@ export default function PrivacyPage() {
             <p className="leading-relaxed font-medium mb-4" style={{ color: C.textMuted }}>We collect only the essential details needed to operate your pacing campaigns and secure your wallet account:</p>
             <ul className="space-y-2 font-medium" style={{ paddingLeft: 0, listStyle: "none", color: C.textMuted }}>
               <li><strong style={{ color: C.text }}>• Account Data:</strong> Email, username, and password hashes for authentication.</li>
-              <li><strong style={{ color: C.text }}>• Campaign Inputs:</strong> Instagram/TikTok video or reel URLs provided to track view delivery.</li>
+              <li><strong style={{ color: C.text }}>• Campaign Inputs:</strong> Social media links (Instagram, TikTok, YouTube, Telegram, Facebook, Twitter) provided to track campaign delivery.</li>
               <li><strong style={{ color: C.text }}>• Billing Logs:</strong> UPI deposit reference numbers and transaction ledger logs.</li>
             </ul>
           </section>

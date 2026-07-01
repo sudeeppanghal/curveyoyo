@@ -223,7 +223,7 @@ export default function OrderDetailPage() {
   const { order, chartData, totalBatches, completedBatches, failedBatches } = data;
   const st = STATUS_STYLES[order.status] ?? STATUS_STYLES.PENDING;
   const isLive = order.status === "DELIVERING" || order.status === "QUEUED";
-  const platformIcons: Record<string, string> = { INSTAGRAM:"📷", TIKTOK:"🎵", YOUTUBE:"▶️" };
+  const platformIcons: Record<string, string> = { INSTAGRAM:"📷", TIKTOK:"🎵", YOUTUBE:"▶️", TELEGRAM:"✈️", FACEBOOK:"📘", TWITTER:"🐦" };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:24, maxWidth:800 }}>

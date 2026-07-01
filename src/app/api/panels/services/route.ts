@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const platform = request.nextUrl.searchParams.get("platform")?.toLowerCase();
-  if (!platform || !["instagram", "tiktok", "youtube"].includes(platform)) {
+  if (!platform || !["instagram", "tiktok", "youtube", "telegram", "facebook", "twitter"].includes(platform)) {
     return NextResponse.json({ error: "Valid platform query parameter is required" }, { status: 400 });
   }
 
