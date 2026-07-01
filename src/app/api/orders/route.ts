@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/redis";
 import { calculateEngagementTargets } from "@/lib/delivery/curve";
+import crypto from "crypto";
 
 /* ── GET /api/orders ── */
 export async function GET() {
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
 
   const dbUser = await prisma.user.findUnique({
     where: { supabaseId: user.id },
-    include: { panels: { where: { isActive: true }, orderBy: { priority: "asc" }, take: 1 } },
+    include: { panels: { where: { isActive: true }, orderBy: { priority: "asc" } } },
   });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -92,19 +93,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
     }
 
-    // Find the first panel that has mapped admin services configured for this platform
-    let adminPanel = activeAdminPanels[0];
-    let adminServices: any[] = [];
+    // Find all panels that have mapped admin services configured for this platform
+    const validAdminPanels: { panel: any; services: any[] }[] = [];
     for (const p of activeAdminPanels) {
       const svcs = await prisma.adminService.findMany({
         where: { panelId: p.id, platform: (platform as string).toUpperCase() as any },
       });
       if (svcs.length > 0) {
-        adminPanel = p;
-        adminServices = svcs;
-        break;
+        validAdminPanels.push({ panel: p, services: svcs });
       }
     }
+    if (validAdminPanels.length === 0) {
+      return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
+    }
+
+    // Auto distribute round-robin across available online panels
+    const onlineAdminPanels = validAdminPanels.filter(x => x.panel.status !== "OFFLINE");
+    const adminPool = onlineAdminPanels.length > 0 ? onlineAdminPanels : validAdminPanels;
+    const totalOrdersCount = await prisma.order.count();
+    const selected = adminPool[totalOrdersCount % adminPool.length];
+    const adminPanel = selected.panel;
+    const adminServices = selected.services;
 
     primaryPanel = adminPanel;
 
@@ -130,7 +139,11 @@ export async function POST(request: NextRequest) {
     if (dbUser.panels.length === 0) {
       return NextResponse.json({ error: "Connect at least one active delivery provider on the Panels page before placing an order." }, { status: 400 });
     }
-    primaryPanel = dbUser.panels[0];
+    // Auto distribute round-robin across available online SMM panels according to availability
+    const onlinePanels = dbUser.panels.filter((p: any) => p.status !== "OFFLINE");
+    const pool = onlinePanels.length > 0 ? onlinePanels : dbUser.panels;
+    const userOrderCount = await prisma.order.count({ where: { userId: dbUser.id } });
+    primaryPanel = pool[userOrderCount % pool.length];
   }
 
   const allowed = await checkRateLimit(dbUser.id, 50);
@@ -154,15 +167,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Upsert reel
-  const reelId = `${dbUser.id}:${Buffer.from(reelUrl).toString("base64").slice(0, 20)}`;
+  // Upsert reel using MD5 hash of URL to avoid identical prefix collisions
+  const urlHash = crypto.createHash("md5").update(reelUrl).digest("hex");
+  const reelId = `${dbUser.id}:${urlHash}`;
   const reel = await prisma.reel.upsert({
     where: { id: reelId },
     create: {
       id: reelId, userId: dbUser.id, url: reelUrl,
       platform: (platform as string).toUpperCase() as "INSTAGRAM" | "TIKTOK" | "YOUTUBE",
     },
-    update: {},
+    update: {
+      url: reelUrl,
+      platform: (platform as string).toUpperCase() as "INSTAGRAM" | "TIKTOK" | "YOUTUBE",
+    },
   });
 
   const curveStyle = ((styleRaw as string | undefined)?.toUpperCase() ?? "ORGANIC") as "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
