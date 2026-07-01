@@ -42,18 +42,41 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
       ? await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } })
       : order.user.panels;
 
-    if (!activePanels.length) {
+    let validPanels = activePanels;
+    if (isWallet && (order as any).reel) {
+      const platform = ((order as any).reel.platform as string).toUpperCase();
+      const configuredPanels: any[] = [];
+      for (const p of activePanels) {
+        const svcs = await prisma.adminService.findMany({
+          where: { panelId: p.id, platform: platform as any },
+        });
+        if (svcs.length > 0) configuredPanels.push(p);
+      }
+      if (configuredPanels.length > 0) validPanels = configuredPanels;
+    }
+    const onlinePanels = validPanels.filter((p: any) => p.status !== "OFFLINE");
+    const panelPool = onlinePanels.length > 0 ? onlinePanels : validPanels;
+
+    if (!panelPool.length) {
       return { ok: false, batchCount: 0, totalViews: 0, error: isWallet ? "No active admin panels configured" : "No active panels" };
     }
 
-    const primaryPanel = activePanels[0];
+    // Randomize existing event panelIds across the available pool
+    await Promise.all(
+      existingEvents.map((e) =>
+        prisma.deliveryEvent.update({
+          where: { id: e.id },
+          data: { panelId: panelPool[Math.floor(Math.random() * panelPool.length)].id },
+        })
+      )
+    );
 
     await prisma.order.update({
       where: { id: orderId },
       data: {
         status: "QUEUED",
         startedAt: new Date(),
-        panelId: primaryPanel.id,
+        panelId: panelPool[0].id,
       },
     });
 
@@ -87,11 +110,24 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     ? await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } })
     : order.user.panels;
 
-  if (!activePanels.length) {
+  let validPanels = activePanels;
+  if (isWallet && (order as any).reel) {
+    const platform = ((order as any).reel.platform as string).toUpperCase();
+    const configuredPanels: any[] = [];
+    for (const p of activePanels) {
+      const svcs = await prisma.adminService.findMany({
+        where: { panelId: p.id, platform: platform as any },
+      });
+      if (svcs.length > 0) configuredPanels.push(p);
+    }
+    if (configuredPanels.length > 0) validPanels = configuredPanels;
+  }
+  const onlinePanels = validPanels.filter((p: any) => p.status !== "OFFLINE");
+  const panelPool = onlinePanels.length > 0 ? onlinePanels : validPanels;
+
+  if (!panelPool.length) {
     return { ok: false, batchCount: 0, totalViews: 0, error: isWallet ? "No active admin panels configured" : "No active panels" };
   }
-
-  const primaryPanel = activePanels[0];
 
   // Generate the S-curve batches
   const params: CurveParams = {
@@ -103,7 +139,7 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
   };
   const batches = generateDeliverySchedule(params);
 
-  // Persist all delivery events to DB
+  // Persist all delivery events to DB with randomized panel assignment
   const now = new Date();
   const data = batches.map((batch, index) => {
     let delayMs = batch.scheduledDelayMs;
@@ -114,9 +150,10 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
       const jitterMs = (Math.random() * 2 - 1) * 15 * 60 * 1000;
       delayMs = Math.max(5 * 60 * 1000, delayMs + jitterMs); // keep at least 5 minutes delay
     }
+    const randomPanel = panelPool[Math.floor(Math.random() * panelPool.length)];
     return {
       orderId: order.id,
-      panelId: primaryPanel.id,
+      panelId: randomPanel.id,
       viewsBatch: batch.views,
       scheduledAt: new Date(now.getTime() + delayMs),
       status: "SCHEDULED" as const,
@@ -136,7 +173,7 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     data: {
       status: "QUEUED",
       startedAt: now,
-      panelId: primaryPanel.id,
+      panelId: panelPool[0].id,
     },
   });
 

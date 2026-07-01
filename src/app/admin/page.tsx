@@ -780,6 +780,7 @@ export default function AdminPage() {
 
 
   const [adminPanels, setAdminPanels] = useState<any[]>([]);
+  const [checkingAdminBalances, setCheckingAdminBalances] = useState<boolean>(false);
   const [verifyingPanelId, setVerifyingPanelId] = useState<string | null>(null);
   const [verificationResult, setVerificationResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
@@ -1248,7 +1249,7 @@ export default function AdminPage() {
         fetch("/api/admin/orders",   { headers }),
         fetch("/api/admin/system",   { headers }),
         fetch("/api/admin/upi-payments", { headers }),
-        fetch("/api/admin/panels",   { headers }),
+        fetch("/api/admin/panels?action=health",   { headers }),
         fetch("/api/tickets",        { headers }),
       ]);
 
@@ -2218,9 +2219,10 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin/panels?action=test&id=${panelId}`, { headers });
       const data = await res.json();
       if (res.ok && data.ok) {
-        setVerificationResult({ id: panelId, success: true, message: "Connection verified! Panel is ONLINE." });
-        // Refresh panel list state to show ONLINE status in table
-        const apRes = await fetch("/api/admin/panels", { headers });
+        const balText = data.balance !== undefined ? ` — Balance: $${Number(data.balance).toFixed(2)} ${data.currency ?? "USD"}` : "";
+        setVerificationResult({ id: panelId, success: true, message: `Connection verified! Panel is ONLINE.${balText}` });
+        // Refresh panel list state to show ONLINE status & balance in table
+        const apRes = await fetch("/api/admin/panels?action=health", { headers });
         if (apRes.ok) {
           const apData = await apRes.json();
           if (apData.panels) setAdminPanels(apData.panels);
@@ -2232,6 +2234,21 @@ export default function AdminPage() {
       setVerificationResult({ id: panelId, success: false, message: `Network error: ${err.message || String(err)}` });
     } finally {
       setVerifyingPanelId(null);
+    }
+  };
+
+  const handleCheckAdminBalances = async () => {
+    setCheckingAdminBalances(true);
+    try {
+      const res = await fetch("/api/admin/panels?action=health", { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.panels) setAdminPanels(data.panels);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingAdminBalances(false);
     }
   };
 
@@ -8349,6 +8366,14 @@ export default function AdminPage() {
 
 
 
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15, marginTop: 10 }}>
+                  <h3 style={{ color: N.text, fontSize: 16, fontWeight: 900, margin: 0 }}>Connected SMM Accounts</h3>
+                  <button onClick={handleCheckAdminBalances} disabled={checkingAdminBalances} className="neo-btn"
+                    style={{ border: "none", background: N.bg, padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer", opacity: checkingAdminBalances ? 0.7 : 1 }}>
+                    {checkingAdminBalances ? "⏳ Refreshing Balances..." : "⚡ Refresh Balances & Health"}
+                  </button>
+                </div>
+
                 {/* SMM Panels List */}
 
 
@@ -8413,7 +8438,7 @@ export default function AdminPage() {
 
 
 
-                          {["Name", "API URL", "Priority", "Load %", "Status", "Actions"].map((h) => (
+                          {["Name", "API URL", "Priority", "Load %", "Balance", "Status", "Actions"].map((h) => (
 
 
 
@@ -8502,6 +8527,9 @@ export default function AdminPage() {
 
 
                             <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.loadPercentage}%</td>
+                            <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 800, color: p.balance !== undefined ? "#16a34a" : N.muted }}>
+                              {p.balance !== undefined ? `$${Number(p.balance).toFixed(2)} ${p.currency ?? "USD"}` : "---"}
+                            </td>
 
 
 

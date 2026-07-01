@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
-import { getPanelServices } from "@/lib/delivery/panel-client";
+import { getPanelServices, getPanelBalance } from "@/lib/delivery/panel-client";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -9,7 +9,7 @@ function verifyAdmin(request: NextRequest) {
   return request.headers.get("x-admin-secret") === ADMIN_SECRET;
 }
 
-// GET all admin panels or test connection
+// GET all admin panels or test connection / check balance
 export async function GET(request: NextRequest) {
   if (!verifyAdmin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -17,6 +17,40 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
+
+  if (action === "health" || action === "balance") {
+    const panels = await prisma.panel.findMany({
+      where: { userId: null },
+      orderBy: { priority: "asc" },
+    });
+    const results = await Promise.all(
+      panels.map(async (panel) => {
+        const start = Date.now();
+        const balanceResult = await getPanelBalance(panel.apiUrl, panel.apiKeyEncrypted);
+        const responseMs = Date.now() - start;
+
+        const status = !balanceResult.ok
+          ? "OFFLINE"
+          : responseMs > 5000
+          ? "SLOW"
+          : "ONLINE";
+
+        await prisma.panel.update({
+          where: { id: panel.id },
+          data: { status: status as any, lastCheckedAt: new Date(), lastResponseMs: responseMs },
+        });
+
+        return {
+          ...panel,
+          status,
+          lastResponseMs: responseMs,
+          balance: balanceResult.balance,
+          currency: balanceResult.currency,
+        };
+      })
+    );
+    return NextResponse.json({ panels: results });
+  }
 
   if (action === "test") {
     const id = searchParams.get("id");
@@ -30,10 +64,13 @@ export async function GET(request: NextRequest) {
     }
 
     const start = Date.now();
-    const res = await getPanelServices(panel.apiUrl, panel.apiKeyEncrypted);
+    const [res, balRes] = await Promise.all([
+      getPanelServices(panel.apiUrl, panel.apiKeyEncrypted),
+      getPanelBalance(panel.apiUrl, panel.apiKeyEncrypted),
+    ]);
     const responseMs = Date.now() - start;
 
-    const status = res.ok ? (responseMs > 5000 ? "SLOW" : "ONLINE") : "OFFLINE";
+    const status = (res.ok || balRes.ok) ? (responseMs > 5000 ? "SLOW" : "ONLINE") : "OFFLINE";
 
     await prisma.panel.update({
       where: { id },
@@ -41,9 +78,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      ok: res.ok,
+      ok: res.ok || balRes.ok,
       status,
-      error: res.ok ? null : (res.error ?? "Failed to connect to SMM panel API. Please check your API URL and Key."),
+      balance: balRes.balance,
+      currency: balRes.currency,
+      error: (res.ok || balRes.ok) ? null : (res.error ?? balRes.error ?? "Failed to connect to SMM panel API. Please check your API URL and Key."),
     });
   }
 
