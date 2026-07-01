@@ -75,6 +75,8 @@ export default function BillingPage() {
   const [txHash, setTxHash] = useState("");
   const [upiAmount, setUpiAmount] = useState("");
   const [upiUtr, setUpiUtr] = useState("");
+  const [depositMethod, setDepositMethod] = useState<"upi" | "crypto">("upi");
+  const [usdtAmount, setUsdtAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -93,6 +95,27 @@ export default function BillingPage() {
       const json = await res.json();
       setSubmitResult({ ok: json.ok, message: json.ok ? json.message : json.error ?? json.message });
       if (json.ok) { setTxHash(""); fetchData(); }
+    } finally { setSubmitting(false); }
+  };
+
+  const submitCryptoWalletPayment = async () => {
+    const amt = parseFloat(usdtAmount);
+    if (isNaN(amt) || amt < 10 || !txHash.trim()) {
+      if (amt < 10) {
+        setSubmitResult({ ok: false, message: "⚠️ Minimum crypto deposit is $10 USDT. Deposits below $10 are non-refundable and will not be credited." });
+      }
+      return;
+    }
+    setSubmitting(true); setSubmitResult(null);
+    try {
+      const res = await fetch("/api/billing/submit-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: "CRYPTO", usdtAmount: amt, txHash: txHash.trim(), network })
+      });
+      const json = await res.json();
+      setSubmitResult({ ok: json.ok, message: json.ok ? json.message : json.error ?? json.message });
+      if (json.ok) { setUsdtAmount(""); setTxHash(""); fetchData(); }
     } finally { setSubmitting(false); }
   };
 
@@ -155,108 +178,229 @@ export default function BillingPage() {
           </div>
         </div>
 
+        {/* Deposit Method Selector */}
+        <div style={{ display: "flex", gap: 12, borderBottom: `2px solid ${N.border}`, paddingBottom: 16 }}>
+          <button onClick={() => { setDepositMethod("upi"); setSubmitResult(null); }} className="neo-btn" style={{
+            padding: "10px 20px", borderRadius: 12, fontSize: 13, fontWeight: 850, cursor: "pointer", border: "none",
+            background: depositMethod === "upi" ? "linear-gradient(135deg,#d97706,#ea580c)" : N.bg,
+            color: depositMethod === "upi" ? "#fff" : N.text,
+            boxShadow: depositMethod === "upi" ? N.raisedSm : N.inset
+          }}>⚡ Pay via UPI (Min ₹{minDeposit})</button>
+          <button onClick={() => { setDepositMethod("crypto"); setSubmitResult(null); }} className="neo-btn" style={{
+            padding: "10px 20px", borderRadius: 12, fontSize: 13, fontWeight: 850, cursor: "pointer", border: "none",
+            background: depositMethod === "crypto" ? "linear-gradient(135deg,#2563eb,#1d4ed8)" : N.bg,
+            color: depositMethod === "crypto" ? "#fff" : N.text,
+            boxShadow: depositMethod === "crypto" ? N.raisedSm : N.inset
+          }}>💎 Pay via USDT Crypto (Min $10)</button>
+        </div>
+
         <div style={{ display:"grid", gridTemplateColumns:"1.1fr 0.9fr", gap:24 }}>
           {/* Left Column: QR and Deposit Info */}
           <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:16 }}>
-              <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>1. Scan &amp; Pay via UPI</h3>
-              
-              {upiId ? (
-                <>
-                  <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:14, background:N.bg, boxShadow:N.inset }}>
-                    <code style={{ flex:1, fontSize:12, color:N.accent, fontWeight:800, wordBreak:"break-all", fontFamily:"monospace" }}>{upiId}</code>
-                    <CopyButton text={upiId}/>
-                  </div>
-                  
-                  {upiQrCode ? (
-                    <div style={{ display:"flex", justifyContent:"center", marginTop:10 }}>
-                      <div style={{ padding:12, borderRadius:16, background:"#ffffff", boxShadow:N.raised }}>
-                        <img src={upiQrCode} alt="UPI QR Code" style={{ maxWidth: 200, height: "auto", display: "block" }} />
+            {depositMethod === "upi" ? (
+              <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:16 }}>
+                <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>1. Scan &amp; Pay via UPI</h3>
+                
+                {upiId ? (
+                  <>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:14, background:N.bg, boxShadow:N.inset }}>
+                      <code style={{ flex:1, fontSize:12, color:N.accent, fontWeight:800, wordBreak:"break-all", fontFamily:"monospace" }}>{upiId}</code>
+                      <CopyButton text={upiId}/>
+                    </div>
+                    
+                    {upiQrCode ? (
+                      <div style={{ display:"flex", justifyContent:"center", marginTop:10 }}>
+                        <div style={{ padding:12, borderRadius:16, background:"#ffffff", boxShadow:N.raised }}>
+                          <img src={upiQrCode} alt="UPI QR Code" style={{ maxWidth: 200, height: "auto", display: "block" }} />
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div style={{ padding:"24px", textAlign:"center", border:`1.5px dashed ${N.border}`, borderRadius:16 }}>
-                      <p style={{ fontSize:12, color:N.muted, margin:0, fontWeight:600 }}>QR code not uploaded by admin.<br/>Please copy the UPI ID above to pay.</p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ padding:"40px 0", textAlign:"center", border:`1.5px dashed ${N.border}`, borderRadius:16 }}>
-                  <p style={{ fontSize:24, margin:0 }}>⚙️</p>
-                  <p style={{ fontSize:13, color:N.muted, fontWeight:600, margin:"8px 0 0" }}>UPI deposits are temporarily unavailable.<br/><span style={{ fontSize:11 }}>Contact support for assistance.</span></p>
-                </div>
-              )}
+                    ) : (
+                      <div style={{ padding:"24px", textAlign:"center", border:`1.5px dashed ${N.border}`, borderRadius:16 }}>
+                        <p style={{ fontSize:12, color:N.muted, margin:0, fontWeight:600 }}>QR code not uploaded by admin.<br/>Please copy the UPI ID above to pay.</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ padding:"40px 0", textAlign:"center", border:`1.5px dashed ${N.border}`, borderRadius:16 }}>
+                    <p style={{ fontSize:24, margin:0 }}>⚙️</p>
+                    <p style={{ fontSize:13, color:N.muted, fontWeight:600, margin:"8px 0 0" }}>UPI deposits are temporarily unavailable.<br/><span style={{ fontSize:11 }}>Contact support for assistance.</span></p>
+                  </div>
+                )}
 
-              <div style={{ padding:"14px", borderRadius:12, background:N.bg, boxShadow:"inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff" }}>
-                <p style={{ fontSize:11, color:"#dc2626", margin:"0 0 6px", fontWeight:800 }}>⚠️ Minimum deposit is <strong>₹{minDeposit}</strong>. Any amount deposited below ₹{minDeposit} is <strong>NON-REFUNDABLE</strong> and will not be credited.</p>
-                <p style={{ fontSize:11, color:N.accent, margin:0, fontWeight:700 }}>⚠️ Ensure you copy the <strong>12-digit UTR number</strong> after payment to submit below.</p>
+                <div style={{ padding:"14px", borderRadius:12, background:N.bg, boxShadow:"inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff" }}>
+                  <p style={{ fontSize:11, color:"#dc2626", margin:"0 0 6px", fontWeight:800 }}>⚠️ Minimum deposit is <strong>₹{minDeposit}</strong>. Any amount deposited below ₹{minDeposit} is <strong>NON-REFUNDABLE</strong> and will not be credited.</p>
+                  <p style={{ fontSize:11, color:N.accent, margin:0, fontWeight:700 }}>⚠️ Ensure you copy the <strong>12-digit UTR number</strong> after payment to submit below.</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:16 }}>
+                <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>1. Send USDT ({network})</h3>
+                
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(["TRC20", "BEP20"] as Network[]).map((net) => (
+                    <button key={net} onClick={() => setNetwork(net)} className="neo-btn" style={{
+                      flex: 1, padding: "10px", borderRadius: 12, fontSize: 13, fontWeight: 800, border: "none", cursor: "pointer",
+                      background: network === net ? (net === "TRC20" ? "#2563eb" : "#d97706") : N.bg,
+                      color: network === net ? "#ffffff" : N.text,
+                      boxShadow: network === net ? N.raisedSm : N.inset
+                    }}>{net} Network</button>
+                  ))}
+                </div>
+
+                {((network === "TRC20" ? data.wallet.trc20 : data.wallet.bep20)) ? (
+                  <>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderRadius:14, background:N.bg, boxShadow:N.inset }}>
+                      <code style={{ flex:1, fontSize:11, color:N.accent, fontWeight:800, wordBreak:"break-all", fontFamily:"monospace" }}>{network === "TRC20" ? data.wallet.trc20 : data.wallet.bep20}</code>
+                      <CopyButton text={network === "TRC20" ? data.wallet.trc20 : data.wallet.bep20}/>
+                    </div>
+                    
+                    <div style={{ display:"flex", justifyContent:"center", marginTop:10 }}>
+                      <QRDisplay address={network === "TRC20" ? data.wallet.trc20 : data.wallet.bep20} network={network} />
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ padding:"40px 0", textAlign:"center", border:`1.5px dashed ${N.border}`, borderRadius:16 }}>
+                    <p style={{ fontSize:24, margin:0 }}>⚙️</p>
+                    <p style={{ fontSize:13, color:N.muted, fontWeight:600, margin:"8px 0 0" }}>{network} address is not configured yet.<br/><span style={{ fontSize:11 }}>Contact support for assistance.</span></p>
+                  </div>
+                )}
+
+                <div style={{ padding:"14px", borderRadius:12, background:N.bg, boxShadow:"inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff" }}>
+                  <p style={{ fontSize:11, color:"#dc2626", margin:"0 0 6px", fontWeight:800 }}>⚠️ Minimum deposit is <strong>$10 USDT</strong>. Any amount deposited below $10 is <strong>NON-REFUNDABLE</strong> and will not be credited.</p>
+                  <p style={{ fontSize:11, color:N.accent, margin:0, fontWeight:700 }}>⚠️ Ensure you send via <strong>{network}</strong> network and copy your Transaction Hash (TXID).</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Right Column: Submit UTR Form & History */}
+          {/* Right Column: Submit Form & History */}
           <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:16 }}>
-              <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>2. Submit Deposit Request</h3>
-              
-              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:800, color:N.muted, marginBottom:6 }}>DEPOSIT AMOUNT (INR)</label>
-                  <input type="number" placeholder={`Minimum ₹${minDeposit}`} value={upiAmount} onChange={e => setUpiAmount(e.target.value)}
-                    style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset }}
-                    className="neo-input" />
+            {depositMethod === "upi" ? (
+              <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:16 }}>
+                <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>2. Submit Deposit Request</h3>
+                
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  <div>
+                    <label style={{ display:"block", fontSize:11, fontWeight:800, color:N.muted, marginBottom:6 }}>DEPOSIT AMOUNT (INR)</label>
+                    <input type="number" placeholder={`Minimum ₹${minDeposit}`} value={upiAmount} onChange={e => setUpiAmount(e.target.value)}
+                      style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset }}
+                      className="neo-input" />
+                  </div>
+
+                  <div>
+                    <label style={{ display:"block", fontSize:11, fontWeight:800, color:N.muted, marginBottom:6 }}>UTR / TRANSACTION ID (12 DIGITS)</label>
+                    <input type="text" placeholder="e.g. 320495810234" value={upiUtr} onChange={e => setUpiUtr(e.target.value)}
+                      style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset, fontFamily:"monospace" }}
+                      className="neo-input" />
+                  </div>
+
+                  <button onClick={submitUpiPayment} disabled={submitting || !upiAmount || !upiUtr.trim() || !upiId} className="neo-btn"
+                    style={{ width:"100%", padding:"14px", borderRadius:12, fontSize:13, fontWeight:850, border:"none", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, cursor:"pointer", opacity: (submitting || !upiAmount || !upiUtr.trim() || !upiId) ? 0.5 : 1 }}>
+                    {submitting ? "Submitting Request…" : "Submit Deposit Request"}
+                  </button>
                 </div>
 
-                <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:800, color:N.muted, marginBottom:6 }}>UTR / TRANSACTION ID (12 DIGITS)</label>
-                  <input type="text" placeholder="e.g. 320495810234" value={upiUtr} onChange={e => setUpiUtr(e.target.value)}
-                    style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset, fontFamily:"monospace" }}
-                    className="neo-input" />
-                </div>
-
-                <button onClick={submitUpiPayment} disabled={submitting || !upiAmount || !upiUtr.trim() || !upiId} className="neo-btn"
-                  style={{ width:"100%", padding:"14px", borderRadius:12, fontSize:13, fontWeight:850, border:"none", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm, cursor:"pointer", opacity: (submitting || !upiAmount || !upiUtr.trim() || !upiId) ? 0.5 : 1 }}>
-                  {submitting ? "Submitting Request…" : "Submit Deposit Request"}
-                </button>
+                {submitResult && (
+                  <div style={{ padding:"12px 14px", borderRadius:12, fontSize:12, fontWeight:800, background:N.bg, boxShadow: submitResult.ok ? "inset 3px 3px 8px rgba(52,211,153,0.2),inset -2px -2px 5px #ffffff" : "inset 3px 3px 8px rgba(220,38,38,0.2),inset -2px -2px 5px #ffffff", color: submitResult.ok ? "#16a34a" : "#dc2626" }}>
+                    {submitResult.message}
+                  </div>
+                )}
               </div>
+            ) : (
+              <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:16 }}>
+                <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>2. Submit Crypto Deposit Request</h3>
+                
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  <div>
+                    <label style={{ display:"block", fontSize:11, fontWeight:800, color:N.muted, marginBottom:6 }}>USDT AMOUNT SENT (MIN $10)</label>
+                    <input type="number" placeholder="Minimum $10" value={usdtAmount} onChange={e => setUsdtAmount(e.target.value)}
+                      style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset }}
+                      className="neo-input" />
+                  </div>
 
-              {submitResult && (
-                <div style={{ padding:"12px 14px", borderRadius:12, fontSize:12, fontWeight:800, background:N.bg, boxShadow: submitResult.ok ? "inset 3px 3px 8px rgba(52,211,153,0.2),inset -2px -2px 5px #ffffff" : "inset 3px 3px 8px rgba(220,38,38,0.2),inset -2px -2px 5px #ffffff", color: submitResult.ok ? "#16a34a" : "#dc2626" }}>
-                  {submitResult.message}
+                  <div>
+                    <label style={{ display:"block", fontSize:11, fontWeight:800, color:N.muted, marginBottom:6 }}>TRANSACTION HASH / TXID</label>
+                    <input type="text" placeholder="Paste your 64-character transaction hash" value={txHash} onChange={e => setTxHash(e.target.value)}
+                      style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset, fontFamily:"monospace" }}
+                      className="neo-input" />
+                  </div>
+
+                  <button onClick={submitCryptoWalletPayment} disabled={submitting || !usdtAmount || !txHash.trim()} className="neo-btn"
+                    style={{ width:"100%", padding:"14px", borderRadius:12, fontSize:13, fontWeight:850, border:"none", color:"#ffffff", background:"linear-gradient(135deg,#2563eb,#1d4ed8)", boxShadow:N.raisedSm, cursor:"pointer", opacity: (submitting || !usdtAmount || !txHash.trim()) ? 0.5 : 1 }}>
+                    {submitting ? "Submitting Request…" : "Submit Crypto Deposit Request"}
+                  </button>
                 </div>
-              )}
-            </div>
 
-            {/* UPI Deposit Requests History */}
-            {data.payments.length > 0 && (
-              <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:14 }}>
-                <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>My Deposit Requests</h3>
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  {data.payments.map((p: any) => {
-                    const statusStyles: Record<string, { color: string; bg: string; label: string }> = {
-                      PENDING:   { color: "#d97706", bg: "rgba(217,119,6,0.08)",   label: "Pending Verification" },
-                      CONFIRMED: { color: "#16a34a", bg: "rgba(22,163,74,0.08)",   label: "Approved & Credited" },
-                      REJECTED:  { color: "#dc2626", bg: "rgba(220,38,38,0.08)",   label: "Rejected" },
-                    };
-                    const s = statusStyles[p.status] ?? statusStyles.PENDING;
-                    return (
-                      <div key={p.id} style={{ padding:"12px", borderRadius:12, background:N.bg, boxShadow:N.raisedSm, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
-                        <div>
-                          <p style={{ fontSize:13, fontWeight:900, color:N.text, margin:0 }}>₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                          <p style={{ fontSize:10, fontFamily:"monospace", color:N.muted, margin:"2px 0 0" }}>UTR: {p.utr}</p>
-                          <p style={{ fontSize:9, color:N.muted, margin:"2px 0 0", fontWeight:600 }}>{new Date(p.createdAt).toLocaleString()}</p>
-                          {p.rejectedReason && p.status === "REJECTED" && (
-                            <p style={{ fontSize:10, color:"#dc2626", margin:"4px 0 0", fontWeight:700 }}>Reason: {p.rejectedReason}</p>
-                          )}
+                {submitResult && (
+                  <div style={{ padding:"12px 14px", borderRadius:12, fontSize:12, fontWeight:800, background:N.bg, boxShadow: submitResult.ok ? "inset 3px 3px 8px rgba(52,211,153,0.2),inset -2px -2px 5px #ffffff" : "inset 3px 3px 8px rgba(220,38,38,0.2),inset -2px -2px 5px #ffffff", color: submitResult.ok ? "#16a34a" : "#dc2626" }}>
+                    {submitResult.message}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Deposit Requests History */}
+            {depositMethod === "upi" ? (
+              data.payments?.length > 0 && (
+                <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:14 }}>
+                  <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>My UPI Deposit Requests</h3>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {data.payments.map((p: any) => {
+                      const statusStyles: Record<string, { color: string; bg: string; label: string }> = {
+                        PENDING:   { color: "#d97706", bg: "rgba(217,119,6,0.08)",   label: "Pending Verification" },
+                        CONFIRMED: { color: "#16a34a", bg: "rgba(22,163,74,0.08)",   label: "Approved & Credited" },
+                        REJECTED:  { color: "#dc2626", bg: "rgba(220,38,38,0.08)",   label: "Rejected" },
+                      };
+                      const s = statusStyles[p.status] ?? statusStyles.PENDING;
+                      return (
+                        <div key={p.id} style={{ padding:"12px", borderRadius:12, background:N.bg, boxShadow:N.raisedSm, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                          <div>
+                            <p style={{ fontSize:13, fontWeight:900, color:N.text, margin:0 }}>₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            <p style={{ fontSize:10, fontFamily:"monospace", color:N.muted, margin:"2px 0 0" }}>UTR: {p.utr}</p>
+                            <p style={{ fontSize:9, color:N.muted, margin:"2px 0 0", fontWeight:600 }}>{new Date(p.createdAt).toLocaleString()}</p>
+                            {p.rejectedReason && p.status === "REJECTED" && (
+                              <p style={{ fontSize:10, color:"#dc2626", margin:"4px 0 0", fontWeight:700 }}>Reason: {p.rejectedReason}</p>
+                            )}
+                          </div>
+                          <span style={{ fontSize:10, fontWeight:900, padding:"4px 8px", borderRadius:6, color:s.color, background:s.bg }}>
+                            {s.label}
+                          </span>
                         </div>
-                        <span style={{ fontSize:10, fontWeight:900, padding:"4px 8px", borderRadius:6, color:s.color, background:s.bg }}>
-                          {s.label}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )
+            ) : (
+              data.cryptoPayments?.length > 0 && (
+                <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:14 }}>
+                  <h3 style={{ fontSize:14, fontWeight:850, color:N.text, margin:0 }}>My Crypto Deposit Requests</h3>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {data.cryptoPayments.map((p: any) => {
+                      const statusStyles: Record<string, { color: string; bg: string; label: string }> = {
+                        PENDING:   { color: "#d97706", bg: "rgba(217,119,6,0.08)",   label: "Pending Verification" },
+                        VERIFYING: { color: "#2563eb", bg: "rgba(37,99,235,0.08)",   label: "Verifying" },
+                        CONFIRMED: { color: "#16a34a", bg: "rgba(22,163,74,0.08)",   label: "Approved & Credited" },
+                        FAILED:    { color: "#dc2626", bg: "rgba(220,38,38,0.08)",   label: "Failed / Rejected" },
+                        REJECTED:  { color: "#dc2626", bg: "rgba(220,38,38,0.08)",   label: "Rejected" },
+                      };
+                      const s = statusStyles[p.status] ?? statusStyles.PENDING;
+                      return (
+                        <div key={p.id} style={{ padding:"12px", borderRadius:12, background:N.bg, boxShadow:N.raisedSm, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                          <div>
+                            <p style={{ fontSize:13, fontWeight:900, color:N.text, margin:0 }}>${p.amountUsdt ?? "—"} USDT ({p.network})</p>
+                            <p style={{ fontSize:10, fontFamily:"monospace", color:N.muted, margin:"2px 0 0", wordBreak:"break-all" }}>TXID: {p.txHash}</p>
+                            <p style={{ fontSize:9, color:N.muted, margin:"2px 0 0", fontWeight:600 }}>{new Date(p.createdAt).toLocaleString()}</p>
+                          </div>
+                          <span style={{ fontSize:10, fontWeight:900, padding:"4px 8px", borderRadius:6, color:s.color, background:s.bg }}>
+                            {s.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
             )}
           </div>
         </div>

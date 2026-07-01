@@ -19,7 +19,45 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
 
   if (dbUser.walletMode) {
-    const { utr, amount } = body as { utr: string; amount: number };
+    const { utr, amount, method, txHash, network, usdtAmount } = body as any;
+
+    if (method === "CRYPTO" || txHash) {
+      if (!txHash || !network || !usdtAmount) {
+        return NextResponse.json({ error: "TXID, network (TRC20/BEP20), and USDT amount are required" }, { status: 400 });
+      }
+      if (isNaN(usdtAmount) || usdtAmount < 10) {
+        return NextResponse.json({ error: "⚠️ Minimum crypto deposit is $10 USDT. Deposits below $10 are non-refundable and will not be credited." }, { status: 400 });
+      }
+      const cleanTxHash = String(txHash).trim();
+      if (cleanTxHash.length < 6) {
+        return NextResponse.json({ error: "Invalid TXID / Transaction Hash" }, { status: 400 });
+      }
+      const existing = await prisma.cryptoPayment.findUnique({ where: { txHash: cleanTxHash } });
+      if (existing) {
+        return NextResponse.json({ error: "This TXID has already been submitted" }, { status: 409 });
+      }
+      const settings = await prisma.adminSettings.findUnique({ where: { id: "global" } });
+      const walletAddress = network === "TRC20" ? settings?.trc20Address : settings?.bep20Address;
+      if (!walletAddress) {
+        return NextResponse.json({ error: `${network} wallet address not configured by admin yet.` }, { status: 503 });
+      }
+      const payment = await prisma.cryptoPayment.create({
+        data: {
+          userId: dbUser.id,
+          network,
+          walletAddress,
+          txHash: cleanTxHash,
+          amountUsdt: parseFloat(Number(usdtAmount).toFixed(2)),
+          status: "PENDING",
+        },
+      });
+      return NextResponse.json({
+        ok: true,
+        message: "✅ Crypto deposit request submitted! Admin will verify and credit INR balance within 10-15 minutes.",
+        payment,
+      });
+    }
+
     if (!utr || !amount) {
       return NextResponse.json({ error: "UTR and amount are required" }, { status: 400 });
     }

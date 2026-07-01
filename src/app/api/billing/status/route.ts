@@ -13,11 +13,10 @@ export async function GET() {
   });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const [settings, payments] = await Promise.all([
+  const [settings, payments, cryptoPayments] = await Promise.all([
     prisma.adminSettings.findUnique({ where: { id: "global" } }),
-    dbUser.walletMode
-      ? prisma.upiPayment.findMany({ where: { userId: dbUser.id }, orderBy: { createdAt: "desc" }, take: 10 })
-      : prisma.cryptoPayment.findMany({ where: { userId: dbUser.id }, orderBy: { createdAt: "desc" }, take: 5 }),
+    prisma.upiPayment.findMany({ where: { userId: dbUser.id }, orderBy: { createdAt: "desc" }, take: 10 }),
+    prisma.cryptoPayment.findMany({ where: { userId: dbUser.id }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 
   return NextResponse.json({
@@ -26,6 +25,7 @@ export async function GET() {
     walletMode: dbUser.walletMode,
     balance: dbUser.balance,
     payments,
+    cryptoPayments,
     wallet: {
       trc20: settings?.trc20Address ?? null,
       bep20: settings?.bep20Address ?? null,

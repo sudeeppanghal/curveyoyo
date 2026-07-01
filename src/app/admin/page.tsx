@@ -1892,6 +1892,29 @@ export default function AdminPage() {
 
 
 
+  const handleCryptoAction = async (paymentId: string, action: "approve" | "reject", inrAmount?: number, rejectedReason?: string) => {
+    setSaved("Processing…");
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ paymentId, action, inrAmount, rejectedReason }),
+      });
+      if (res.ok) {
+        setSaved(`Crypto Payment ${action === "approve" ? "Approved" : "Rejected"}!`);
+        setTimeout(() => setSaved(""), 2000);
+        loadAll();
+      } else {
+        const errJson = await res.json();
+        setError(errJson.error ?? "Crypto action failed");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
   // Admin Panels Tab Actions
 
 
@@ -6989,7 +7012,7 @@ export default function AdminPage() {
 
 
 
-                        {["User", "Network", "Transaction Hash / TXID", "Amount", "Status", "Date"].map((h) => (
+                        {["User", "Network", "Transaction Hash / TXID", "Amount", "Status", "Date", "Actions"].map((h) => (
 
 
 
@@ -7045,7 +7068,7 @@ export default function AdminPage() {
 
 
 
-                        const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", FAILED: "#dc2626", VERIFYING: "#2563eb" };
+                        const statusColors: Record<string, string> = { CONFIRMED: "#16a34a", PENDING: "#d97706", FAILED: "#dc2626", VERIFYING: "#2563eb", REJECTED: "#dc2626" };
 
 
 
@@ -7214,6 +7237,32 @@ export default function AdminPage() {
 
 
                             <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                            <td style={{ padding: "14px 24px" }}>
+                              {(p.status === "PENDING" || p.status === "VERIFYING") ? (
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button onClick={() => {
+                                    const usdt = p.amountUsdt ?? 10;
+                                    const rate = settings.priceUsdt && settings.priceUsdt > 50 ? settings.priceUsdt : 90;
+                                    const defaultInr = Math.round(usdt * rate);
+                                    const input = prompt(`Enter INR amount to credit for $${usdt} USDT (Rate: ₹${rate}/USDT):`, String(defaultInr));
+                                    if (input !== null) {
+                                      const val = parseFloat(input);
+                                      if (!isNaN(val) && val > 0) {
+                                        handleCryptoAction(p.id, "approve", val);
+                                      } else {
+                                        alert("Invalid INR amount");
+                                      }
+                                    }
+                                  }} className="neo-btn" style={{ padding: "6px 12px", borderRadius: 8, background: "#16a34a", color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 800 }}>✓ Approve</button>
+                                  <button onClick={() => {
+                                    const reason = prompt("Enter rejection reason:", "Invalid TXID / Payment not received");
+                                    if (reason !== null) handleCryptoAction(p.id, "reject", undefined, reason);
+                                  }} className="neo-btn" style={{ padding: "6px 12px", borderRadius: 8, background: "#dc2626", color: "#fff", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 800 }}>✗ Reject</button>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>—</span>
+                              )}
+                            </td>
 
 
 
