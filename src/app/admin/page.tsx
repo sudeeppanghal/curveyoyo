@@ -6431,7 +6431,7 @@ export default function AdminPage() {
 
 
 
-                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                <div style={{ overflowX: "auto" }}>
 
 
 
@@ -6439,7 +6439,7 @@ export default function AdminPage() {
 
 
 
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
 
 
@@ -6463,7 +6463,7 @@ export default function AdminPage() {
 
 
 
-                        {["Email", "Created At", "Wallet Mode", "Wallet Balance", "Plan Status", "Connected Panels", "Campaigns Count", "Actions"].map((h) => (
+                        {["Email", "Joined", "Wallet", "Balance", "Plan", "Panels", "Campaigns", "Actions"].map((h) => (
 
 
 
@@ -6471,7 +6471,7 @@ export default function AdminPage() {
 
 
 
-                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          <th key={h} style={{ padding: "12px 8px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
 
 
 
@@ -6527,7 +6527,7 @@ export default function AdminPage() {
 
 
 
-                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u.email}</td>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, maxWidth: 180, wordBreak: "break-all" }}>{u.email}</td>
 
 
 
@@ -6535,7 +6535,7 @@ export default function AdminPage() {
 
 
 
-                          <td style={{ padding: "14px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                          <td style={{ padding: "12px 8px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
 
 
 
@@ -6545,7 +6545,7 @@ export default function AdminPage() {
 
                           
                           {/* Wallet Mode Toggle */}
-                          <td style={{ padding: "14px 24px" }}>
+                          <td style={{ padding: "12px 8px" }}>
                             <button
                               onClick={() => userAction(u.id, "toggleWalletMode")}
                               className="neo-btn"
@@ -6558,7 +6558,8 @@ export default function AdminPage() {
                                 fontSize: 11,
                                 fontWeight: 800,
                                 boxShadow: N.raisedSm,
-                                cursor: "pointer"
+                                cursor: "pointer",
+                                whiteSpace: "nowrap"
                               }}
                             >
                               {u.walletMode ? "✓ Wallet ON" : "Wallet OFF"}
@@ -6566,10 +6567,10 @@ export default function AdminPage() {
                           </td>
 
                           {/* Wallet Balance Edit */}
-                          <td style={{ padding: "14px 24px" }}>
+                          <td style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>
                             {u.walletMode ? (
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>
+                                <span style={{ fontSize: 12, fontWeight: 800, color: "#16a34a" }}>
                                   ₹ {(u.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </span>
                                 <button
@@ -6599,103 +6600,12 @@ export default function AdminPage() {
                               <span style={{ fontSize: 12, color: N.muted, fontWeight: 600 }}>—</span>
                             )}
                           </td>
-<td style={{ padding: "14px 24px" }}>
-
-
-
-
-
-
-
-                            <span style={{
-
-
-
-
-
-
-
-                              fontSize: 10,
-
-
-
-
-
-
-
-                              fontWeight: 850,
-
-
-
-
-
-
-
-                              padding: "4px 8px",
-
-
-
-
-
-
-
-                              borderRadius: 6,
-
-
-
-
-
-
-
-                              background: PLAN_COLORS[u.plan] + "1A",
-
-
-
-
-
-
-
-                              color: PLAN_COLORS[u.plan]
-
-
-
-
-
-
-
-                            }}>{u.plan}</span>
-
-
-
-
-
-
-
+                          <td style={{ padding: "12px 8px" }}>
+                            <span style={{ fontSize: 10, fontWeight: 850, padding: "4px 8px", borderRadius: 6, background: PLAN_COLORS[u.plan] + "1A", color: PLAN_COLORS[u.plan] }}>{u.plan}</span>
                           </td>
-
-
-
-
-
-
-
-                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u._count?.panels ?? 0} connected</td>
-
-
-
-
-
-
-
-                          <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{u._count?.orders ?? 0} campaigns</td>
-
-
-
-
-
-
-
-                          <td style={{ padding: "14px 24px" }}>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, textAlign: "center" }}>{u._count?.panels ?? 0}</td>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, textAlign: "center" }}>{u._count?.orders ?? 0}</td>
+                          <td style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>
 
 
 

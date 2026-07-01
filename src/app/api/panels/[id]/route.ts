@@ -54,6 +54,17 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const panel = await prisma.panel.findFirst({ where: { id, userId: dbUser.id } });
   if (!panel) return NextResponse.json({ error: "Panel not found" }, { status: 404 });
 
-  await prisma.panel.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.$transaction([
+      prisma.adminService.deleteMany({ where: { panelId: id } }),
+      prisma.serviceConfig.deleteMany({ where: { panelId: id } }),
+      prisma.deliveryEvent.updateMany({ where: { panelId: id }, data: { panelId: null } }),
+      prisma.order.updateMany({ where: { panelId: id }, data: { panelId: null } }),
+      prisma.panel.delete({ where: { id } })
+    ]);
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error("Error deleting panel:", err);
+    return NextResponse.json({ error: err?.message || "Failed to delete panel" }, { status: 500 });
+  }
 }
