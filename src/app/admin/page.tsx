@@ -7591,7 +7591,12 @@ export default function AdminPage() {
 
 
 
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: "#16a34a" }}>₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: p.amount < (settings.minDeposit ?? 500) ? "#dc2626" : "#16a34a" }}>
+                              ₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              {p.amount < (settings.minDeposit ?? 500) && (
+                                <span style={{ display: "block", fontSize: 9, color: "#dc2626", fontWeight: 900 }}>⚠️ BELOW MIN (NO REFUND)</span>
+                              )}
+                            </td>
 
 
 

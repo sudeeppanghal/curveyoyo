@@ -98,7 +98,13 @@ export default function BillingPage() {
 
   const submitUpiPayment = async () => {
     const amt = parseFloat(upiAmount);
-    if (isNaN(amt) || amt <= 0 || !upiUtr.trim()) return;
+    const minDep = data?.wallet?.minDeposit ?? 500;
+    if (isNaN(amt) || amt < minDep || !upiUtr.trim()) {
+      if (amt < minDep) {
+        setSubmitResult({ ok: false, message: `⚠️ Minimum deposit is ₹${minDep}. Deposits below ₹${minDep} are non-refundable and will not be credited.` });
+      }
+      return;
+    }
     setSubmitting(true); setSubmitResult(null);
     try {
       const res = await fetch("/api/billing/submit-payment", {
@@ -182,7 +188,7 @@ export default function BillingPage() {
               )}
 
               <div style={{ padding:"14px", borderRadius:12, background:N.bg, boxShadow:"inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff" }}>
-                <p style={{ fontSize:11, color:N.accent, margin:"0 0 6px", fontWeight:700 }}>⚠️ Minimum deposit is <strong>₹{minDeposit}</strong>. Deposits below ₹{minDeposit} will not be approved.</p>
+                <p style={{ fontSize:11, color:"#dc2626", margin:"0 0 6px", fontWeight:800 }}>⚠️ Minimum deposit is <strong>₹{minDeposit}</strong>. Any amount deposited below ₹{minDeposit} is <strong>NON-REFUNDABLE</strong> and will not be credited.</p>
                 <p style={{ fontSize:11, color:N.accent, margin:0, fontWeight:700 }}>⚠️ Ensure you copy the <strong>12-digit UTR number</strong> after payment to submit below.</p>
               </div>
             </div>

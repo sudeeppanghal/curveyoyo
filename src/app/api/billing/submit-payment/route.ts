@@ -27,8 +27,10 @@ export async function POST(request: NextRequest) {
     if (cleanUtr.length < 6) {
       return NextResponse.json({ error: "Invalid UTR number" }, { status: 400 });
     }
-    if (isNaN(amount) || amount <= 0) {
-      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    const settings = await prisma.adminSettings.findUnique({ where: { id: "global" } });
+    const minDeposit = settings?.minDeposit ?? 500;
+    if (isNaN(amount) || amount < minDeposit) {
+      return NextResponse.json({ error: `⚠️ Minimum deposit amount is ₹${minDeposit}. Deposits below ₹${minDeposit} are non-refundable and will not be credited.` }, { status: 400 });
     }
 
 
