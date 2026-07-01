@@ -114,7 +114,7 @@ export default function AnalyticsPage() {
           { icon:"📦", label:"Total Orders",    val: stats.totalOrders.toLocaleString(),          sub:`${stats.deliveringOrders} active` },
           { icon:"✅", label:"Completed",        val: stats.completedOrders.toLocaleString(),       sub:`${stats.successRate}% success` },
           { icon:"👁", label:"Views Delivered",  val: stats.totalViewsDelivered.toLocaleString(),  sub:"across all campaigns" },
-          { icon:"🔌", label:"Active Panels",    val: stats.activePanels.toLocaleString(),          sub:"connected providers" },
+          { icon:"⚡", label:"Active Campaigns", val: stats.deliveringOrders.toLocaleString(),     sub:"delivering now" },
         ].map(({ icon, label, val, sub }, i) => (
           <NeoCard key={label} style={{ animation:`fadeUp ${0.2 + i*0.07}s ease` }}>
             <div style={{ fontSize:24, marginBottom:12, width:42, height:42, borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", background:N.bg, boxShadow:N.raisedSm }}>{icon}</div>

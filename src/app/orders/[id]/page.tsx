@@ -266,7 +266,7 @@ export default function OrderDetailPage() {
           ["🎯", "Target", order.viewsTarget.toLocaleString(), "views"],
           ["✅", "Delivered", order.viewsDelivered.toLocaleString(), "views"],
           ["⏳", "Remaining", order.viewsRemaining.toLocaleString(), "views"],
-          ["🔌", "Panel", order.panel?.name ?? "None", order.panel?.status ?? ""],
+          ["🚀", "Algorithm", order.curveStyle ? (order.curveStyle.charAt(0).toUpperCase() + order.curveStyle.slice(1)) : "Organic", "paced delivery"],
         ].map(([icon, label, val, sub]) => (
           <div key={label} style={{ borderRadius:16, padding:18, background:N.bg, boxShadow:N.raised }}>
             <div style={{ fontSize:20, marginBottom:8 }}>{icon}</div>

@@ -26,8 +26,6 @@ const NAV = [
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> },
   { href: "/orders",   label: "Orders",
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> },
-  { href: "/panels",   label: "Panels",
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> },
   { href: "/analytics", label: "Analytics",
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
   { href: "/billing",  label: "Billing",
@@ -135,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ padding:"4px 6px 8px", fontSize:10, fontWeight:800, color:N.faint, textTransform:"uppercase", letterSpacing:"0.1em" }}>
             Navigation
           </div>
-          {NAV.filter(item => !(walletMode && item.href === "/panels")).map(({ href, label, icon }) => {
+          {NAV.map(({ href, label, icon }) => {
             const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
             return (
               <Link key={href} href={href} onClick={() => setSidebarOpen(false)}
@@ -182,15 +180,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             boxShadow: N.inset,
             display:"flex", alignItems:"center", gap:8,
           }}>
-            <div style={{ width:28, height:28, borderRadius:8, background: walletMode ? "rgba(22, 163, 74, 0.12)" : "rgba(217, 119, 6, 0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, boxShadow:N.raisedSm }}>
-              {walletMode ? "₹" : "🔌"}
+            <div style={{ width:28, height:28, borderRadius:8, background: "rgba(22, 163, 74, 0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, boxShadow:N.raisedSm }}>
+              ₹
             </div>
             <div>
-              <div style={{ fontSize:11, fontWeight:800, color: walletMode ? "#16a34a" : N.accent }}>
-                {walletMode ? `₹ ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "Developer Mode"}
+              <div style={{ fontSize:11, fontWeight:800, color: "#16a34a" }}>
+                ₹ {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
               <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:700 }}>
-                {walletMode ? "Wallet Balance" : "Own SMM API Connected"}
+                Wallet Balance
               </div>
             </div>
 

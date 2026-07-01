@@ -193,24 +193,15 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
-  const quickActions = walletMode ? [
-    { label:"Add New Reel",    href:"/reels/new",    icon:"🎬", desc:"Import a reel URL to track" },
+  const quickActions = [
+    { label:"Deposit Funds",   href:"/billing",      icon:"🪙", desc:"Add wallet balance via UPI or Crypto" },
     { label:"Create Order",    href:"/reels/new",    icon:"⚡", desc:"Start organic S-curve delivery" },
-    { label:"Deposit Funds",   href:"/billing",      icon:"💳", desc:"Add wallet balance via UPI" },
-    { label:"View Analytics",  href:"/analytics",    icon:"📊", desc:"Track views & engagement" },
-  ] : [
     { label:"Add New Reel",    href:"/reels/new",    icon:"🎬", desc:"Import a reel URL to track" },
-    { label:"Create Order",    href:"/reels/new",    icon:"⚡", desc:"Start organic S-curve delivery" },
-    { label:"Add SMM Panel",   href:"/panels",       icon:"🔌", desc:"Connect your provider API" },
     { label:"View Analytics",  href:"/analytics",    icon:"📊", desc:"Track views & engagement" },
   ];
 
-  const steps = walletMode ? [
-    { num:"01", label:"Deposit Funds",   desc:"Add wallet balance via UPI (min ₹500)",    href:"/billing",   done: (stats.totalOrders ?? 0) > 0 },
-    { num:"02", label:"Import a Reel",   desc:"Paste any Instagram or TikTok reel URL",   href:"/reels/new", done: (stats.totalReels ?? 0) > 0 },
-    { num:"03", label:"Create an Order", desc:"Set views, curve shape, and run campaign", href:"/reels/new", done: (stats.totalOrders ?? 0) > 0 },
-  ] : [
-    { num:"01", label:"Add a Panel",     desc:"Connect your SMM provider via API",        href:"/panels",    done: (stats.activePanels ?? 0) > 0 },
+  const steps = [
+    { num:"01", label:"Deposit Funds",   desc:"Add wallet balance via UPI or Crypto",     href:"/billing",   done: (stats.totalOrders ?? 0) > 0 },
     { num:"02", label:"Import a Reel",   desc:"Paste any Instagram or TikTok reel URL",   href:"/reels/new", done: (stats.totalReels ?? 0) > 0 },
     { num:"03", label:"Create an Order", desc:"Set views, curve shape, and run campaign", href:"/reels/new", done: (stats.totalOrders ?? 0) > 0 },
   ];
@@ -398,57 +389,7 @@ export default function DashboardPage() {
           <StatCard label="Total Orders"    value={stats.totalOrders ?? 0}     sub="All time campaigns"           icon="📋" />
           <StatCard label="Live Now"        value={stats.activeOrders ?? 0}    sub="Currently delivering"         icon="⚡" />
           <StatCard label="Views Sent"      value={stats.viewsDelivered ?? 0}  sub="Total organic views"          icon="👁" />
-          {walletMode ? (
-            <StatCard label="Active Routes"   value={3}                          sub="Delivery paths online"        icon="🛡️" />
-          ) : (
-            <StatCard label="Panels Online"   value={stats.activePanels ?? 0}    sub="Active SMM providers"         icon="🔌" />
-          )}
-        </div>
-      )}
-
-      {/* Connected SMM Panels Widget */}
-      {!walletMode && panels.length > 0 && (
-        <div style={{ animation: "fadeUp 0.3s ease" }}>
-          <p style={{ fontSize:11, fontWeight:800, color:N.muted, textTransform:"uppercase", letterSpacing:"0.12em", margin:"0 0 14px" }}>🔋 Connected SMM Panels</p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:16 }}>
-            {panels.map((p) => {
-              const statusColors: Record<string, string> = { ONLINE: "#16a34a", OFFLINE: "#dc2626", SLOW: "#d97706", UNKNOWN: "#718096" };
-              return (
-                <div key={p.id} style={{
-                  borderRadius:20, padding:"20px 22px", background:N.bg, boxShadow:N.raised,
-                  display:"flex", alignItems:"center", justifyContent:"space-between", gap:12
-                }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
-                    <div style={{
-                      width:36, height:36, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18,
-                      background:N.bg, boxShadow:N.raisedSm
-                    }}>🔌</div>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:850, color:N.text, display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:130 }}>{p.name}</span>
-                        <span style={{ width:6, height:6, borderRadius:"50%", background: statusColors[p.status] ?? "#718096" }} />
-                      </div>
-                      <div style={{ fontSize:11, color:N.muted, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.apiUrl}</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign:"right", flexShrink:0 }}>
-                    {p.balance !== undefined ? (
-                      <>
-                        <div style={{ fontSize:15, fontWeight:900, color:"#16a34a" }}>
-                          ${p.balance.toFixed(2)}
-                        </div>
-                        <div style={{ fontSize:9, fontWeight:800, color:N.muted }}>
-                          {p.currency ?? "USD"}
-                        </div>
-                      </>
-                    ) : (
-                      <span style={{ fontSize:11, color:N.muted, fontWeight:600, animation: "pulse 1.5s infinite" }}>Checking…</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <StatCard label="Active Routes"   value={3}                          sub="Delivery paths online"        icon="🛡️" />
         </div>
       )}
 

@@ -189,11 +189,6 @@ export default function OrdersPage() {
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {o.panel && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: N.muted, background: N.bg, padding: "4px 10px", borderRadius: 20, boxShadow: N.inset }}>
-                        🔌 {o.panel.name}
-                      </span>
-                    )}
                     <span style={{
                       fontSize: 11, fontWeight: 800, color: st.color, background: N.bg,
                       padding: "4px 12px", borderRadius: 20, boxShadow: N.inset,
