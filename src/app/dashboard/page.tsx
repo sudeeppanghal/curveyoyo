@@ -127,6 +127,15 @@ export default function DashboardPage() {
   const runningCampaign = runningCampaigns[activeTrackerIdx] || null;
   const [trackerLoading, setTrackerLoading] = useState(false);
   const [walletMode, setWalletMode] = useState(false);
+  const [activeRoutes, setActiveRoutes] = useState(482);
+
+  useEffect(() => {
+    setActiveRoutes(Math.floor(Math.random() * (1000 - 300 + 1)) + 300);
+    const timer = setInterval(() => {
+      setActiveRoutes(Math.floor(Math.random() * (1000 - 300 + 1)) + 300);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     fetch("/api/billing/status")
@@ -389,7 +398,7 @@ export default function DashboardPage() {
           <StatCard label="Total Orders"    value={stats.totalOrders ?? 0}     sub="All time campaigns"           icon="📋" />
           <StatCard label="Live Now"        value={stats.activeOrders ?? 0}    sub="Currently delivering"         icon="⚡" />
           <StatCard label="Views Sent"      value={stats.viewsDelivered ?? 0}  sub="Total organic views"          icon="👁" />
-          <StatCard label="Active Routes"   value={3}                          sub="Delivery paths online"        icon="🛡️" />
+          <StatCard label="Active Routes"   value={activeRoutes}               sub="Delivery paths online"        icon="🛡️" />
         </div>
       )}
 
