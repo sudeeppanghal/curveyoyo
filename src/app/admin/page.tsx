@@ -183,6 +183,10 @@ export default function AdminPage() {
 
   const [orderFilter, setOrderFilter] = useState("All");
 
+  const [userQuery, setUserQuery] = useState("");
+  const [userSort, setUserSort] = useState("newest");
+  const [userFilter, setUserFilter] = useState("all");
+
   // New UPI Payments & Admin Panels States
 
   const [upiPayments, setUpiPayments] = useState<any[]>([]);
@@ -1061,6 +1065,27 @@ export default function AdminPage() {
 
   // Main Dashboard REDESIGNED
 
+  const displayedUsers = users
+    .filter((u) => {
+      if (userFilter === "wallet" && !u.walletMode) return false;
+      if (userFilter === "lifetime" && !u.lifetimeUnlocked && u.plan !== "LIFETIME") return false;
+      if (userQuery.trim()) {
+        const q = userQuery.toLowerCase().trim();
+        const emailMatch = u.email?.toLowerCase().includes(q);
+        const nameMatch = u.name?.toLowerCase().includes(q);
+        const idMatch = u.id?.toLowerCase().includes(q);
+        if (!emailMatch && !nameMatch && !idMatch) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (userSort === "balance_desc") return (b.balance || 0) - (a.balance || 0);
+      if (userSort === "balance_asc") return (a.balance || 0) - (b.balance || 0);
+      if (userSort === "orders_desc") return (b._count?.orders || 0) - (a._count?.orders || 0);
+      if (userSort === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
   return (
 
     <div style={{
@@ -1783,13 +1808,83 @@ export default function AdminPage() {
 
                 <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Platform Registered Users</h2>
 
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Active registered operators and accounts: {users.length}</p>
+                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Active registered operators and accounts: {users.length} (Showing: {displayedUsers.length})</p>
 
               </div>
 
-              {users.length === 0 ? (
+              {/* Search & Filter Controls */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search user by name, email, or ID…"
+                  value={userQuery}
+                  onChange={(e) => setUserQuery(e.target.value)}
+                  className="neo-input"
+                  style={{
+                    flex: 1,
+                    minWidth: 260,
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: N.text,
+                    background: N.bg,
+                    border: "none",
+                    boxShadow: N.inset,
+                    outline: "none"
+                  }}
+                />
 
-                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No users found</div>
+                <select
+                  value={userSort}
+                  onChange={(e) => setUserSort(e.target.value)}
+                  className="neo-input"
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: N.text,
+                    background: N.bg,
+                    border: "none",
+                    boxShadow: N.raisedSm,
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="newest">📅 Newest First</option>
+                  <option value="oldest">📅 Oldest First</option>
+                  <option value="balance_desc">💰 Highest Balance</option>
+                  <option value="balance_asc">💸 Lowest Balance</option>
+                  <option value="orders_desc">🚀 Most Campaigns</option>
+                </select>
+
+                <select
+                  value={userFilter}
+                  onChange={(e) => setUserFilter(e.target.value)}
+                  className="neo-input"
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: N.text,
+                    background: N.bg,
+                    border: "none",
+                    boxShadow: N.raisedSm,
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="all">👥 All Accounts ({users.length})</option>
+                  <option value="wallet">💼 Wallet Mode Only</option>
+                  <option value="lifetime">⚡ Lifetime VIPs</option>
+                </select>
+              </div>
+
+              {displayedUsers.length === 0 ? (
+
+                <div style={{ padding: "48px 0", textAlign: "center", color: N.muted, fontSize: 13, fontWeight: 700 }}>No matching users found</div>
 
               ) : (
 
@@ -1801,7 +1896,7 @@ export default function AdminPage() {
 
                       <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
 
-                        {["Email", "Joined", "Wallet", "Balance", "Plan", "Panels", "Campaigns", "Actions"].map((h) => (
+                        {["User / Email", "Joined", "Wallet", "Balance", "Plan", "Panels", "Campaigns", "Actions"].map((h) => (
 
                           <th key={h} style={{ padding: "12px 8px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
 
@@ -1813,11 +1908,14 @@ export default function AdminPage() {
 
                     <tbody>
 
-                      {users.map((u) => (
+                      {displayedUsers.map((u) => (
 
                         <tr key={u.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
-                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, maxWidth: 180, wordBreak: "break-all" }}>{u.email}</td>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, maxWidth: 200, wordBreak: "break-all" }}>
+                            {u.name && <div style={{ fontSize: 13, fontWeight: 800, color: N.text }}>{u.name}</div>}
+                            <div style={{ fontSize: u.name ? 11 : 12, color: u.name ? N.muted : N.text, fontWeight: 600 }}>{u.email}</div>
+                          </td>
 
                           <td style={{ padding: "12px 8px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
 
