@@ -3,14 +3,11 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets, DeliveryBatch } from "@/lib/delivery/curve";
+import { CURVE_DESCRIPTIONS_100 as CURVE_DESCRIPTIONS, STYLE_NEON_COLORS_100 as STYLE_NEON_COLORS, CURVE_100_LIST } from "@/lib/delivery/curve-styles-100";
 
 // ── Types ───────────────────────────────────────────────────────
 type Platform = "INSTAGRAM" | "TIKTOK" | "FACEBOOK";
-type CurveStyle = "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"
-  | "LINEAR" | "EXPONENTIAL" | "S_CURVE" | "BELL_CURVE" | "LOGARITHMIC" | "QUADRATIC" | "CUBIC"
-  | "SINE_WAVE" | "COSINE_WAVE" | "SAWTOOTH" | "CHAOTIC" | "DOUBLE_BELL" | "STEP_LADDER"
-  | "ALTERNATING" | "FIBONACCI" | "PARETO" | "MORNING_SURGE" | "NOON_PEAK" | "EVENING_BLAST"
-  | "SIGMOID_DECAY" | "STEEP_WARMUP";
+type CurveStyle = string;
 
 interface Panel {
   id: string; name: string; isActive: boolean;
@@ -33,75 +30,6 @@ const N = {
 
 const PLATFORM_ICONS: Record<Platform, string> = {
   INSTAGRAM: "📷", TIKTOK: "🎵", FACEBOOK: "📘",
-};
-const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warmup: number; peak: number; icon: string; category: string }> = {
-  ORGANIC:       { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic" },
-  FAST:          { label: "Fast Burst",      desc: "Compressed 12h curve — quicker ramp, shorter peak.", warmup: 2, peak: 4, icon: "⚡", category: "Classic" },
-  AGGRESSIVE:    { label: "Aggressive Spike",desc: "Rapid 6h burst — immediate surge. Higher visibility risk.", warmup: 1, peak: 2, icon: "🔥", category: "Classic" },
-  WHOP:          { label: "Whop commerce",   desc: "Commerce activity profile — sustained midday plateau.", warmup: 5, peak: 10, icon: "💳", category: "Classic" },
-  CLIPSTAKE:     { label: "Clipstake Wave",  desc: "Double-plateau step-wise curve simulating viral trigger prompts.", warmup: 3, peak: 6, icon: "🎲", category: "Classic" },
-  CLIPSTAR:      { label: "Clipstar Burst",  desc: "Immediate sustained viral burst with long-tail retention.", warmup: 2, peak: 12, icon: "⭐", category: "Classic" },
-  PICSART:       { label: "Picsart Creative",desc: "Creative designer pacing — afternoon peak with high interaction curves.", warmup: 4, peak: 8, icon: "🎨", category: "Classic" },
-  CROSSWAVE:     { label: "Crosswave Multi", desc: "Oscillatory crest/trough waves simulating syndication.", warmup: 4, peak: 8, icon: "🌊", category: "Classic" },
-
-  LINEAR:        { label: "Linear Pace",     desc: "Constant, equal-increment delivery rate over the entire campaign.", warmup: 0, peak: 0, icon: "📈", category: "Standard" },
-  EXPONENTIAL:   { label: "Exponential Surge",desc: "Starts slowly and accelerates sharply. Ideal for countdowns.", warmup: 0, peak: 0, icon: "🚀", category: "Standard" },
-  S_CURVE:       { label: "S-Curve Growth",  desc: "Slow ramp-up, rapid mid-campaign dispatch, and smooth saturation.", warmup: 0, peak: 0, icon: "📉", category: "Standard" },
-  BELL_CURVE:    { label: "Bell Curve Dispatch",desc: "Symmetric pacing starting gently, peaking at mid-duration.", warmup: 0, peak: 0, icon: "🔔", category: "Standard" },
-  LOGARITHMIC:   { label: "Logarithmic Warm-up",desc: "Surges immediately on launch, then maintains a decelerating pace.", warmup: 0, peak: 0, icon: "🪵", category: "Standard" },
-  QUADRATIC:     { label: "Quadratic Velocity",desc: "Accelerates at a moderate squared rate.", warmup: 0, peak: 0, icon: "📐", category: "Standard" },
-  CUBIC:         { label: "Cubic Accelerating",desc: "Aggressive third-degree curve with longer slow-phase and sharper final surge.", warmup: 0, peak: 0, icon: "🧮", category: "Standard" },
-
-  SINE_WAVE:     { label: "Sine Wave Ripple", desc: "Alternate peaks and valleys of activity for natural testing.", warmup: 0, peak: 0, icon: "〰️", category: "Waves & Pulses" },
-  COSINE_WAVE:   { label: "Cosine Wave Ripple",desc: "Starts at absolute peak output, dipping and recovering periodically.", warmup: 0, peak: 0, icon: "🎢", category: "Waves & Pulses" },
-  SAWTOOTH:      { label: "Sawtooth Throttling",desc: "Linear ramp-up cycles that sharply drop back to baseline.", warmup: 0, peak: 0, icon: "🪚", category: "Waves & Pulses" },
-  CHAOTIC:       { label: "Chaotic Wave",    desc: "Simulates pseudo-random fluctuations to mimic organic user patterns.", warmup: 0, peak: 0, icon: "🌀", category: "Waves & Pulses" },
-  DOUBLE_BELL:   { label: "Double Bell Surge",desc: "Dual peaks centered around morning and evening high-traffic blocks.", warmup: 0, peak: 0, icon: "🐫", category: "Waves & Pulses" },
-  STEP_LADDER:   { label: "Step Ladder",     desc: "Increments output in discrete, flat tiers.", warmup: 0, peak: 0, icon: "🪜", category: "Waves & Pulses" },
-  ALTERNATING:   { label: "Alternating Pulse",desc: "Outputs either 100% or 0% at alternating steps.", warmup: 0, peak: 0, icon: "🫀", category: "Waves & Pulses" },
-  FIBONACCI:     { label: "Fibonacci Pace",  desc: "Paces delivery according to the golden ratio sequence.", warmup: 0, peak: 0, icon: "🐚", category: "Specialized" },
-  PARETO:        { label: "Pareto 80/20",    desc: "Dispatches 80% of volume in the first 20% of duration.", warmup: 0, peak: 0, icon: "📊", category: "Specialized" },
-
-  MORNING_SURGE: { label: "Morning Surge",   desc: "Heavily front-loaded peak in the early hours to target feed checkings.", warmup: 0, peak: 0, icon: "🌅", category: "Surge Peaks" },
-  NOON_PEAK:     { label: "Noon Peak",       desc: "Centered peak focusing on the typical lunch-break browsing slot.", warmup: 0, peak: 0, icon: "☀️", category: "Surge Peaks" },
-  EVENING_BLAST: { label: "Evening Blast",   desc: "Back-loaded dispatch peak targeted at after-work leisure hours.", warmup: 0, peak: 0, icon: "🌆", category: "Surge Peaks" },
-  SIGMOID_DECAY: { label: "Sigmoid Decay",   desc: "Starts at maximum volume and stays flat, before dropping in a smooth S-curve.", warmup: 0, peak: 0, icon: "🥀", category: "Surge Peaks" },
-  STEEP_WARMUP:  { label: "Steep Warm-up",   desc: "Ramps up extremely quickly to max output within the first 10%.", warmup: 0, peak: 0, icon: "📈", category: "Surge Peaks" },
-};
-
-const STYLE_NEON_COLORS: Record<CurveStyle, { stroke: string; glow: string; stop: string }> = {
-  ORGANIC:       { stroke: "#d946ef", glow: "rgba(217, 70, 239, 0.4)", stop: "#a855f7" },
-  FAST:          { stroke: "#ec4899", glow: "rgba(236, 72, 153, 0.4)", stop: "#db2777" },
-  AGGRESSIVE:    { stroke: "#f43f5e", glow: "rgba(244, 63, 94, 0.4)", stop: "#e11d48" },
-  WHOP:          { stroke: "#06b6d4", glow: "rgba(6, 182, 212, 0.4)", stop: "#0891b2" },
-  CLIPSTAKE:     { stroke: "#10b981", glow: "rgba(16, 185, 129, 0.4)", stop: "#059669" },
-  CLIPSTAR:      { stroke: "#eab308", glow: "rgba(234, 179, 8, 0.4)", stop: "#ca8a04" },
-  PICSART:       { stroke: "#8b5cf6", glow: "rgba(139, 92, 246, 0.4)", stop: "#7c3aed" },
-  CROSSWAVE:     { stroke: "#0ea5e9", glow: "rgba(14, 165, 233, 0.4)", stop: "#0284c7" },
-
-  LINEAR:        { stroke: "#6366f1", glow: "rgba(99, 102, 241, 0.4)", stop: "#4f46e5" },
-  EXPONENTIAL:   { stroke: "#f97316", glow: "rgba(249, 115, 22, 0.4)", stop: "#ea580c" },
-  S_CURVE:       { stroke: "#14b8a6", glow: "rgba(20, 184, 166, 0.4)", stop: "#0d9488" },
-  BELL_CURVE:    { stroke: "#a855f7", glow: "rgba(168, 85, 247, 0.4)", stop: "#9333ea" },
-  LOGARITHMIC:   { stroke: "#84cc16", glow: "rgba(132, 204, 22, 0.4)", stop: "#65a30d" },
-  QUADRATIC:     { stroke: "#38bdf8", glow: "rgba(56, 189, 248, 0.4)", stop: "#0284c7" },
-  CUBIC:         { stroke: "#fb7185", glow: "rgba(251, 113, 133, 0.4)", stop: "#e11d48" },
-
-  SINE_WAVE:     { stroke: "#22d3ee", glow: "rgba(34, 211, 238, 0.4)", stop: "#0891b2" },
-  COSINE_WAVE:   { stroke: "#818cf8", glow: "rgba(129, 140, 248, 0.4)", stop: "#4f46e5" },
-  SAWTOOTH:      { stroke: "#f472b6", glow: "rgba(244, 114, 182, 0.4)", stop: "#db2777" },
-  CHAOTIC:       { stroke: "#a78bfa", glow: "rgba(167, 139, 250, 0.4)", stop: "#7c3aed" },
-  DOUBLE_BELL:   { stroke: "#34d399", glow: "rgba(52, 211, 153, 0.4)", stop: "#059669" },
-  STEP_LADDER:   { stroke: "#fbbf24", glow: "rgba(251, 191, 36, 0.4)", stop: "#d97706" },
-  ALTERNATING:   { stroke: "#f87171", glow: "rgba(248, 113, 113, 0.4)", stop: "#dc2626" },
-  FIBONACCI:     { stroke: "#c084fc", glow: "rgba(192, 132, 252, 0.4)", stop: "#9333ea" },
-  PARETO:        { stroke: "#4ade80", glow: "rgba(74, 222, 128, 0.4)", stop: "#16a34a" },
-
-  MORNING_SURGE: { stroke: "#fb923c", glow: "rgba(251, 146, 60, 0.4)", stop: "#ea580c" },
-  NOON_PEAK:     { stroke: "#facc15", glow: "rgba(250, 204, 21, 0.4)", stop: "#ca8a04" },
-  EVENING_BLAST: { stroke: "#e879f9", glow: "rgba(232, 121, 249, 0.4)", stop: "#c026d3" },
-  SIGMOID_DECAY: { stroke: "#94a3b8", glow: "rgba(148, 163, 184, 0.4)", stop: "#64748b" },
-  STEEP_WARMUP:  { stroke: "#2dd4bf", glow: "rgba(45, 212, 191, 0.4)", stop: "#0d9488" },
 };
 
 // ── Custom Graph Drawing Canvas ──────────────────────────────────
@@ -429,7 +357,7 @@ function CurvePreview({
     `L ${pts[0].x.toFixed(1)} ${H - pad} Z`,
   ].join(" ");
 
-  const curveInfo = CURVE_DESCRIPTIONS[style];
+  const curveInfo = CURVE_DESCRIPTIONS[style] || CURVE_DESCRIPTIONS["ORGANIC"] || { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic", num: 6 };
 
   // Determine current active simulation batch
   const currentBatchIdx = isPlaying ? playHour : (batches.length - 1);
@@ -749,7 +677,6 @@ function CurvePreview({
 // ── Mini Sparkline Curve Chart ──────────────────────────────────
 function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean }) {
   const info = CURVE_DESCRIPTIONS[style];
-  // Memoize so we only recompute when style changes — NOT on every parent re-render
   const points = useMemo(() => {
     const batches = generateRawSchedule({
       totalViews: 10000,
@@ -761,11 +688,11 @@ function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean 
       tzOffsetHours: 0,
     });
     return batches.map((b) => b.views);
-  }, [style]);
+  }, [style, info?.warmup, info?.peak]);
 
   const maxVal = Math.max(...points, 1);
-  const width = 80;
-  const height = 24;
+  const width = 100;
+  const height = 30;
   const padding = 2;
 
   const pathD = points
@@ -776,18 +703,29 @@ function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean 
     })
     .join(" ");
 
-  const neon = STYLE_NEON_COLORS[style] || STYLE_NEON_COLORS.ORGANIC;
+  const fillD = `${pathD} L ${width - padding} ${height} L ${padding} ${height} Z`;
+
+  const neon = STYLE_NEON_COLORS[style] || STYLE_NEON_COLORS.ORGANIC || { stroke: "#d946ef", glow: "rgba(217, 70, 239, 0.4)", stop: "#a855f7" };
+  const gradId = `mini-grad-${style}`;
+
   return (
-    <svg width={width} height={height} style={{ overflow: "visible", marginTop: 4, display: "block" }}>
+    <svg width={width} height={height} style={{ overflow: "visible", marginTop: 6, display: "block", width: "100%" }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={neon.stroke} stopOpacity={active ? "0.45" : "0.25"} />
+          <stop offset="100%" stopColor={neon.stroke} stopOpacity="0.0" />
+        </linearGradient>
+      </defs>
+      <path d={fillD} fill={`url(#${gradId})`} />
       <path
         d={pathD}
         fill="none"
-        stroke={active ? neon.stroke : "#3f1b6d"}
-        strokeWidth="2.5"
+        stroke={neon.stroke}
+        strokeWidth={active ? "2.5" : "2"}
         strokeLinecap="round"
         strokeLinejoin="round"
         style={{
-          filter: active ? `drop-shadow(0 0 5px ${neon.stroke})` : "none",
+          filter: active ? `drop-shadow(0 0 8px ${neon.stroke})` : `drop-shadow(0 0 3px ${neon.stroke})`,
           transition: "all 0.25s ease"
         }}
       />
@@ -1048,6 +986,7 @@ export default function NewReelPage() {
   const [selectedViewsService, setSelectedViewsService] = useState<"views" | "reach_impressions_views">("views");
   const [durationDays, setDurationDays] = useState(7);
   const [style, setStyle] = useState<CurveStyle>("ORGANIC");
+  const [selectedCategory, setSelectedCategory] = useState("All (100)");
 
   // Step 3 ── Engagement
   const [engEnabled, setEngEnabled] = useState(true);
@@ -1242,7 +1181,7 @@ export default function NewReelPage() {
   };
 
   const durationHours = durationDays * 24;
-  const curveInfo = CURVE_DESCRIPTIONS[style];
+  const curveInfo = CURVE_DESCRIPTIONS[style] || CURVE_DESCRIPTIONS["ORGANIC"] || { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic", num: 6 };
   const eng = calculateEngagementTargets(
     views,
     engEnabled && likesOn ? likesRatio : 0,
@@ -1819,35 +1758,113 @@ export default function NewReelPage() {
             <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:32,alignItems:'start',marginTop:8}}>
               <div style={{background:'#08010f',border:'1px solid #1c0a35',borderRadius:24,padding:24,boxShadow:'0 10px 30px rgba(0,0,0,0.5)',color:'#f3e8ff',display:'flex',flexDirection:'column',gap:16}}>
                 <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0" }}>3. Drip Pacing &amp; Flow Settings</h3>
-                  <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select Organic Pacing Growth Graph</p>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  {["Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized"].map((cat) => {
-                    const catStyles = (Object.keys(CURVE_DESCRIPTIONS) as CurveStyle[]).filter(s => CURVE_DESCRIPTIONS[s].category === cat);
-                    if (catStyles.length === 0) return null;
-                    return (
-                      <div key={cat}>
-                        <p style={{ fontSize: 10, fontWeight: 900, color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{cat}</p>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
-                          {catStyles.map((s) => (
-                            <button key={s} onClick={() => { setStyle(s); setSelectedTemplateId(""); }}
-                              style={{
-                                padding: "14px 6px", borderRadius: 14, cursor: "pointer", transition: "all 0.25s ease",
-                                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                                background: style === s ? "#1a0636" : "#0c0218",
-                                border: style === s ? `2.5px solid ${STYLE_NEON_COLORS[s]?.stroke || "#d946ef"}` : "1.5px solid #1c0a35",
-                                boxShadow: style === s ? `0 0 15px ${STYLE_NEON_COLORS[s]?.glow || "rgba(217, 70, 239, 0.35)"}` : "none",
-                                color: style === s ? "#ffffff" : "#a78bfa",
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0", letterSpacing: "-0.3px" }}>3. Drip Pacing &amp; Flow Settings (100 Neon Growth Graphs)</h3>
+                      <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select from 100 specialized neon animated growth algorithms to customize your delivery profile</p>
+                    </div>
+                  </div>
+
+                  {/* Category Filter Tabs */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, padding: "4px 0" }}>
+                    {[
+                      "All (100)", "Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized",
+                      "Patterns", "Cycles & Trends", "Technical Formations", "Chart Patterns", "Pro Formations"
+                    ].map((cat) => {
+                      const isCatActive = selectedCategory === cat;
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 20,
+                            fontSize: 11,
+                            fontWeight: isCatActive ? 800 : 600,
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                            background: isCatActive ? "linear-gradient(135deg, #d946ef, #8b5cf6)" : "#130428",
+                            color: isCatActive ? "#ffffff" : "#a78bfa",
+                            border: isCatActive ? "1px solid #f0abfc" : "1px solid #261047",
+                            boxShadow: isCatActive ? "0 0 12px rgba(217, 70, 239, 0.5)" : "none",
+                          }}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* 100 Neon Cards Grid */}
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+                    gap: 12,
+                    maxHeight: 620,
+                    overflowY: "auto",
+                    padding: "4px 6px 12px 2px",
+                    scrollBehavior: "smooth"
+                  }}>
+                    {CURVE_100_LIST
+                      .filter((item) => selectedCategory === "All (100)" || item.category === selectedCategory)
+                      .map((item) => {
+                        const s = item.id;
+                        const isSelected = style === s;
+                        const neon = STYLE_NEON_COLORS[s] || STYLE_NEON_COLORS.ORGANIC || { stroke: "#d946ef", glow: "rgba(217, 70, 239, 0.4)" };
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => { setStyle(s); setSelectedTemplateId(""); }}
+                            style={{
+                              padding: "12px 8px",
+                              borderRadius: 14,
+                              cursor: "pointer",
+                              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "flex-start",
+                              gap: 6,
+                              background: isSelected ? "linear-gradient(180deg, #2a0b4e 0%, #130428 100%)" : "#0a0117",
+                              border: isSelected ? `2px solid ${neon.stroke}` : "1px solid #1e0b36",
+                              boxShadow: isSelected
+                                ? `0 0 20px ${neon.glow}, inset 0 0 12px rgba(255, 255, 255, 0.1)`
+                                : "0 4px 10px rgba(0, 0, 0, 0.6)",
+                              color: isSelected ? "#ffffff" : "#a78bfa",
+                              position: "relative",
+                              overflow: "hidden",
+                              textAlign: "left",
+                              width: "100%",
+                              transform: isSelected ? "translateY(-2px)" : "none"
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%" }}>
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 900,
+                                color: neon.stroke,
+                                background: "rgba(255,255,255,0.05)",
+                                padding: "2px 6px",
+                                borderRadius: 6,
+                                flexShrink: 0
                               }}>
-                              <span style={{ fontSize: 11, fontWeight: 805, textAlign: "center" }}>{CURVE_DESCRIPTIONS[s].label}</span>
-                              <MiniCurveChart style={s} active={style === s} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                                #{item.num}
+                              </span>
+                              <span style={{
+                                fontSize: 11.5,
+                                fontWeight: isSelected ? 800 : 700,
+                                color: isSelected ? "#ffffff" : "#e2e8f0",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis"
+                              }}>
+                                {item.label}
+                              </span>
+                            </div>
+                            <MiniCurveChart style={s} active={isSelected} />
+                          </button>
+                        );
+                      })}
+                  </div>
                 </div>
               </div>
 

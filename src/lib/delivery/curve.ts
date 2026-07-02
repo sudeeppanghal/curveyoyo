@@ -3,16 +3,14 @@
 // Logistic: V(t) = K / (1 + e^(-r(t - t0)))
 // ─────────────────────────────────────────────────────────────
 
+import { CURVE_100_MAP } from "./curve-styles-100";
+
 export interface CurveParams {
   totalViews: number;
   durationHours: number;
   warmupHours: number;
   peakHours: number;
-  style: "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"
-    | "LINEAR" | "EXPONENTIAL" | "S_CURVE" | "BELL_CURVE" | "LOGARITHMIC" | "QUADRATIC" | "CUBIC"
-    | "SINE_WAVE" | "COSINE_WAVE" | "SAWTOOTH" | "CHAOTIC" | "DOUBLE_BELL" | "STEP_LADDER"
-    | "ALTERNATING" | "FIBONACCI" | "PARETO" | "MORNING_SURGE" | "NOON_PEAK" | "EVENING_BLAST"
-    | "SIGMOID_DECAY" | "STEEP_WARMUP";
+  style: string;
   // Engagement
   engagementEnabled?: boolean;
   likesRatioPct?: number;
@@ -128,67 +126,11 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
   const raw = Array.from({ length: totalSteps }, (_, t) => {
     const progress = t / totalSteps;
     const hourTime = t / stepsPerHour;
+    const config = CURVE_100_MAP[style];
     let val = 1.0;
-
-    if (style === "LINEAR") {
-      val = 0.15 + 0.85 * progress;
-    } else if (style === "EXPONENTIAL") {
-      val = Math.pow(progress, 3) + 0.05;
-    } else if (style === "S_CURVE") {
-      val = 1 / (1 + Math.exp(-8 * (progress - 0.5)));
-    } else if (style === "BELL_CURVE") {
-      val = Math.exp(-Math.pow((progress - 0.5) / 0.18, 2)) + 0.05;
-    } else if (style === "LOGARITHMIC") {
-      val = Math.log(1 + 20 * progress) / Math.log(21) + 0.1;
-    } else if (style === "QUADRATIC") {
-      val = Math.pow(progress, 2) + 0.1;
-    } else if (style === "CUBIC") {
-      val = Math.pow(progress, 3.5) + 0.05;
-    } else if (style === "SINE_WAVE") {
-      val = 0.6 + 0.4 * Math.sin(progress * 4 * Math.PI);
-    } else if (style === "COSINE_WAVE") {
-      val = 0.6 + 0.4 * Math.cos(progress * 4 * Math.PI);
-    } else if (style === "SAWTOOTH") {
-      const periodSteps = Math.max(1, Math.floor(totalSteps / 4));
-      val = (t % periodSteps) / periodSteps + 0.1;
-    } else if (style === "CHAOTIC") {
-      val = 0.5 + 0.25 * Math.sin(progress * 7 * Math.PI) + 0.2 * Math.cos(progress * 17 * Math.PI) + 0.1 * Math.sin(progress * 29 * Math.PI);
-    } else if (style === "DOUBLE_BELL") {
-      val = Math.exp(-Math.pow((progress - 0.25) / 0.12, 2)) + Math.exp(-Math.pow((progress - 0.75) / 0.12, 2)) + 0.1;
-    } else if (style === "STEP_LADDER") {
-      val = Math.floor(progress * 4) / 4 + 0.15;
-    } else if (style === "ALTERNATING") {
-      val = (Math.floor(t) % 2 === 0) ? 1.0 : 0.15;
-    } else if (style === "FIBONACCI") {
-      val = Math.pow(1.618, progress * 6) - 0.8;
-    } else if (style === "PARETO") {
-      val = Math.pow(1 - progress, 3) + 0.05;
-    } else if (style === "MORNING_SURGE") {
-      val = Math.exp(-Math.pow((progress - 0.18) / 0.12, 2)) + 0.08;
-    } else if (style === "NOON_PEAK") {
-      val = Math.exp(-Math.pow((progress - 0.5) / 0.15, 2)) + 0.08;
-    } else if (style === "EVENING_BLAST") {
-      val = Math.exp(-Math.pow((progress - 0.82) / 0.12, 2)) + 0.08;
-    } else if (style === "SIGMOID_DECAY") {
-      val = 1 / (1 + Math.exp(8 * (progress - 0.5)));
-    } else if (style === "STEEP_WARMUP") {
-      val = progress < 0.15 ? (progress / 0.15) : 1.0;
-    } else if (style === "FAST") {
-      val = Math.pow(progress, 0.35) + 0.1;
-    } else if (style === "AGGRESSIVE") {
-      val = Math.exp(-progress * 4.5) + 0.15;
-    } else if (style === "WHOP") {
-      val = (progress > 0.25 && progress < 0.75) ? 1.0 : (progress <= 0.25 ? progress * 4 : (1 - progress) * 4);
-    } else if (style === "CLIPSTAKE") {
-      val = progress < 0.33 ? 0.25 : progress < 0.66 ? 0.6 : 1.0;
-    } else if (style === "CLIPSTAR") {
-      val = 0.8 * Math.exp(-progress * 5) + 0.5 + 0.5 * Math.pow(progress, 2);
-    } else if (style === "PICSART") {
-      val = Math.exp(-Math.pow((progress - 0.35) / 0.12, 2)) + Math.exp(-Math.pow((progress - 0.75) / 0.12, 2)) + 0.15;
-    } else if (style === "CROSSWAVE") {
-      val = 0.6 + 0.4 * Math.sin(progress * 8 * Math.PI);
+    if (config && config.evalCurve) {
+      val = config.evalCurve(t, progress, totalSteps);
     } else {
-      // ORGANIC
       val = 1 / (1 + Math.exp(-6 * (progress - 0.45)));
     }
 
