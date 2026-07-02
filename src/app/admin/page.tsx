@@ -2336,13 +2336,7 @@ export default function AdminPage() {
 
                           <option value="TIKTOK">TikTok</option>
 
-                          <option value="YOUTUBE">YouTube</option>
-
-                          <option value="TELEGRAM">Telegram</option>
-
                           <option value="FACEBOOK">Facebook</option>
-
-                          <option value="TWITTER">Twitter (X)</option>
 
                         </select>
 
@@ -2358,6 +2352,8 @@ export default function AdminPage() {
 
                           <option value="views">Views</option>
 
+                          <option value="reach_impressions_views">Instagram Reach, Impressions & Views [Special ⭐]</option>
+
                           <option value="likes">Likes</option>
 
                           <option value="saves">Saves</option>
@@ -2365,26 +2361,6 @@ export default function AdminPage() {
                           <option value="shares">Shares</option>
 
                           <option value="comments">Comments</option>
-
-                          <option value="followers">Followers</option>
-
-                          <option value="subscribers">Subscribers</option>
-
-                          <option value="members">Members</option>
-
-                          <option value="reactions">Reactions</option>
-
-                          <option value="retweets">Retweets</option>
-                          <option value="story_views">Story Views</option>
-                          <option value="poll_votes">Poll Votes</option>
-                          <option value="live_stream">Live Stream</option>
-                          <option value="profile_visits">Profile Visits</option>
-                          <option value="impressions">Impressions</option>
-                          <option value="reach">Reach</option>
-                          <option value="page_likes">Page Likes</option>
-                          <option value="group_members">Group Members</option>
-                          <option value="channel_subscribers">Channel Subscribers</option>
-                          <option value="post_views">Post Views</option>
 
                         </select>
 

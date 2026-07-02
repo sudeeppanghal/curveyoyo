@@ -15,10 +15,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "YoyoSMM — Organic Pacing SMM Panel",
   description:
-    "Premium SMM panel with built-in organic timing schedules. Grow naturally across Instagram, YouTube, TikTok, Telegram, Facebook, and Twitter with human-like pacing curves.",
+    "Premium SMM panel with built-in organic timing schedules. Grow naturally across Instagram, TikTok, and Facebook with human-like pacing curves.",
   keywords: [
     "SMM panel", "organic delivery", "Instagram views", "TikTok views",
-    "YouTube views", "Telegram members", "Facebook followers", "Twitter retweets", "SMM automation", "organic pacing", "yoyosmm"
+    "Facebook views", "SMM automation", "organic pacing", "yoyosmm"
   ],
   authors: [{ name: "YoyoSMM" }],
   metadataBase: new URL("https://www.yoyosmm.online"),

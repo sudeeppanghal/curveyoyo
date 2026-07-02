@@ -49,10 +49,10 @@ export default function AboutPage() {
         {/* Story Card */}
         <div style={{ padding: 40, borderRadius: 28, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 20, fontSize: 16, fontWeight: 500, color: N.muted, lineHeight: 1.8 }}>
           <p style={{ margin: 0 }}>
-            We built YoyoSMM as an <strong style={{ color: N.text }}>independent, premium SMM panel</strong> with built-in organic timing layers. We provide high-retention views and engagement (likes, saves, shares, comments, followers, subscribers, members, retweets, and reactions) that match your selected pacing schedules perfectly.
+            We built YoyoSMM as an <strong style={{ color: N.text }}>independent, premium SMM panel</strong> with built-in organic timing layers. We provide high-retention views and engagement (likes, saves, shares, comments) that match your selected pacing schedules perfectly.
           </p>
           <p style={{ margin: 0 }}>
-            Our S-curve pacing engine is modeled after the natural logistic growth of real viral content across Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter. When a post goes viral, engagement builds slowly, reaches a peak, and then decays naturally. We replicate this exact flow.
+            Our S-curve pacing engine is modeled after the natural logistic growth of real viral content across Instagram, TikTok, and Facebook. When a post goes viral, engagement builds slowly, reaches a peak, and then decays naturally. We replicate this exact flow.
           </p>
           <p style={{ margin: 0 }}>
             Our fail-safe routing infrastructure guarantees zero drops. If any delivery path experiences network latency, our system automatically redirects the batch instantly — guaranteeing 99.98% uptime with zero lost orders.

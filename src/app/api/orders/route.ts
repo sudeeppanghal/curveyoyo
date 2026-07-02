@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
     likesTarget: bodyLikes, savesTarget: bodySaves,
     sharesTarget: bodyShares, commentsTarget: bodyComments,
     customSchedule, // <--- custom schedule parameter
+    viewsType = "views",
   } = body;
 
   const views = viewsTarget ?? totalViews;
@@ -119,7 +120,8 @@ export async function POST(request: NextRequest) {
     return s ? s.customRate : fallback;
   };
 
-  const viewsCost = (views / 1000) * getRate("views", 3.0);
+  const viewsRateKey = (platform === "INSTAGRAM" && viewsType === "reach_impressions_views") ? "reach_impressions_views" : "views";
+  const viewsCost = (views / 1000) * getRate(viewsRateKey, 3.0);
   const likesCost = (engTargets.likesTarget / 1000) * getRate("likes", 5.0);
   const savesCost = (engTargets.savesTarget / 1000) * getRate("saves", 5.0);
   const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
@@ -169,7 +171,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const curveStyle = ((styleRaw as string | undefined)?.toUpperCase() ?? "ORGANIC") as "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE";
+  const curveStyle = ((styleRaw as string | undefined)?.toUpperCase() ?? "ORGANIC") as any;
   const defDuration = curveStyle === "AGGRESSIVE" ? 6 : curveStyle === "FAST" ? 12 : 24;
 
   const order = await prisma.$transaction(async (tx) => {
@@ -183,6 +185,7 @@ export async function POST(request: NextRequest) {
         userId: dbUser.id,
         reelId: reel.id,
         panelId: primaryPanel.id,
+        panelServiceId: (platform === "INSTAGRAM" && viewsType === "reach_impressions_views") ? "reach_impressions_views" : null,
         viewsTarget: views,
         viewsRemaining: views,
         curveStyle,

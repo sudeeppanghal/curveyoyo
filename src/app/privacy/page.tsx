@@ -55,7 +55,7 @@ export default function PrivacyPage() {
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 15, fontWeight: 500, color: N.muted }}>
               <div><strong style={{ color: N.text }}>• Account Data:</strong> Email, username, and password hashes for authentication.</div>
-              <div><strong style={{ color: N.text }}>• Campaign Inputs:</strong> Social media links (Instagram, TikTok, YouTube, Telegram, Facebook, Twitter) provided to track campaign delivery.</div>
+              <div><strong style={{ color: N.text }}>• Campaign Inputs:</strong> Social media links (Instagram, TikTok, Facebook) provided to track campaign delivery.</div>
               <div><strong style={{ color: N.text }}>• Billing Logs:</strong> UPI deposit reference numbers and transaction ledger logs.</div>
             </div>
           </section>

@@ -18,14 +18,11 @@ export async function GET() {
     orderBy: { priority: "asc" },
   });
 
-  const defaultServices = { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, followers: 10.0, subscribers: 15.0, members: 8.0, reactions: 4.0, retweets: 6.0 };
+  const defaultServices = { views: 3.0, reach_impressions_views: 4.5, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 };
   const rates: Record<string, Record<string, number>> = {
     INSTAGRAM: { ...defaultServices },
-    TIKTOK: { ...defaultServices },
-    YOUTUBE: { ...defaultServices },
-    TELEGRAM: { ...defaultServices },
-    FACEBOOK: { ...defaultServices },
-    TWITTER: { ...defaultServices },
+    TIKTOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
+    FACEBOOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
   };
 
   let adminPanel = activeAdminPanels[0];

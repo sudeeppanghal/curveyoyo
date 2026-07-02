@@ -5,7 +5,7 @@ import Link from "next/link";
 import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets, DeliveryBatch } from "@/lib/delivery/curve";
 
 // ── Types ───────────────────────────────────────────────────────
-type Platform = "INSTAGRAM" | "TIKTOK" | "YOUTUBE" | "TELEGRAM" | "FACEBOOK" | "TWITTER";
+type Platform = "INSTAGRAM" | "TIKTOK" | "FACEBOOK";
 type CurveStyle = "ORGANIC" | "FAST" | "AGGRESSIVE" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"
   | "LINEAR" | "EXPONENTIAL" | "S_CURVE" | "BELL_CURVE" | "LOGARITHMIC" | "QUADRATIC" | "CUBIC"
   | "SINE_WAVE" | "COSINE_WAVE" | "SAWTOOTH" | "CHAOTIC" | "DOUBLE_BELL" | "STEP_LADDER"
@@ -32,7 +32,7 @@ const N = {
 };
 
 const PLATFORM_ICONS: Record<Platform, string> = {
-  INSTAGRAM: "📷", TIKTOK: "🎵", YOUTUBE: "▶️", TELEGRAM: "✈️", FACEBOOK: "📘", TWITTER: "🐦",
+  INSTAGRAM: "📷", TIKTOK: "🎵", FACEBOOK: "📘",
 };
 const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warmup: number; peak: number; icon: string; category: string }> = {
   ORGANIC:       { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic" },
@@ -67,6 +67,41 @@ const CURVE_DESCRIPTIONS: Record<CurveStyle, { label: string; desc: string; warm
   EVENING_BLAST: { label: "Evening Blast",   desc: "Back-loaded dispatch peak targeted at after-work leisure hours.", warmup: 0, peak: 0, icon: "🌆", category: "Surge Peaks" },
   SIGMOID_DECAY: { label: "Sigmoid Decay",   desc: "Starts at maximum volume and stays flat, before dropping in a smooth S-curve.", warmup: 0, peak: 0, icon: "🥀", category: "Surge Peaks" },
   STEEP_WARMUP:  { label: "Steep Warm-up",   desc: "Ramps up extremely quickly to max output within the first 10%.", warmup: 0, peak: 0, icon: "📈", category: "Surge Peaks" },
+};
+
+const STYLE_NEON_COLORS: Record<CurveStyle, { stroke: string; glow: string; stop: string }> = {
+  ORGANIC:       { stroke: "#d946ef", glow: "rgba(217, 70, 239, 0.4)", stop: "#a855f7" },
+  FAST:          { stroke: "#ec4899", glow: "rgba(236, 72, 153, 0.4)", stop: "#db2777" },
+  AGGRESSIVE:    { stroke: "#f43f5e", glow: "rgba(244, 63, 94, 0.4)", stop: "#e11d48" },
+  WHOP:          { stroke: "#06b6d4", glow: "rgba(6, 182, 212, 0.4)", stop: "#0891b2" },
+  CLIPSTAKE:     { stroke: "#10b981", glow: "rgba(16, 185, 129, 0.4)", stop: "#059669" },
+  CLIPSTAR:      { stroke: "#eab308", glow: "rgba(234, 179, 8, 0.4)", stop: "#ca8a04" },
+  PICSART:       { stroke: "#8b5cf6", glow: "rgba(139, 92, 246, 0.4)", stop: "#7c3aed" },
+  CROSSWAVE:     { stroke: "#0ea5e9", glow: "rgba(14, 165, 233, 0.4)", stop: "#0284c7" },
+
+  LINEAR:        { stroke: "#6366f1", glow: "rgba(99, 102, 241, 0.4)", stop: "#4f46e5" },
+  EXPONENTIAL:   { stroke: "#f97316", glow: "rgba(249, 115, 22, 0.4)", stop: "#ea580c" },
+  S_CURVE:       { stroke: "#14b8a6", glow: "rgba(20, 184, 166, 0.4)", stop: "#0d9488" },
+  BELL_CURVE:    { stroke: "#a855f7", glow: "rgba(168, 85, 247, 0.4)", stop: "#9333ea" },
+  LOGARITHMIC:   { stroke: "#84cc16", glow: "rgba(132, 204, 22, 0.4)", stop: "#65a30d" },
+  QUADRATIC:     { stroke: "#38bdf8", glow: "rgba(56, 189, 248, 0.4)", stop: "#0284c7" },
+  CUBIC:         { stroke: "#fb7185", glow: "rgba(251, 113, 133, 0.4)", stop: "#e11d48" },
+
+  SINE_WAVE:     { stroke: "#22d3ee", glow: "rgba(34, 211, 238, 0.4)", stop: "#0891b2" },
+  COSINE_WAVE:   { stroke: "#818cf8", glow: "rgba(129, 140, 248, 0.4)", stop: "#4f46e5" },
+  SAWTOOTH:      { stroke: "#f472b6", glow: "rgba(244, 114, 182, 0.4)", stop: "#db2777" },
+  CHAOTIC:       { stroke: "#a78bfa", glow: "rgba(167, 139, 250, 0.4)", stop: "#7c3aed" },
+  DOUBLE_BELL:   { stroke: "#34d399", glow: "rgba(52, 211, 153, 0.4)", stop: "#059669" },
+  STEP_LADDER:   { stroke: "#fbbf24", glow: "rgba(251, 191, 36, 0.4)", stop: "#d97706" },
+  ALTERNATING:   { stroke: "#f87171", glow: "rgba(248, 113, 113, 0.4)", stop: "#dc2626" },
+  FIBONACCI:     { stroke: "#c084fc", glow: "rgba(192, 132, 252, 0.4)", stop: "#9333ea" },
+  PARETO:        { stroke: "#4ade80", glow: "rgba(74, 222, 128, 0.4)", stop: "#16a34a" },
+
+  MORNING_SURGE: { stroke: "#fb923c", glow: "rgba(251, 146, 60, 0.4)", stop: "#ea580c" },
+  NOON_PEAK:     { stroke: "#facc15", glow: "rgba(250, 204, 21, 0.4)", stop: "#ca8a04" },
+  EVENING_BLAST: { stroke: "#e879f9", glow: "rgba(232, 121, 249, 0.4)", stop: "#c026d3" },
+  SIGMOID_DECAY: { stroke: "#94a3b8", glow: "rgba(148, 163, 184, 0.4)", stop: "#64748b" },
+  STEEP_WARMUP:  { stroke: "#2dd4bf", glow: "rgba(45, 212, 191, 0.4)", stop: "#0d9488" },
 };
 
 // ── Custom Graph Drawing Canvas ──────────────────────────────────
@@ -372,6 +407,7 @@ function CurvePreview({
 
   const W = 550, H = 200, pad = 30;
   const maxVal = Math.max(...batches.map((b) => b.views), 1);
+  const neon = STYLE_NEON_COLORS[style] || STYLE_NEON_COLORS.ORGANIC;
 
   // Helper to map index & quantity to coordinates
   const getCoords = (val: number, max: number, idx: number, hour: number) => {
@@ -559,8 +595,8 @@ function CurvePreview({
         >
           <defs>
             <linearGradient id="neonGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#d946ef" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+              <stop offset="0%" stopColor={neon.stroke} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={neon.stop} stopOpacity="0" />
             </linearGradient>
 
             <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
@@ -602,7 +638,7 @@ function CurvePreview({
           {/* Curve Area & Line */}
           <g>
             <path d={makeFill(viewsPts)} fill="url(#neonGrad)" style={{ transition: draggingIdx !== null ? "none" : "all 0.5s ease" }} />
-            <path d={makePath(viewsPts)} fill="none" stroke="#d946ef" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonGlow)" style={{ transition: draggingIdx !== null ? "none" : "all 0.5s ease" }} />
+            <path d={makePath(viewsPts)} fill="none" stroke={neon.stroke} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#neonGlow)" style={{ transition: draggingIdx !== null ? "none" : "all 0.5s ease" }} />
           </g>
 
           {/* Interactive dots in custom mode */}
@@ -612,7 +648,7 @@ function CurvePreview({
               cx={pt.x}
               cy={pt.y}
               r={selectedBatchIndex === idx ? 8 : 4.5}
-              fill={selectedBatchIndex === idx ? "#22c55e" : "#d946ef"}
+              fill={selectedBatchIndex === idx ? "#22c55e" : neon.stroke}
               stroke="#ffffff"
               strokeWidth={selectedBatchIndex === idx ? 2.5 : 1.5}
               style={{ cursor: "move", filter: selectedBatchIndex === idx ? "drop-shadow(0 0 6px #22c55e)" : "none" }}
@@ -633,14 +669,14 @@ function CurvePreview({
           {!isCustomMode && currentPt && (
             <g>
               <line x1={currentPt.x} y1={pad} x2={currentPt.x} y2={H - pad} stroke="#a78bfa" strokeWidth="1.5" strokeDasharray="2 2" opacity="0.6" />
-              <circle cx={currentPt.x} cy={currentPt.y} r="14" fill="none" stroke="#d946ef" strokeWidth="1.5" opacity="0.8">
+              <circle cx={currentPt.x} cy={currentPt.y} r="14" fill="none" stroke={neon.stroke} strokeWidth="1.5" opacity="0.8">
                 <animate attributeName="r" values="6;22;6" dur="2.4s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.8;0;0.8" dur="2.4s" repeatCount="indefinite" />
               </circle>
-              <circle cx={currentPt.x} cy={currentPt.y} r="6" fill="rgba(217, 70, 239, 0.4)" opacity="0.6">
+              <circle cx={currentPt.x} cy={currentPt.y} r="6" fill={neon.glow} opacity="0.6">
                 <animate attributeName="r" values="6;14;6" dur="1.8s" repeatCount="indefinite" />
               </circle>
-              <circle cx={currentPt.x} cy={currentPt.y} r="6" fill="#ffffff" stroke="#d946ef" strokeWidth="3" filter="drop-shadow(0 0 6px #d946ef)" />
+              <circle cx={currentPt.x} cy={currentPt.y} r="6" fill="#ffffff" stroke={neon.stroke} strokeWidth="3" filter={`drop-shadow(0 0 6px ${neon.stroke})`} />
             </g>
           )}
         </svg>
@@ -740,17 +776,18 @@ function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean 
     })
     .join(" ");
 
+  const neon = STYLE_NEON_COLORS[style] || STYLE_NEON_COLORS.ORGANIC;
   return (
     <svg width={width} height={height} style={{ overflow: "visible", marginTop: 4, display: "block" }}>
       <path
         d={pathD}
         fill="none"
-        stroke={active ? "#d946ef" : "#3f1b6d"}
+        stroke={active ? neon.stroke : "#3f1b6d"}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         style={{
-          filter: active ? "drop-shadow(0 0 4px #d946ef)" : "none",
+          filter: active ? `drop-shadow(0 0 5px ${neon.stroke})` : "none",
           transition: "all 0.25s ease"
         }}
       />
@@ -1008,6 +1045,7 @@ export default function NewReelPage() {
 
   // Step 2
   const [views, setViews] = useState(10000);
+  const [selectedViewsService, setSelectedViewsService] = useState<"views" | "reach_impressions_views">("views");
   const [durationDays, setDurationDays] = useState(7);
   const [style, setStyle] = useState<CurveStyle>("ORGANIC");
 
@@ -1131,7 +1169,7 @@ export default function NewReelPage() {
           rowObj.viewsVal = parseInt(rowObj.views) || 0;
           rowObj.durDays = parseInt(rowObj.duration_days) || 7;
           rowObj.styleVal = (rowObj.curve_style || "ORGANIC").toUpperCase();
-          rowObj.isValid = rowObj.url && ["INSTAGRAM", "TIKTOK", "YOUTUBE", "TELEGRAM", "FACEBOOK", "TWITTER"].includes((rowObj.platform || "").toUpperCase()) && rowObj.viewsVal >= 100 && rowObj.durDays >= 1;
+          rowObj.isValid = rowObj.url && ["INSTAGRAM", "TIKTOK", "FACEBOOK"].includes((rowObj.platform || "").toUpperCase()) && rowObj.viewsVal >= 100 && rowObj.durDays >= 1;
           return rowObj;
         });
 
@@ -1215,7 +1253,7 @@ export default function NewReelPage() {
 
   const calculateTotalCost = () => {
     if (!pricingInfo || !pricingInfo.walletMode) return 0;
-    const rates = pricingInfo.rates[platform] || { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, followers: 10.0, subscribers: 15.0, members: 8.0, reactions: 4.0, retweets: 6.0 };
+    const rates = pricingInfo.rates[platform] || { views: 3.0, reach_impressions_views: 4.5, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 };
 
     const totalViews = isCustomMode ? customSchedule.reduce((a, b) => a + b.views, 0) : views;
     const totalLikes = engEnabled && likesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget) : 0;
@@ -1223,7 +1261,8 @@ export default function NewReelPage() {
     const totalShares = engEnabled && sharesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) : 0;
     const totalComments = engEnabled && commentsOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) : 0;
 
-    const viewsCost = (totalViews / 1000) * (rates.views ?? 3.0);
+    const viewsRateKey = (platform === "INSTAGRAM" && selectedViewsService === "reach_impressions_views") ? "reach_impressions_views" : "views";
+    const viewsCost = (totalViews / 1000) * (rates[viewsRateKey] ?? rates.views ?? 3.0);
     const likesCost = (totalLikes / 1000) * (rates.likes ?? 5.0);
     const savesCost = (totalSaves / 1000) * (rates.saves ?? 5.0);
     const sharesCost = (totalShares / 1000) * (rates.shares ?? 8.0);
@@ -1265,6 +1304,7 @@ export default function NewReelPage() {
           likesRatioPct: engEnabled && likesOn ? likesRatio : 0, savesRatioPct: engEnabled && savesOn ? savesRatio : 0,
           sharesRatioPct: engEnabled && sharesOn ? sharesRatio : 0, commentsRatioPct: engEnabled && commentsOn ? commentsRatio : 0,
           customSchedule: isCustomMode ? customSchedule : null,
+          viewsType: platform === "INSTAGRAM" ? selectedViewsService : "views",
         }),
       });
       const data = await res.json();
@@ -1320,7 +1360,7 @@ export default function NewReelPage() {
           <div>
             <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Select Platform</label>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-              {(["INSTAGRAM", "TIKTOK", "YOUTUBE", "TELEGRAM", "FACEBOOK", "TWITTER"] as Platform[]).map((p) => (
+              {(["INSTAGRAM", "TIKTOK", "FACEBOOK"] as Platform[]).map((p) => (
                 <button key={p} onClick={() => setPlatform(p)} className="neo-btn"
                   style={{ padding:"12px 6px", borderRadius:12, border:"none", cursor:"pointer", transition:"all 0.2s",
                     background: N.bg,
@@ -1364,6 +1404,49 @@ export default function NewReelPage() {
                   <option key={t.id} value={t.id}>{t.name} ({t.style}, {t.durationHours}h)</option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {platform === "INSTAGRAM" && (
+            <div style={{ borderRadius:16, padding:18, background:N.bg, boxShadow:N.inset, border:`1.5px solid ${selectedViewsService === "reach_impressions_views" ? "#d946ef" : N.border}`, transition:"all 0.2s" }}>
+              <label style={{ display:"block", fontSize:11, fontWeight:800, color:N.muted, marginBottom:10, textTransform:"uppercase", letterSpacing:"0.08em" }}>
+                Select Instagram View Type
+              </label>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedViewsService("views")}
+                  className="neo-btn"
+                  style={{
+                    padding:"12px 14px", borderRadius:12, border:"none", cursor:"pointer", transition:"all 0.2s",
+                    background: N.bg,
+                    color: selectedViewsService === "views" ? N.accent : N.muted,
+                    boxShadow: selectedViewsService === "views" ? N.inset : N.raisedSm,
+                    fontWeight:800, fontSize:13, display:"flex", flexDirection:"column", alignItems:"center", gap:4
+                  }}>
+                  <span>Standard Views</span>
+                  <span style={{ fontSize:10, fontWeight:600, opacity:0.8 }}>Regular Reel Views</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedViewsService("reach_impressions_views")}
+                  className="neo-btn"
+                  style={{
+                    padding:"12px 14px", borderRadius:12, border:"none", cursor:"pointer", transition:"all 0.2s",
+                    background: N.bg,
+                    color: selectedViewsService === "reach_impressions_views" ? "#d946ef" : N.muted,
+                    boxShadow: selectedViewsService === "reach_impressions_views" ? N.inset : N.raisedSm,
+                    fontWeight:800, fontSize:13, display:"flex", flexDirection:"column", alignItems:"center", gap:4
+                  }}>
+                  <span>Reach & Impressions ⭐</span>
+                  <span style={{ fontSize:10, fontWeight:600, opacity:0.8 }}>Best for Clipstake</span>
+                </button>
+              </div>
+              {selectedViewsService === "reach_impressions_views" && (
+                <div style={{ marginTop:12, padding:12, borderRadius:10, background:"rgba(217, 70, 239, 0.1)", color:"#c026d3", fontSize:12, fontWeight:600, lineHeight:1.4 }}>
+                  💡 <strong>Why this service?</strong> Delivers organic Reach, Profile Impressions, and Reel Views together. Optimized and <strong>best for Clipstake</strong> where reach & impressions are required for creator payouts!
+                </div>
+              )}
             </div>
           )}
 
@@ -1753,8 +1836,8 @@ export default function NewReelPage() {
                                 padding: "14px 6px", borderRadius: 14, cursor: "pointer", transition: "all 0.25s ease",
                                 display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
                                 background: style === s ? "#1a0636" : "#0c0218",
-                                border: style === s ? "2.5px solid #d946ef" : "1.5px solid #1c0a35",
-                                boxShadow: style === s ? "0 0 15px rgba(217, 70, 239, 0.35)" : "none",
+                                border: style === s ? `2.5px solid ${STYLE_NEON_COLORS[s]?.stroke || "#d946ef"}` : "1.5px solid #1c0a35",
+                                boxShadow: style === s ? `0 0 15px ${STYLE_NEON_COLORS[s]?.glow || "rgba(217, 70, 239, 0.35)"}` : "none",
                                 color: style === s ? "#ffffff" : "#a78bfa",
                               }}>
                               <span style={{ fontSize: 11, fontWeight: 805, textAlign: "center" }}>{CURVE_DESCRIPTIONS[s].label}</span>

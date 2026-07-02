@@ -131,71 +131,70 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     let val = 1.0;
 
     if (style === "LINEAR") {
-      val = 1.0;
+      val = 0.15 + 0.85 * progress;
     } else if (style === "EXPONENTIAL") {
-      val = Math.exp(progress * 3);
+      val = Math.pow(progress, 3) + 0.05;
     } else if (style === "S_CURVE") {
-      val = 1 / (1 + Math.exp(-6 * (progress - 0.5)));
+      val = 1 / (1 + Math.exp(-8 * (progress - 0.5)));
     } else if (style === "BELL_CURVE") {
-      val = Math.exp(-Math.pow((progress - 0.5) / 0.2, 2));
+      val = Math.exp(-Math.pow((progress - 0.5) / 0.18, 2)) + 0.05;
     } else if (style === "LOGARITHMIC") {
-      val = Math.log(1 + 9 * progress);
+      val = Math.log(1 + 20 * progress) / Math.log(21) + 0.1;
     } else if (style === "QUADRATIC") {
       val = Math.pow(progress, 2) + 0.1;
     } else if (style === "CUBIC") {
-      val = Math.pow(progress, 3) + 0.05;
+      val = Math.pow(progress, 3.5) + 0.05;
     } else if (style === "SINE_WAVE") {
-      val = 1.0 + 0.5 * Math.sin(progress * 4 * Math.PI);
+      val = 0.6 + 0.4 * Math.sin(progress * 4 * Math.PI);
     } else if (style === "COSINE_WAVE") {
-      val = 1.0 + 0.5 * Math.cos(progress * 4 * Math.PI);
+      val = 0.6 + 0.4 * Math.cos(progress * 4 * Math.PI);
     } else if (style === "SAWTOOTH") {
       const periodSteps = Math.max(1, Math.floor(totalSteps / 4));
       val = (t % periodSteps) / periodSteps + 0.1;
     } else if (style === "CHAOTIC") {
-      val = 0.5 + 0.3 * Math.sin(progress * 6 * Math.PI) + 0.2 * Math.sin(progress * 14 * Math.PI + 1.0) + 0.1 * Math.cos(progress * 22 * Math.PI);
+      val = 0.5 + 0.25 * Math.sin(progress * 7 * Math.PI) + 0.2 * Math.cos(progress * 17 * Math.PI) + 0.1 * Math.sin(progress * 29 * Math.PI);
     } else if (style === "DOUBLE_BELL") {
-      val = Math.exp(-Math.pow((progress - 0.25) / 0.1, 2)) + Math.exp(-Math.pow((progress - 0.75) / 0.1, 2)) + 0.05;
+      val = Math.exp(-Math.pow((progress - 0.25) / 0.12, 2)) + Math.exp(-Math.pow((progress - 0.75) / 0.12, 2)) + 0.1;
     } else if (style === "STEP_LADDER") {
-      val = Math.floor(progress * 4) / 4 + 0.1;
+      val = Math.floor(progress * 4) / 4 + 0.15;
     } else if (style === "ALTERNATING") {
-      val = (Math.floor(t) % 2 === 0) ? 1.0 : 0.05;
+      val = (Math.floor(t) % 2 === 0) ? 1.0 : 0.15;
     } else if (style === "FIBONACCI") {
-      val = Math.pow(1.618, progress * 8);
+      val = Math.pow(1.618, progress * 6) - 0.8;
     } else if (style === "PARETO") {
-      val = Math.pow(1 - progress, 4) + 0.02;
+      val = Math.pow(1 - progress, 3) + 0.05;
     } else if (style === "MORNING_SURGE") {
-      val = Math.exp(-Math.pow((progress - 0.15) / 0.1, 2));
+      val = Math.exp(-Math.pow((progress - 0.18) / 0.12, 2)) + 0.08;
     } else if (style === "NOON_PEAK") {
-      val = Math.exp(-Math.pow((progress - 0.5) / 0.15, 2));
+      val = Math.exp(-Math.pow((progress - 0.5) / 0.15, 2)) + 0.08;
     } else if (style === "EVENING_BLAST") {
-      val = Math.exp(-Math.pow((progress - 0.8) / 0.15, 2));
+      val = Math.exp(-Math.pow((progress - 0.82) / 0.12, 2)) + 0.08;
     } else if (style === "SIGMOID_DECAY") {
-      val = 1 / (1 + Math.exp(10 * (progress - 0.85)));
+      val = 1 / (1 + Math.exp(8 * (progress - 0.5)));
     } else if (style === "STEEP_WARMUP") {
-      val = (progress < 0.1) ? (progress / 0.1) : 1.0;
+      val = progress < 0.15 ? (progress / 0.15) : 1.0;
+    } else if (style === "FAST") {
+      val = Math.pow(progress, 0.35) + 0.1;
+    } else if (style === "AGGRESSIVE") {
+      val = Math.exp(-progress * 4.5) + 0.15;
+    } else if (style === "WHOP") {
+      val = (progress > 0.25 && progress < 0.75) ? 1.0 : (progress <= 0.25 ? progress * 4 : (1 - progress) * 4);
+    } else if (style === "CLIPSTAKE") {
+      val = progress < 0.33 ? 0.25 : progress < 0.66 ? 0.6 : 1.0;
+    } else if (style === "CLIPSTAR") {
+      val = 0.8 * Math.exp(-progress * 5) + 0.5 + 0.5 * Math.pow(progress, 2);
+    } else if (style === "PICSART") {
+      val = Math.exp(-Math.pow((progress - 0.35) / 0.12, 2)) + Math.exp(-Math.pow((progress - 0.75) / 0.12, 2)) + 0.15;
+    } else if (style === "CROSSWAVE") {
+      val = 0.6 + 0.4 * Math.sin(progress * 8 * Math.PI);
     } else {
-      const relativeWarmup = warmupHours / 24;
-      const relativePeak = peakHours / 24;
-      const progressT0 = relativeWarmup + relativePeak / 2;
-      const progressR = (RATES_MAP[style] ?? 0.8) * 6;
-      let logistic = 1 / (1 + Math.exp(-progressR * (progress - progressT0)));
-
-      if (style === "CLIPSTAKE") {
-        logistic = logistic * (progress < 0.35 ? 0.4 : progress < 0.7 ? 0.75 : 1.0);
-      } else if (style === "CROSSWAVE") {
-        logistic = logistic * (1 + 0.3 * Math.sin(progress * 8 * Math.PI));
-      } else if (style === "WHOP") {
-        logistic = Math.pow(logistic, 1.5);
-      } else if (style === "CLIPSTAR") {
-        logistic = Math.sqrt(logistic);
-      } else if (style === "PICSART") {
-        logistic = Math.pow(logistic, 1.2);
-      }
-      val = logistic;
+      // ORGANIC
+      val = 1 / (1 + Math.exp(-6 * (progress - 0.45)));
     }
 
     const utcHour = (nowUtcHour + hourTime) % 24;
-    return val * peakHourMultiplier(utcHour, tzOffsetHours);
+    const mult = (style === "ORGANIC") ? peakHourMultiplier(utcHour, tzOffsetHours) : 1.0;
+    return val * mult;
   });
 
   const sum = raw.reduce((a, b) => a + b, 0);

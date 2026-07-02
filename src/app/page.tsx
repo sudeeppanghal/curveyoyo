@@ -431,7 +431,7 @@ export default function Home() {
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {[
               ["Do I need to deposit funds to start?","Yes. To launch campaign pacing, you add funds to your wallet using UPI (minimum ₹500). Your charges are calculated per order on-demand, according to our transparent direct pricing."],
-              ["Which platforms are supported?","We currently support organic views and engagement (likes, saves, shares, comments, followers, subscribers, members) across Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter, with full S-curve timing options."],
+              ["Which platforms are supported?","We currently support organic views and engagement (likes, saves, shares, comments) across Instagram, TikTok, and Facebook, with full S-curve timing options."],
               ["How does your fail-safe delivery network work?","Our engine utilizes multiple redundant delivery routes. If any route experiences network delay, the system redirects the batch to an active backup path instantly (in under a second) ensuring zero drops."],
               ["What is S-Curve pacing?","Standard panels deliver views in one flat spike, which looks artificial to algorithms. Our engine spreads orders dynamically over your chosen duration — mimicking organic viral growth with warmup, peak, and natural decay phases."],
               ["How does the wallet deposit work?","You can deposit funds into your platform wallet instantly using UPI (minimum ₹500). The funds reflect in your dashboard balance immediately upon admin verification of the UTR number."],

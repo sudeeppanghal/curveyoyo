@@ -68,7 +68,7 @@ export default function TermsPage() {
           <section style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 12 }}>
             <h2 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0 }}>3. Service Pacing & Completion</h2>
             <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
-              Our proprietary pacing engine dispatches views, likes, saves, comments, followers, subscribers, members, retweets, and reactions according to your chosen logistic S-curve style across Instagram, TikTok, YouTube, Telegram, Facebook, and Twitter. Pacing schedules are approximations and can be impacted by social platform traffic fluctuations.
+              Our proprietary pacing engine dispatches views, likes, saves, comments, and shares according to your chosen logistic S-curve style across Instagram, TikTok, and Facebook. Pacing schedules are approximations and can be impacted by social platform traffic fluctuations.
             </p>
             <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
               Engagement batches trigger automatically according to our high-retention schedule. Any remaining engagement is always flushed to completion during the final campaign hour with fail-safe routing protection.
