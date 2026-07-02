@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PublicNav, PublicFooter } from "../PublicHeaderFooter";
 
 export const metadata: Metadata = {
   title: "Blog — YoyoSMM",
@@ -19,7 +20,7 @@ const N = {
 };
 
 const POSTS = [
-  { slug: "why-organic-delivery-beats-flat", title: "Why Organic S-Curve Delivery Beats Flat Delivery Every Time", excerpt: "Flat panel delivery creates artificial machine patterns that算法 easily detect. Here's the mathematical breakdown of why organic curves produce superior algorithmic reach.", date: "July 2026", readTime: "5 min" },
+  { slug: "why-organic-delivery-beats-flat", title: "Why Organic S-Curve Delivery Beats Flat Delivery Every Time", excerpt: "Flat panel delivery creates artificial machine patterns that algorithms easily detect. Here's the mathematical breakdown of why organic curves produce superior algorithmic reach.", date: "July 2026", readTime: "5 min" },
   { slug: "timing-routing-infrastructure", title: "Designing a Fail-Safe Timing Delivery Routing Infrastructure", excerpt: "How our multi-path routing nodes guarantee 99.98% delivery success rates with instant backup path switching across major social platforms.", date: "July 2026", readTime: "7 min" },
   { slug: "why-organic-pacing-wins", title: "Why Organic Pacing Wins the Algorithm Game in 2026", excerpt: "A comprehensive analysis comparing legacy reseller flat delivery to proprietary wholesale S-curve pacing.", date: "July 2026", readTime: "8 min" },
   { slug: "peak-hour-delivery-guide", title: "Peak-Hour Delivery: When to Dispatch Engagement for Maximum Viral Reach", excerpt: "Delivery timing matters just as much as delivery volume. A data-driven guide to peak-hour audience clustering across TikTok, IG, and YouTube.", date: "July 2026", readTime: "6 min" },
@@ -36,21 +37,10 @@ export default function BlogPage() {
         .blog-card:hover { transform: translateY(-3px); box-shadow: 12px 12px 24px #c8d0e7, -12px -12px 24px #ffffff !important; }
       `}</style>
       
-      {/* Navigation */}
-      <nav style={{ borderBottom: `1px solid ${N.border}`, background: "rgba(238,242,247,0.95)", position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(12px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
-            <span style={{ fontWeight: 800, fontSize: 20, color: N.text, letterSpacing: "-0.5px" }}>YoyoSMM</span>
-          </Link>
-          <Link href="/signup" className="neo-btn" style={{ padding: "10px 24px", borderRadius: 999, fontWeight: 800, fontSize: 14, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
-            Get Started →
-          </Link>
-        </div>
-      </nav>
+      <PublicNav />
 
       {/* Main Content Container */}
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 100px", display: "flex", flexDirection: "column", gap: 40 }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 40px", display: "flex", flexDirection: "column", gap: 48 }}>
         
         {/* Header Section */}
         <div>
@@ -91,6 +81,7 @@ export default function BlogPage() {
         </div>
 
       </div>
+      <PublicFooter />
     </div>
   );
 }

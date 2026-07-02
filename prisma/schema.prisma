@@ -398,11 +398,23 @@ model SupportTicket {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   subject   String
   message   String
-  status    String   @default("OPEN") // "OPEN", "RESOLVED", "CLOSED"
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  status    String          @default("OPEN") // "OPEN", "RESOLVED", "CLOSED", "ANSWERED"
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  messages  TicketMessage[]
 
   @@map("support_tickets")
+}
+
+model TicketMessage {
+  id        String        @id @default(cuid())
+  ticketId  String        @map("ticket_id")
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    String        // "USER" or "ADMIN"
+  message   String
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@map("ticket_messages")
 }
 
 

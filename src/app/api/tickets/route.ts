@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
   if (isAdminHeader) {
     const tickets = await prisma.supportTicket.findMany({
       include: {
-        user: { select: { email: true, name: true } }
+        user: { select: { email: true, name: true } },
+        messages: { orderBy: { createdAt: "asc" } }
       },
       orderBy: { createdAt: "desc" }
     });
@@ -26,6 +27,9 @@ export async function GET(request: NextRequest) {
 
   const tickets = await prisma.supportTicket.findMany({
     where: { userId: dbUser.id },
+    include: {
+      messages: { orderBy: { createdAt: "asc" } }
+    },
     orderBy: { createdAt: "desc" }
   });
 
@@ -50,9 +54,54 @@ export async function POST(request: NextRequest) {
       userId: dbUser.id,
       subject: subject.trim(),
       message: message.trim(),
-      status: "OPEN"
+      status: "OPEN",
+      messages: {
+        create: {
+          sender: "USER",
+          message: message.trim()
+        }
+      }
+    },
+    include: {
+      messages: true
     }
   });
 
   return NextResponse.json({ ticket }, { status: 201 });
+}
+
+export async function PUT(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
+  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const { ticketId, message } = await request.json();
+  if (!ticketId || !message) {
+    return NextResponse.json({ error: "ticketId and message are required" }, { status: 400 });
+  }
+
+  const ticket = await prisma.supportTicket.findFirst({
+    where: { id: ticketId, userId: dbUser.id }
+  });
+  if (!ticket) return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+
+  const ticketMessage = await prisma.ticketMessage.create({
+    data: {
+      ticketId,
+      sender: "USER",
+      message: message.trim()
+    }
+  });
+
+  if (ticket.status !== "OPEN") {
+    await prisma.supportTicket.update({
+      where: { id: ticketId },
+      data: { status: "OPEN" }
+    });
+  }
+
+  return NextResponse.json({ ticketMessage });
 }

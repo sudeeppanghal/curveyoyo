@@ -143,6 +143,9 @@ export default function AdminPage() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [adminChatTicketId, setAdminChatTicketId] = useState<string | null>(null);
+  const [adminReplyText, setAdminReplyText] = useState("");
+  const [adminReplying, setAdminReplying] = useState(false);
 
   const [payments, setPayments] = useState<Payment[]>([]);
 
@@ -202,7 +205,7 @@ export default function AdminPage() {
 
   const [chartMetric, setChartMetric] = useState<"profit" | "revenue">("profit");
   const [serviceSearch, setServiceSearch] = useState("");
-  const [servicePlatformFilter, setServicePlatformFilter] = useState(true);
+  const [servicePlatformFilter, setServicePlatformFilter] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
 
   // New Panel fields
@@ -334,7 +337,12 @@ export default function AdminPage() {
 
         const apData = await apRes.json();
 
-        if (apData.panels) setAdminPanels(apData.panels);
+        if (apData.panels) {
+          setAdminPanels(apData.panels);
+          if (apData.panels.length > 0) {
+            handleLoadServices(apData.panels[0].id);
+          }
+        }
 
       } catch (err) {}
 
@@ -775,9 +783,7 @@ export default function AdminPage() {
 
       if (res.ok) {
 
-        setSaved("Pricing configured successfully!");
-
-        setPricingServiceId("");
+        setSaved(`✅ Successfully mapped Service #${pricingServiceId} across all API keys!`);
 
         setPricingOriginalRate("");
 
@@ -2233,243 +2239,40 @@ export default function AdminPage() {
                 </div>
 
                 {panelSubTab === "defaults" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>⚙️ Global SMM Provider Defaults</p>
-                    {adminPanels.length === 0 ? (
-                      <div style={{ padding: "20px 0", textAlign: "center", color: N.muted, fontSize: 12, fontWeight: 700 }}>No providers found. Add an API Key first.</div>
-                    ) : (
-                      <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                          <thead>
-                            <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                              {["Provider API URL", "Active API Keys", "Actions"].map((h) => (
-                                <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, background: N.inset, padding: 18, borderRadius: 18 }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 15, fontWeight: 900, color: N.accent }}>⚙️ Global SMM Provider Service Mapping & Pricing</p>
+                        <p style={{ margin: "4px 0 0", fontSize: 12, color: N.muted, fontWeight: 600 }}>Configure default service IDs & custom markup prices once — auto-applies across all connected API keys!</p>
+                      </div>
+                      {adminPanels.length > 0 && (
+                        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: N.text }}>🌐 Provider API:</span>
+                          <select
+                            value={selectedPanelId || adminPanels[0]?.id || ""}
+                            onChange={e => handleLoadServices(e.target.value)}
+                            style={{ padding: "10px 16px", borderRadius: 12, fontSize: 12, background: N.bg, border: "none", color: N.text, fontWeight: 800, cursor: "pointer", outline: "none", boxShadow: N.raisedSm }}
+                          >
                             {Array.from(new Set(adminPanels.map(p => p.apiUrl))).map(apiUrl => {
                               const panelsForUrl = adminPanels.filter(p => p.apiUrl === apiUrl);
-                              const p = panelsForUrl[0]; // First panel to use for configuration ID
-                              return (
-                                <tr key={apiUrl} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
-                                  <td style={{ padding: "12px 16px", fontSize: 12, color: N.text, fontFamily: "monospace", fontWeight: 700 }}>{apiUrl}</td>
-                                  <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: N.accent }}>{panelsForUrl.length} active keys</td>
-                                  <td style={{ padding: "12px 16px" }}>
-                                    <button onClick={() => handleLoadServices(p.id)} className="neo-btn"
-                                      style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
-                                      ⚙️ Configure Default Services
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
+                              const p = panelsForUrl[0];
+                              return <option key={p.id} value={p.id}>{apiUrl} ({panelsForUrl.length} active keys connected)</option>;
                             })}
-                          </tbody>
-                        </table>
+                          </select>
+                          <button onClick={() => handleLoadServices(selectedPanelId || adminPanels[0]?.id || "")} style={{ padding: "10px 16px", borderRadius: 12, background: N.accentBg, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", boxShadow: N.raisedSm }}>
+                            🔄 Reload API Services
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {adminPanels.length === 0 ? (
+                      <div style={{ padding: "40px", textAlign: "center", border: `2px dashed ${N.border}`, borderRadius: 20, color: N.muted, fontSize: 13, fontWeight: 700 }}>
+                        No SMM API panels added yet. Switch to "🔑 API Keys & Accounts" tab to add your first Yoyomedia API key!
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {panelSubTab === "accounts" && (
-                  <>
-{/* Form to add admin panel */}
-
-                <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
-
-                  <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>➕ Add New SMM Panel API</p>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-
-                    <div>
-
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Panel Name</label>
-
-                      <input value={newPanelName} onChange={e => setNewPanelName(e.target.value)} placeholder="e.g. BulkSMM"
-
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-
-                    </div>
-
-                    <div>
-
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API URL</label>
-
-                      <input value={newPanelApiUrl} onChange={e => setNewPanelApiUrl(e.target.value)} placeholder="e.g. https://bulksmm.com/api/v2"
-
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-
-                    </div>
-
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.4fr 0.4fr", gap: 16 }}>
-
-                    <div>
-
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API Key / Token</label>
-
-                      <input type="password" value={newPanelApiKey} onChange={e => setNewPanelApiKey(e.target.value)} placeholder="Enter API Key"
-
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-
-                    </div>
-
-                    <div>
-
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Priority (1-10)</label>
-
-                      <input type="number" value={newPanelPriority} onChange={e => setNewPanelPriority(e.target.value)} placeholder="1"
-
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-
-                    </div>
-
-                    <div>
-
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Load %</label>
-
-                      <input type="number" value={newPanelLoadPercentage} onChange={e => setNewPanelLoadPercentage(e.target.value)} placeholder="100"
-
-                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-
-                    </div>
-
-                  </div>
-
-                  <button onClick={handleAddPanel} className="neo-btn"
-
-                    style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer" }}>
-
-                    Connect SMM Panel
-
-                  </button>
-
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15, marginTop: 10 }}>
-                  <h3 style={{ color: N.text, fontSize: 16, fontWeight: 900, margin: 0 }}>Connected SMM Accounts</h3>
-                  <button onClick={handleCheckAdminBalances} disabled={checkingAdminBalances} className="neo-btn"
-                    style={{ border: "none", background: N.bg, padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer", opacity: checkingAdminBalances ? 0.7 : 1 }}>
-                    {checkingAdminBalances ? "⏳ Refreshing Balances..." : "⚡ Refresh Balances & Health"}
-                  </button>
-                </div>
-
-                {/* SMM Panels List */}
-
-                {adminPanels.length === 0 ? (
-
-                  <div style={{ padding: "20px 0", textAlign: "center", color: N.muted, fontSize: 12, fontWeight: 700 }}>No admin SMM panels connected yet</div>
-
-                ) : (
-
-                  <div style={{ overflowX: "auto" }}>
-
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-
-                      <thead>
-
-                        <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-
-                          {["Name", "API URL", "Priority", "Load %", "Balance", "Status", "Actions"].map((h) => (
-
-                            <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
-
-                          ))}
-
-                        </tr>
-
-                      </thead>
-
-                      <tbody>
-
-                        {adminPanels.map((p) => (
-
-                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
-
-                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.name}</td>
-
-                            <td style={{ padding: "12px 16px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
-
-                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.priority}</td>
-
-                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.loadPercentage}%</td>
-                            <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 800, color: p.balance !== undefined ? "#16a34a" : N.muted }}>
-                              {p.balance !== undefined ? `$${Number(p.balance).toFixed(2)} ${p.currency ?? "USD"}` : "---"}
-                            </td>
-
-                            <td style={{ padding: "12px 16px" }}>
-
-                              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: p.status === "ONLINE" ? "rgba(22,163,74,0.08)" : "rgba(113,128,150,0.08)", color: p.status === "ONLINE" ? "#16a34a" : N.muted }}>
-
-                                {p.status}
-
-                              </span>
-
-                            </td>
-
-                            <td style={{ padding: "12px 16px" }}>
-
-                              <div style={{ display: "flex", gap: 10 }}>
-
-                                <button onClick={() => handleVerifyConnection(p.id)} className="neo-btn" disabled={verifyingPanelId === p.id}
-                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: verifyingPanelId === p.id ? N.muted : "#16a34a", boxShadow: N.raisedSm, cursor: "pointer", opacity: verifyingPanelId === p.id ? 0.7 : 1 }}>
-                                  {verifyingPanelId === p.id ? "⏳ Verifying..." : "⚡ Verify Connection"}
-                                </button>
-
-                                <button onClick={() => handleDeletePanel(p.id)} className="neo-btn"
-
-                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
-
-                                  ✗ Delete
-
-                                </button>
-
-                              </div>
-
-                            </td>
-
-                          </tr>
-
-                        ))}
-
-                      </tbody>
-
-                    </table>
-
-                  </div>
-
-                )}
-
-                  </>
-                )}
-              </div>
-
-              {verificationResult && (
-                <div style={{
-                  marginTop: 16,
-                  padding: 14,
-                  borderRadius: 12,
-                  background: verificationResult.success ? "rgba(22,163,74,0.06)" : "rgba(220,38,38,0.06)",
-                  border: `1.5px solid ${verificationResult.success ? "rgba(22,163,74,0.2)" : "rgba(220,38,38,0.2)"}`,
-                  color: verificationResult.success ? "#16a34a" : "#dc2626",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 16
-                }}>
-                  <span>
-                    {verificationResult.success ? "✅" : "⚠️"} {verificationResult.message}
-                  </span>
-                  <button onClick={() => setVerificationResult(null)} style={{ background: "transparent", border: "none", color: "inherit", fontWeight: 800, cursor: "pointer", padding: "0 4px" }}>✕</button>
-                </div>
-              )}
-
-              {/* Section 2: Services configurations */}
-
-              {selectedPanelId && (
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                        {selectedPanelId && (
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 20, borderTop: `1.5px solid ${N.border}`, paddingTop: 24 }}>
 
@@ -2572,6 +2375,16 @@ export default function AdminPage() {
                           <option value="reactions">Reactions</option>
 
                           <option value="retweets">Retweets</option>
+                          <option value="story_views">Story Views</option>
+                          <option value="poll_votes">Poll Votes</option>
+                          <option value="live_stream">Live Stream</option>
+                          <option value="profile_visits">Profile Visits</option>
+                          <option value="impressions">Impressions</option>
+                          <option value="reach">Reach</option>
+                          <option value="page_likes">Page Likes</option>
+                          <option value="group_members">Group Members</option>
+                          <option value="channel_subscribers">Channel Subscribers</option>
+                          <option value="post_views">Post Views</option>
 
                         </select>
 
@@ -2588,14 +2401,24 @@ export default function AdminPage() {
                               placeholder="🔍 Search services by ID, name, or category..."
                               style={{ flex: 1, padding: "8px 12px", borderRadius: 8, fontSize: 11, background: N.inset, border: "none", color: N.text, outline: "none", fontWeight: 600 }}
                             />
-                            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: N.muted, cursor: "pointer", whiteSpace: "nowrap" }}>
-                              <input
-                                type="checkbox"
-                                checked={servicePlatformFilter}
-                                onChange={e => setServicePlatformFilter(e.target.checked)}
-                              />
-                              Filter Platform ({pricingPlatform})
-                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setServicePlatformFilter(!servicePlatformFilter)}
+                              style={{
+                                padding: "8px 14px",
+                                borderRadius: 10,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                border: "none",
+                                cursor: "pointer",
+                                background: servicePlatformFilter ? N.accentBg : N.inset,
+                                color: servicePlatformFilter ? "#fff" : N.text,
+                                whiteSpace: "nowrap",
+                                boxShadow: servicePlatformFilter ? N.raisedSm : "none"
+                              }}
+                            >
+                              {servicePlatformFilter ? `🎯 Filtered (${pricingPlatform}) — Click for ALL Services` : "🌐 Showing ALL API Services (Unfiltered)"}
+                            </button>
                           </div>
                         </div>
 
@@ -2882,6 +2705,210 @@ export default function AdminPage() {
                 </div>
 
               )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {panelSubTab === "accounts" && (
+                  <>
+{/* Form to add admin panel */}
+
+                <div style={{ borderRadius: 16, padding: 20, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 14 }}>
+
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.accent }}>➕ Add New SMM Panel API</p>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+                    <div>
+
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Panel Name</label>
+
+                      <input value={newPanelName} onChange={e => setNewPanelName(e.target.value)} placeholder="e.g. BulkSMM"
+
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+                    </div>
+
+                    <div>
+
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API URL</label>
+
+                      <input value={newPanelApiUrl} onChange={e => setNewPanelApiUrl(e.target.value)} placeholder="e.g. https://bulksmm.com/api/v2"
+
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+                    </div>
+
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.4fr 0.4fr", gap: 16 }}>
+
+                    <div>
+
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>API Key / Token</label>
+
+                      <input type="password" value={newPanelApiKey} onChange={e => setNewPanelApiKey(e.target.value)} placeholder="Enter API Key"
+
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+                    </div>
+
+                    <div>
+
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Priority (1-10)</label>
+
+                      <input type="number" value={newPanelPriority} onChange={e => setNewPanelPriority(e.target.value)} placeholder="1"
+
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+                    </div>
+
+                    <div>
+
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>Load %</label>
+
+                      <input type="number" value={newPanelLoadPercentage} onChange={e => setNewPanelLoadPercentage(e.target.value)} placeholder="100"
+
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
+
+                    </div>
+
+                  </div>
+
+                  <button onClick={handleAddPanel} className="neo-btn"
+
+                    style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer" }}>
+
+                    Connect SMM Panel
+
+                  </button>
+
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15, marginTop: 10 }}>
+                  <h3 style={{ color: N.text, fontSize: 16, fontWeight: 900, margin: 0 }}>Connected SMM Accounts</h3>
+                  <button onClick={handleCheckAdminBalances} disabled={checkingAdminBalances} className="neo-btn"
+                    style={{ border: "none", background: N.bg, padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer", opacity: checkingAdminBalances ? 0.7 : 1 }}>
+                    {checkingAdminBalances ? "⏳ Refreshing Balances..." : "⚡ Refresh Balances & Health"}
+                  </button>
+                </div>
+
+                {/* SMM Panels List */}
+
+                {adminPanels.length === 0 ? (
+
+                  <div style={{ padding: "20px 0", textAlign: "center", color: N.muted, fontSize: 12, fontWeight: 700 }}>No admin SMM panels connected yet</div>
+
+                ) : (
+
+                  <div style={{ overflowX: "auto" }}>
+
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+
+                      <thead>
+
+                        <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+
+                          {["Name", "API URL", "Priority", "Load %", "Balance", "Status", "Actions"].map((h) => (
+
+                            <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
+
+                          ))}
+
+                        </tr>
+
+                      </thead>
+
+                      <tbody>
+
+                        {adminPanels.map((p) => (
+
+                          <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}` }}>
+
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.name}</td>
+
+                            <td style={{ padding: "12px 16px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
+
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.priority}</td>
+
+                            <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: N.text }}>{p.loadPercentage}%</td>
+                            <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 800, color: p.balance !== undefined ? "#16a34a" : N.muted }}>
+                              {p.balance !== undefined ? `$${Number(p.balance).toFixed(2)} ${p.currency ?? "USD"}` : "---"}
+                            </td>
+
+                            <td style={{ padding: "12px 16px" }}>
+
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: p.status === "ONLINE" ? "rgba(22,163,74,0.08)" : "rgba(113,128,150,0.08)", color: p.status === "ONLINE" ? "#16a34a" : N.muted }}>
+
+                                {p.status}
+
+                              </span>
+
+                            </td>
+
+                            <td style={{ padding: "12px 16px" }}>
+
+                              <div style={{ display: "flex", gap: 10 }}>
+
+                                <button onClick={() => handleVerifyConnection(p.id)} className="neo-btn" disabled={verifyingPanelId === p.id}
+                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: verifyingPanelId === p.id ? N.muted : "#16a34a", boxShadow: N.raisedSm, cursor: "pointer", opacity: verifyingPanelId === p.id ? 0.7 : 1 }}>
+                                  {verifyingPanelId === p.id ? "⏳ Verifying..." : "⚡ Verify Connection"}
+                                </button>
+
+                                <button onClick={() => handleDeletePanel(p.id)} className="neo-btn"
+
+                                  style={{ border: "none", background: N.bg, padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
+
+                                  ✗ Delete
+
+                                </button>
+
+                              </div>
+
+                            </td>
+
+                          </tr>
+
+                        ))}
+
+                      </tbody>
+
+                    </table>
+
+                  </div>
+
+                )}
+
+                  </>
+                )}
+              </div>
+
+              {verificationResult && (
+                <div style={{
+                  marginTop: 16,
+                  padding: 14,
+                  borderRadius: 12,
+                  background: verificationResult.success ? "rgba(22,163,74,0.06)" : "rgba(220,38,38,0.06)",
+                  border: `1.5px solid ${verificationResult.success ? "rgba(22,163,74,0.2)" : "rgba(220,38,38,0.2)"}`,
+                  color: verificationResult.success ? "#16a34a" : "#dc2626",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16
+                }}>
+                  <span>
+                    {verificationResult.success ? "✅" : "⚠️"} {verificationResult.message}
+                  </span>
+                  <button onClick={() => setVerificationResult(null)} style={{ background: "transparent", border: "none", color: "inherit", fontWeight: 800, cursor: "pointer", padding: "0 4px" }}>✕</button>
+                </div>
+              )}
+
+              {/* Section 2: Services configurations */}
+
+              
 
             </div>
 
@@ -3430,84 +3457,272 @@ export default function AdminPage() {
 
           {tab === "tickets" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Support Tickets Inbox</h2>
-                <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Inspect and resolve user support tickets</p>
-              </div>
+              {tickets.find(t => t.id === adminChatTicketId) ? (() => {
+                const activeT = tickets.find(t => t.id === adminChatTicketId)!;
+                return (
+                  <div style={{ background: N.bg, borderRadius: 24, padding: 24, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 20 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1.5px solid ${N.border}`, paddingBottom: 16, flexWrap: "wrap", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <button
+                          onClick={() => setAdminChatTicketId(null)}
+                          className="neo-btn"
+                          style={{ padding: "8px 14px", borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, border: "none", color: N.text, fontWeight: 800, fontSize: 12, cursor: "pointer" }}
+                        >
+                          ← Back to Inbox
+                        </button>
+                        <div>
+                          <h2 style={{ fontSize: 16, fontWeight: 900, color: N.text, margin: 0 }}>{activeT.subject}</h2>
+                          <span style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>User: <strong style={{ color: N.text }}>{activeT.user?.email || "Unknown"}</strong> (ID: #{activeT.id})</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          color: activeT.status === "OPEN" ? "#d97706" : activeT.status === "RESOLVED" ? "#16a34a" : "#718096",
+                          background: activeT.status === "OPEN" ? "rgba(217,119,6,0.1)" : activeT.status === "RESOLVED" ? "rgba(22,163,74,0.1)" : "rgba(113,128,150,0.1)",
+                          padding: "6px 14px",
+                          borderRadius: 20,
+                          border: `1px solid ${activeT.status === "OPEN" ? "rgba(217,119,6,0.2)" : activeT.status === "RESOLVED" ? "rgba(22,163,74,0.2)" : "rgba(113,128,150,0.2)"}`,
+                          textTransform: "uppercase",
+                          marginRight: 8
+                        }}>
+                          ● {activeT.status}
+                        </span>
+                        {activeT.status !== "RESOLVED" && (
+                          <button
+                            onClick={async () => {
+                              const res = await fetch("/api/admin/tickets", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+                                body: JSON.stringify({ id: activeT.id, status: "RESOLVED" }),
+                              });
+                              if (res.ok) {
+                                setTickets(prev => prev.map(pt => pt.id === activeT.id ? { ...pt, status: "RESOLVED" } : pt));
+                              }
+                            }}
+                            style={{ padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 800, color: "#fff", background: "#16a34a", border: "none", cursor: "pointer", boxShadow: "0 2px 8px rgba(22,163,74,0.25)" }}
+                          >
+                            ✓ Mark Resolved
+                          </button>
+                        )}
+                        {activeT.status !== "CLOSED" && (
+                          <button
+                            onClick={async () => {
+                              const res = await fetch("/api/admin/tickets", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+                                body: JSON.stringify({ id: activeT.id, status: "CLOSED" }),
+                              });
+                              if (res.ok) {
+                                setTickets(prev => prev.map(pt => pt.id === activeT.id ? { ...pt, status: "CLOSED" } : pt));
+                              }
+                            }}
+                            style={{ padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 800, color: "#fff", background: "#dc2626", border: "none", cursor: "pointer" }}
+                          >
+                            ✕ Close Ticket
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-              {tickets.length === 0 ? (
-                <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No support tickets submitted</div>
-              ) : (
-                <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-                    <thead>
-                      <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                        {["Ticket ID", "User Email", "Subject", "Message Detail", "Status", "Actions"].map((h) => (
-                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tickets.map((t) => {
-                        const badgeColor = t.status === "OPEN" ? "#d97706" : t.status === "RESOLVED" ? "#16a34a" : "#718096";
-                        return (
-                          <tr key={t.id} style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                            <td style={{ padding: "14px 24px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text }}>{t.id}</td>
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{t.user?.email || "Unknown"}</td>
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: N.text }}>{t.subject}</td>
-                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, maxWidth: 300, whiteSpace: "pre-wrap" }}>{t.message}</td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <span style={{ fontSize: 10, fontWeight: 800, color: badgeColor, background: `${badgeColor}10`, padding: "4px 8px", borderRadius: 12, border: `1px solid ${badgeColor}20` }}>
-                                {t.status}
+                    {/* Chat Messages Area */}
+                    <div style={{
+                      minHeight: 320,
+                      maxHeight: 480,
+                      overflowY: "auto",
+                      padding: "16px",
+                      borderRadius: 16,
+                      background: N.inset,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 16
+                    }}>
+                      {(!activeT.messages || activeT.messages.length === 0) ? (
+                        <div style={{ alignSelf: "flex-start", maxWidth: "80%", display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: "#d97706", alignSelf: "flex-start" }}>👤 User ({activeT.user?.email || "User"})</span>
+                          <div style={{ padding: "14px 18px", borderRadius: "18px 18px 18px 4px", background: "#fef3c7", color: "#92400e", fontSize: 13, fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                            {activeT.message}
+                          </div>
+                          <span style={{ fontSize: 9, color: N.muted, fontWeight: 600, alignSelf: "flex-start" }}>
+                            {new Date(activeT.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      ) : (
+                        activeT.messages.map((m: any) => {
+                          const isAdmin = m.sender === "ADMIN";
+                          return (
+                            <div key={m.id} style={{ alignSelf: isAdmin ? "flex-end" : "flex-start", maxWidth: "80%", display: "flex", flexDirection: "column", gap: 4 }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: isAdmin ? "#4f46e5" : "#d97706", alignSelf: isAdmin ? "flex-end" : "flex-start" }}>
+                                {isAdmin ? "🛡️ You (Admin / Helpdesk)" : `👤 User (${activeT.user?.email || "User"})`}
                               </span>
-                            </td>
-                            <td style={{ padding: "14px 24px" }}>
-                              <div style={{ display: "flex", gap: 8 }}>
-                                {t.status === "OPEN" && (
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm("Mark this ticket as resolved?")) return;
-                                      const res = await fetch("/api/admin/tickets", {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
-                                        body: JSON.stringify({ id: t.id, status: "RESOLVED" }),
-                                      });
-                                      if (res.ok) {
-                                        setTickets(prev => prev.map(pt => pt.id === t.id ? { ...pt, status: "RESOLVED" } : pt));
-                                      }
-                                    }}
-                                    className="neo-btn"
-                                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#ffffff", background: "#16a34a", border: "none", cursor: "pointer" }}
-                                  >
-                                    Resolve
-                                  </button>
-                                )}
-                                {t.status !== "CLOSED" && (
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm("Close this ticket?")) return;
-                                      const res = await fetch("/api/admin/tickets", {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
-                                        body: JSON.stringify({ id: t.id, status: "CLOSED" }),
-                                      });
-                                      if (res.ok) {
-                                        setTickets(prev => prev.map(pt => pt.id === t.id ? { ...pt, status: "CLOSED" } : pt));
-                                      }
-                                    }}
-                                    className="neo-btn"
-                                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#ffffff", background: "#dc2626", border: "none", cursor: "pointer" }}
-                                  >
-                                    Close
-                                  </button>
-                                )}
+                              <div style={{
+                                padding: "14px 18px",
+                                borderRadius: isAdmin ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                                background: isAdmin ? "#e0e7ff" : "#fef3c7",
+                                color: isAdmin ? "#3730a3" : "#92400e",
+                                fontSize: 13,
+                                fontWeight: 600,
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                                lineHeight: 1.5,
+                                whiteSpace: "pre-wrap"
+                              }}>
+                                {m.message}
                               </div>
-                            </td>
+                              <span style={{ fontSize: 9, color: N.muted, fontWeight: 600, alignSelf: isAdmin ? "flex-end" : "flex-start" }}>
+                                {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Admin Reply Footer */}
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+                      <textarea
+                        value={adminReplyText}
+                        onChange={e => setAdminReplyText(e.target.value)}
+                        placeholder="Type an official admin response to the user..."
+                        rows={2}
+                        style={{ flex: 1, padding: "12px 16px", borderRadius: 14, fontSize: 13, background: N.bg, border: "none", color: N.text, outline: "none", boxShadow: N.inset, fontFamily: "inherit", resize: "none" }}
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!adminReplyText.trim()) return;
+                          setAdminReplying(true);
+                          try {
+                            const res = await fetch("/api/admin/tickets", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+                              body: JSON.stringify({ ticketId: activeT.id, message: adminReplyText, status: "ANSWERED" }),
+                            });
+                            const data = await res.json();
+                            if (res.ok && data.ticket) {
+                              setTickets(prev => prev.map(pt => pt.id === activeT.id ? data.ticket : pt));
+                              setAdminReplyText("");
+                            } else {
+                              alert(data.error || "Failed to send reply");
+                            }
+                          } catch (e) {
+                            alert(String(e));
+                          } finally {
+                            setAdminReplying(false);
+                          }
+                        }}
+                        disabled={adminReplying || !adminReplyText.trim()}
+                        className="neo-btn"
+                        style={{
+                          padding: "14px 24px",
+                          borderRadius: 14,
+                          background: !adminReplyText.trim() ? N.muted : "#4f46e5",
+                          color: "#ffffff",
+                          fontWeight: 800,
+                          border: "none",
+                          cursor: !adminReplyText.trim() ? "not-allowed" : "pointer",
+                          boxShadow: !adminReplyText.trim() ? "none" : "0 4px 14px rgba(79, 70, 229, 0.3)",
+                          fontSize: 13,
+                          whiteSpace: "nowrap",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {adminReplying ? "Sending..." : "🛡️ Send Admin Reply"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })() : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div>
+                    <h2 style={{ color: N.text, fontSize: 15, fontWeight: 900, margin: "0 0 4px" }}>Support Tickets Inbox &amp; Live Chat</h2>
+                    <p style={{ color: N.muted, fontSize: 12, margin: 0, fontWeight: 600 }}>Click any ticket to open live chat and reply to the user</p>
+                  </div>
+
+                  {tickets.length === 0 ? (
+                    <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No support tickets submitted</div>
+                  ) : (
+                    <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                        <thead>
+                          <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                            {["Ticket ID", "User Email", "Subject", "Message Preview", "Status", "Actions"].map((h) => (
+                              <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                            ))}
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </thead>
+                        <tbody>
+                          {tickets.map((t) => {
+                            const badgeColor = t.status === "OPEN" ? "#d97706" : t.status === "RESOLVED" ? "#16a34a" : "#718096";
+                            const msgCount = t.messages?.length || 1;
+                            return (
+                              <tr key={t.id} style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
+                                <td style={{ padding: "14px 24px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text }}>{t.id}</td>
+                                <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{t.user?.email || "Unknown"}</td>
+                                <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: N.text }}>{t.subject}</td>
+                                <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1].message : t.message}
+                                </td>
+                                <td style={{ padding: "14px 24px" }}>
+                                  <span style={{ fontSize: 10, fontWeight: 800, color: badgeColor, background: `${badgeColor}10`, padding: "4px 8px", borderRadius: 12, border: `1px solid ${badgeColor}20` }}>
+                                    {t.status}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "14px 24px" }}>
+                                  <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                      onClick={() => setAdminChatTicketId(t.id)}
+                                      className="neo-btn"
+                                      style={{ padding: "6px 14px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#ffffff", background: N.accent, border: "none", cursor: "pointer", boxShadow: N.raisedSm }}
+                                    >
+                                      💬 Open Chat ({msgCount})
+                                    </button>
+                                    {t.status === "OPEN" && (
+                                      <button
+                                        onClick={async () => {
+                                          if (!confirm("Mark this ticket as resolved?")) return;
+                                          const res = await fetch("/api/admin/tickets", {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+                                            body: JSON.stringify({ id: t.id, status: "RESOLVED" }),
+                                          });
+                                          if (res.ok) {
+                                            setTickets(prev => prev.map(pt => pt.id === t.id ? { ...pt, status: "RESOLVED" } : pt));
+                                          }
+                                        }}
+                                        className="neo-btn"
+                                        style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#ffffff", background: "#16a34a", border: "none", cursor: "pointer" }}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                    {t.status !== "CLOSED" && (
+                                      <button
+                                        onClick={async () => {
+                                          if (!confirm("Close this ticket?")) return;
+                                          const res = await fetch("/api/admin/tickets", {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+                                            body: JSON.stringify({ id: t.id, status: "CLOSED" }),
+                                          });
+                                          if (res.ok) {
+                                            setTickets(prev => prev.map(pt => pt.id === t.id ? { ...pt, status: "CLOSED" } : pt));
+                                          }
+                                        }}
+                                        className="neo-btn"
+                                        style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#ffffff", background: "#dc2626", border: "none", cursor: "pointer" }}
+                                      >
+                                        Close
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

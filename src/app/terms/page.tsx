@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PublicNav, PublicFooter } from "../PublicHeaderFooter";
 
 export const metadata: Metadata = {
   title: "Terms of Service — YoyoSMM",
@@ -27,21 +28,10 @@ export default function TermsPage() {
         .neo-btn:active { transform: translateY(0); box-shadow: inset 3px 3px 8px #c8d0e7, inset -1px -1px 4px #ffffff !important; }
       `}</style>
       
-      {/* Navigation */}
-      <nav style={{ borderBottom: `1px solid ${N.border}`, background: "rgba(238,242,247,0.95)", position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(12px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
-            <span style={{ fontWeight: 800, fontSize: 20, color: N.text, letterSpacing: "-0.5px" }}>YoyoSMM</span>
-          </Link>
-          <Link href="/signup" className="neo-btn" style={{ padding: "10px 24px", borderRadius: 999, fontWeight: 800, fontSize: 14, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>
-            Get Started →
-          </Link>
-        </div>
-      </nav>
+      <PublicNav />
 
       {/* Main Content Container */}
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 100px", display: "flex", flexDirection: "column", gap: 36 }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 40px", display: "flex", flexDirection: "column", gap: 36 }}>
         
         {/* Header Section */}
         <div>
@@ -68,7 +58,7 @@ export default function TermsPage() {
           <section style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised, display: "flex", flexDirection: "column", gap: 12 }}>
             <h2 style={{ fontSize: 22, fontWeight: 900, color: N.text, margin: 0 }}>2. Wallet & Billing System</h2>
             <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
-              YoyoSMM operates on a free account, pre-funded wallet balance model. You must deposit funds into your account (minimum ₹500 via UPI) to launch organic delivery pacing campaigns. Your charges are calculated per order on-demand.
+              YoyoSMM operates on an independent wholesale, pre-funded wallet balance model. You must deposit funds into your account (minimum ₹500 via UPI) to launch organic delivery pacing campaigns. Your charges are calculated per order on-demand.
             </p>
             <p style={{ fontSize: 15, fontWeight: 500, color: N.muted, margin: 0, lineHeight: 1.7 }}>
               <strong style={{ color: N.text }}>Refund Policy:</strong> All deposits made to your wallet balance are final. We do not support refunds once a balance is successfully credited or partially used for active campaigns.
@@ -104,6 +94,7 @@ export default function TermsPage() {
         </div>
 
       </div>
+      <PublicFooter />
     </div>
   );
 }
