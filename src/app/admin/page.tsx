@@ -2718,8 +2718,14 @@ export default function AdminPage() {
                       )}
 
                       <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>4. Minimum Order Limit (Supplier Min Qty)</label>
+                        <input type="number" step="1" placeholder="e.g. 10 or 100" value={pricingMin} onChange={e => setPricingMin(e.target.value)}
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", outline:"none", boxShadow: N.raisedSm, fontWeight: 800, color: N.text }} />
+                        <p style={{ fontSize: 10, color: N.muted, margin: "4px 0 0", fontWeight: 600 }}>Orders below this quantity will be blocked or omitted to prevent API errors.</p>
+                      </div>
 
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>4. Final Custom Rate Charged to Users (INR per 1,000)</label>
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>5. Final Custom Rate Charged to Users (INR per 1,000)</label>
 
                         <input type="number" step="0.1" placeholder="e.g. 20.0" value={pricingCustomRate} onChange={e => {
 
@@ -2747,7 +2753,7 @@ export default function AdminPage() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.muted }}>Currently Configured Markup Prices</p>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: N.muted }}>Currently Configured Markup Prices (Click any card to edit)</p>
 
                       {savedServices.length === 0 ? (
 
@@ -2763,7 +2769,15 @@ export default function AdminPage() {
 
                           {savedServices.map(s => (
 
-                            <div key={s.id} style={{ padding: 12, borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div key={s.id} onClick={() => {
+                              setPricingPlatform(s.platform || "instagram");
+                              setPricingType(s.type || "views");
+                              setPricingServiceId(String(s.serviceId || ""));
+                              setPricingOriginalRate(String(s.originalRate || ""));
+                              setPricingCustomRate(String(s.customRate || ""));
+                              setPricingName(s.name || "");
+                              setPricingMin(String(s.minQuantity ?? 10));
+                            }} style={{ padding: 12, borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", border: pricingServiceId === String(s.serviceId) && pricingType === s.type ? `1.5px solid ${N.accent}` : "none", transition: "all 0.2s" }} title="Click to edit this service configuration">
 
                               <div>
 
@@ -2773,7 +2787,7 @@ export default function AdminPage() {
 
                                 <p style={{ fontSize: 11, color: N.muted, margin: "4px 0 0" }}>Service ID: #{s.serviceId} {s.name ? `(${s.name.slice(0, 25)}…)` : ""}</p>
 
-                                <p style={{ fontSize: 10, color: N.muted, margin: "2px 0 0" }}>Base Cost: ${s.originalRate}/1k</p>
+                                <p style={{ fontSize: 10, color: N.muted, margin: "2px 0 0" }}>Base Cost: ${s.originalRate}/1k | Min Qty: <strong style={{ color: N.text }}>{s.minQuantity ?? 10}</strong></p>
 
                               </div>
 
