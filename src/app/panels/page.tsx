@@ -81,7 +81,7 @@ function ServiceIdConfig({ svcIds, onChange }: { svcIds: ServiceIds; onChange:(s
           <div key={type}>
             <label style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:N.muted, marginBottom:6, fontWeight:600 }}>
               <span>{TYPE_ICONS[type]}</span>
-              <span style={{ textTransform:"capitalize" }}>{type} ID</span>
+              <span style={{ textTransform:"capitalize" }}>{type === "shares" ? "Shares / Reposts" : type} ID</span>
             </label>
             <input
               placeholder="e.g. 1234"

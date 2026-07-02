@@ -229,9 +229,9 @@ export async function POST(request: NextRequest) {
         if (index === 0) {
           delayMs = 0; // First batch starts instantly
         } else if (index < sortedSchedule.length - 1) {
-          // Add ±15 minutes of random time jitter (±900,000 ms)
-          const jitterMs = (Math.random() * 2 - 1) * 15 * 60 * 1000;
-          delayMs = Math.max(5 * 60 * 1000, delayMs + jitterMs);
+          // Add ±5 minutes of random time jitter (±300,000 ms)
+          const jitterMs = (Math.random() * 2 - 1) * 5 * 60 * 1000;
+          delayMs = Math.max(2 * 60 * 1000, delayMs + jitterMs);
         }
         scheduledAt = new Date(now.getTime() + delayMs);
       }

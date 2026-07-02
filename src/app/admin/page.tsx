@@ -2475,7 +2475,7 @@ export default function AdminPage() {
 
                           <option value="saves">Saves</option>
 
-                          <option value="shares">Shares</option>
+                          <option value="shares">Shares / Reposts</option>
 
                           <option value="comments">Comments</option>
 

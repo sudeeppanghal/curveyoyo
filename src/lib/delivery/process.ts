@@ -119,21 +119,19 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       };
     } else {
       const viewsDeliveredNow = order.viewsDelivered + jitteredViews;
-      let minBatchSizes = { likes: 50, saves: 10, shares: 50, comments: 5 };
-      if (order.user.walletMode) {
-        try {
-          const uppercasePlatform = String(order.reel.platform || "INSTAGRAM").toUpperCase() as any;
-          const mappedServices = await prisma.adminService.findMany({
-            where: { panelId: activePanel.id, platform: uppercasePlatform }
-          });
-          mappedServices.forEach(s => {
-            if (s.type === "likes" && s.minQuantity > 0) minBatchSizes.likes = s.minQuantity;
-            if (s.type === "saves" && s.minQuantity > 0) minBatchSizes.saves = s.minQuantity;
-            if (s.type === "shares" && s.minQuantity > 0) minBatchSizes.shares = s.minQuantity;
-            if (s.type === "comments" && s.minQuantity > 0) minBatchSizes.comments = s.minQuantity;
-          });
-        } catch { /* fallback */ }
-      }
+      let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5 };
+      try {
+        const uppercasePlatform = String(order.reel.platform || "INSTAGRAM").toUpperCase() as any;
+        const mappedServices = await prisma.adminService.findMany({
+          where: { panelId: activePanel.id, platform: uppercasePlatform }
+        });
+        mappedServices.forEach(s => {
+          if (s.type === "likes" && s.minQuantity > 0) minBatchSizes.likes = s.minQuantity;
+          if (s.type === "saves" && s.minQuantity > 0) minBatchSizes.saves = s.minQuantity;
+          if (s.type === "shares" && s.minQuantity > 0) minBatchSizes.shares = s.minQuantity;
+          if (s.type === "comments" && s.minQuantity > 0) minBatchSizes.comments = s.minQuantity;
+        });
+      } catch { /* fallback */ }
       due = calculateEngagementDue(
         order.viewsTarget,
         viewsDeliveredNow,

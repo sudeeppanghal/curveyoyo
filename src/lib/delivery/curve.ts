@@ -395,7 +395,7 @@ export function calculateEngagementDue(
   viewsDeliveredNow: number,
   targets: { likes: number; saves: number; shares: number; comments: number },
   alreadyDelivered: { likes: number; saves: number; shares: number; comments: number },
-  minBatchSizes: { likes: number; saves: number; shares: number; comments: number } = { likes: 50, saves: 10, shares: 50, comments: 5 },
+  minBatchSizes: { likes: number; saves: number; shares: number; comments: number } = { likes: 10, saves: 10, shares: 10, comments: 5 },
 ): EngagementDue {
   if (viewsTarget <= 0) return { likes: 0, saves: 0, shares: 0, comments: 0 };
 
@@ -419,7 +419,7 @@ export function calculateEngagementDue(
   };
 
   // Only fire if due amount meets the specific SMM service minimum threshold
-  // (or it's the LAST batch of the campaign — flush remainder)
+  // (or it's the LAST batch of the campaign — flush remainder ONLY IF total target >= min threshold)
   const isLastBatch = fraction >= 0.99;
 
   const minLikes = minBatchSizes.likes;
@@ -428,9 +428,9 @@ export function calculateEngagementDue(
   const minComments = minBatchSizes.comments;
 
   return {
-    likes:    (due.likes    >= minLikes    || (isLastBatch && due.likes    > 0)) ? due.likes    : 0,
-    saves:    (due.saves    >= minSaves    || (isLastBatch && due.saves    > 0)) ? due.saves    : 0,
-    shares:   (due.shares   >= minShares   || (isLastBatch && due.shares   > 0)) ? due.shares   : 0,
-    comments: (due.comments >= minComments || (isLastBatch && due.comments > 0)) ? due.comments : 0,
+    likes:    targets.likes    < minLikes    ? 0 : ((due.likes    >= minLikes    || (isLastBatch && due.likes    > 0)) ? due.likes    : 0),
+    saves:    targets.saves    < minSaves    ? 0 : ((due.saves    >= minSaves    || (isLastBatch && due.saves    > 0)) ? due.saves    : 0),
+    shares:   targets.shares   < minShares   ? 0 : ((due.shares   >= minShares   || (isLastBatch && due.shares   > 0)) ? due.shares   : 0),
+    comments: targets.comments < minComments ? 0 : ((due.comments >= minComments || (isLastBatch && due.comments > 0)) ? due.comments : 0),
   };
 }

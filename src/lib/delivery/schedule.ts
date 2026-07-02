@@ -156,9 +156,9 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     if (index === 0) {
       delayMs = 0; // First batch starts instantly!
     } else if (index < batches.length - 1) {
-      // Add ±15 minutes of random time jitter (±900,000 ms)
-      const jitterMs = (Math.random() * 2 - 1) * 15 * 60 * 1000;
-      delayMs = Math.max(5 * 60 * 1000, delayMs + jitterMs); // keep at least 5 minutes delay
+      // Add ±5 minutes of random time jitter (±300,000 ms)
+      const jitterMs = (Math.random() * 2 - 1) * 5 * 60 * 1000;
+      delayMs = Math.max(2 * 60 * 1000, delayMs + jitterMs); // keep at least 2 minutes delay
     }
     const randomPanel = panelPool[Math.floor(Math.random() * panelPool.length)];
     return {
