@@ -66,6 +66,10 @@ export async function GET(request: NextRequest) {
     const services = await res.json();
     if (!Array.isArray(services)) throw new Error("Invalid SMM response");
 
+    const adminServices = await prisma.adminService.findMany({
+      where: { panelId: panel.id, platform: platform.toUpperCase() as any }
+    });
+
     const limits: Record<string, { min: number; max: number } | null> = {
       views: null,
       likes: null,
@@ -75,12 +79,14 @@ export async function GET(request: NextRequest) {
     };
 
     Object.keys(limits).forEach((type) => {
-      const id = platformIds[type];
+      const adminSvc = adminServices.find((s) => s.type.toLowerCase() === type.toLowerCase());
+      const id = platformIds[type] || adminSvc?.serviceId;
       if (id) {
         const match = services.find((s) => String(s.service) === String(id));
         if (match) {
+          const apiMin = match.min !== undefined && match.min !== null ? Number(match.min) : (type === "comments" ? 5 : (type === "views" ? 100 : 10));
           limits[type] = {
-            min: Number(match.min ?? 100),
+            min: adminSvc && adminSvc.minQuantity > 0 ? adminSvc.minQuantity : apiMin,
             max: Number(match.max ?? 1000000),
           };
         }

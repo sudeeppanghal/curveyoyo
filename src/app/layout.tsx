@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { prisma } from "@/lib/prisma";
 import MaintenanceGate from "./MaintenanceGate";
 import ReferralTracker from "@/components/ReferralTracker";
+import TelegramPopup from "@/components/TelegramPopup";
 import "./global.css";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,16 @@ export const metadata: Metadata = {
   verification: {
     google: "your-google-verification-code",
   },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 export default async function RootLayout({
@@ -75,6 +86,7 @@ export default async function RootLayout({
       <body style={{ margin:0, padding:0, minHeight:"100vh", background:"#eef2f7", color:"#2d3748", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,sans-serif", WebkitFontSmoothing:"antialiased" }}>
         <MaintenanceGate initialMaintenance={isMaintenance} supportEmail={supportEmail}>
           <ReferralTracker />
+          <TelegramPopup />
           {children}
         </MaintenanceGate>
       </body>

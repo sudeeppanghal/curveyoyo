@@ -38,11 +38,11 @@ const PLATFORMS = ["instagram", "tiktok", "youtube"] as const;
 type Plat = typeof PLATFORMS[number];
 const PLAT_ICONS: Record<Plat, string> = { instagram:"📷", tiktok:"🎵", youtube:"▶️" };
 const ENGAGEMENT_TYPES: Record<Plat, string[]> = {
-  instagram: ["views","likes","saves","shares","comments"],
+  instagram: ["views","likes","saves","shares","reposts","comments"],
   tiktok:    ["views","likes","saves","shares","comments"],
   youtube:   ["views","likes","saves","shares"],
 };
-const TYPE_ICONS: Record<string, string> = { views:"👁", likes:"👍", saves:"🔖", shares:"📤", comments:"💬" };
+const TYPE_ICONS: Record<string, string> = { views:"👁", likes:"👍", saves:"🔖", shares:"📤", reposts:"🔁", comments:"💬" };
 const DEFAULT_FORM: PanelFormData = { name:"", apiUrl:"", apiKey:"", priority:1, loadPercentage:100, serviceIds:{ instagram:{}, tiktok:{}, youtube:{} } };
 
 function NeoInput({ label, value, onChange, placeholder, type="text" }: { label:string; value:string|number; onChange:(v:string)=>void; placeholder?:string; type?:string }) {
@@ -81,7 +81,7 @@ function ServiceIdConfig({ svcIds, onChange }: { svcIds: ServiceIds; onChange:(s
           <div key={type}>
             <label style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:N.muted, marginBottom:6, fontWeight:600 }}>
               <span>{TYPE_ICONS[type]}</span>
-              <span style={{ textTransform:"capitalize" }}>{type === "shares" ? "Shares / Reposts" : type} ID</span>
+              <span style={{ textTransform:"capitalize" }}>{type} ID</span>
             </label>
             <input
               placeholder="e.g. 1234"

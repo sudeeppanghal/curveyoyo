@@ -1942,7 +1942,7 @@ export default function NewReelPage() {
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <EngRow icon="👍" label="Likes" enabled={likesOn} ratio={likesRatio} maxRatio={15} count={eng.likesTarget} minLimit={10} onToggle={() => { setLikesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setLikesRatio(v); setHasCustomizedEng(true); }} />
                 <EngRow icon="🔖" label="Saves" enabled={savesOn} ratio={savesRatio} maxRatio={8} count={eng.savesTarget} minLimit={10} onToggle={() => { setSavesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSavesRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="📤" label="Shares / Reposts" enabled={sharesOn} ratio={sharesRatio} maxRatio={5} count={eng.sharesTarget} minLimit={10} onToggle={() => { setSharesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSharesRatio(v); setHasCustomizedEng(true); }} />
+                <EngRow icon="📤" label="Shares" enabled={sharesOn} ratio={sharesRatio} maxRatio={5} count={eng.sharesTarget} minLimit={10} onToggle={() => { setSharesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSharesRatio(v); setHasCustomizedEng(true); }} />
                 <EngRow icon="💬" label="Comments" enabled={commentsOn} ratio={commentsRatio} maxRatio={3} count={eng.commentsTarget} minLimit={5} onToggle={() => { setCommentsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setCommentsRatio(v); setHasCustomizedEng(true); }} />
               </div>
 
@@ -1952,7 +1952,7 @@ export default function NewReelPage() {
                   <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>👁 Views</span><span style={{ fontWeight:800, color:N.text }}>{views.toLocaleString()}</span></div>
                   {likesOn && eng.likesTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>👍 Likes</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.likesTarget.toLocaleString()}</span></div>}
                   {savesOn && eng.savesTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>🔖 Saves</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.savesTarget.toLocaleString()}</span></div>}
-                  {sharesOn && eng.sharesTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>📤 Shares / Reposts</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.sharesTarget.toLocaleString()}</span></div>}
+                  {sharesOn && eng.sharesTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>📤 Shares</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.sharesTarget.toLocaleString()}</span></div>}
                   {commentsOn && eng.commentsTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>💬 Comments</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.commentsTarget.toLocaleString()}</span></div>}
                 </div>
               </div>
@@ -2092,7 +2092,7 @@ export default function NewReelPage() {
                 ["Engagement Mode", "✅ Paced concurrently"],
                 ...(likesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget) > 0 ? [["👍 Likes Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget).toLocaleString()}`]] : []),
                 ...(savesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget) > 0 ? [["🔖 Saves Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget).toLocaleString()}`]] : []),
-                ...(sharesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) > 0 ? [["📤 Shares / Reposts Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget).toLocaleString()}`]] : []),
+                ...(sharesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) > 0 ? [["📤 Shares Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget).toLocaleString()}`]] : []),
                 ...(commentsOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) > 0 ? [["💬 Comments Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget).toLocaleString()}`]] : []),
               ] : [["Engagement Mode", "⬜ Views only"]]),
               ...(pricingInfo?.walletMode ? [

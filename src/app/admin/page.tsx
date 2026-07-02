@@ -2475,7 +2475,8 @@ export default function AdminPage() {
 
                           <option value="saves">Saves</option>
 
-                          <option value="shares">Shares / Reposts</option>
+                          <option value="shares">Shares</option>
+                          <option value="reposts">Instagram Reposts ⭐</option>
 
                           <option value="comments">Comments</option>
 
@@ -2523,7 +2524,20 @@ export default function AdminPage() {
 
                           <div style={{ display: "flex", gap: 10 }}>
 
-                            <input value={pricingServiceId} onChange={e => setPricingServiceId(e.target.value)} placeholder="e.g. 1042"
+                            <input value={pricingServiceId} onChange={e => {
+                              const val = e.target.value;
+                              setPricingServiceId(val);
+                              const selected = liveServices.find(s => String(s.service) === val.trim());
+                              if (selected) {
+                                setPricingOriginalRate(String(selected.rate || ""));
+                                setPricingName(selected.name ?? "");
+                                setPricingMin(String(selected.min ?? ""));
+                                setPricingMax(String(selected.max ?? ""));
+                                if (pricingMultiplier) {
+                                  handleMultiplierChange(pricingMultiplier, String(selected.rate || ""));
+                                }
+                              }
+                            }} placeholder="e.g. 1042"
 
                               style={{ flex:1, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
 

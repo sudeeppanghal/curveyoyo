@@ -35,9 +35,9 @@ export function PublicNav() {
         .pub-nav-link:hover { color: #d97706 !important; }
       `}</style>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, color: "#fff", background: N.accentBg, boxShadow: N.raisedSm }}>Y</div>
-          <span style={{ fontWeight: 800, fontSize: 21, color: N.text, letterSpacing: "-0.5px" }}>YoyoSMM</span>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <img src="/logo.png" alt="YoyoSMM Logo" style={{ width: 42, height: 42, objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.15))" }} />
+          <span style={{ fontWeight: 850, fontSize: 22, color: N.text, letterSpacing: "-0.5px" }}>YoyoSMM</span>
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6, background: N.bg, padding: "6px 12px", borderRadius: 999, boxShadow: N.insetSm }}>
@@ -93,8 +93,8 @@ export function PublicFooter() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 36, marginBottom: 48 }}>
           <div>
             <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", marginBottom: 14 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: N.accentBg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#ffffff", boxShadow: N.raisedSm }}>Y</div>
-              <span style={{ fontWeight: 800, fontSize: 18, color: N.text }}>YoyoSMM</span>
+              <img src="/logo.png" alt="YoyoSMM Logo" style={{ width: 36, height: 36, objectFit: "contain" }} />
+              <span style={{ fontWeight: 850, fontSize: 18, color: N.text }}>YoyoSMM</span>
             </Link>
             <p style={{ fontSize: 13, color: N.muted, lineHeight: 1.7, margin: 0, fontWeight: 500, maxWidth: 260 }}>
               The premium independent organic SMM panel with built-in timing layers. Zero upfront fees, direct wholesale pricing, and 99.98% delivery success rates.

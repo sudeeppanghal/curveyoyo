@@ -113,16 +113,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Logo */}
         <div style={{ padding:"20px 16px 18px", borderBottom:`1px solid ${N.border}` }}>
-          <Link href="/" style={{ textDecoration:"none", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{
-              width:36, height:36, borderRadius:12, flexShrink:0,
-              background: N.accentBg,
-              boxShadow: N.raisedSm,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontWeight:900, fontSize:14, color:"#ffffff",
-            }}>Y</div>
+          <Link href="/" style={{ textDecoration:"none", display:"flex", alignItems:"center", gap:10 }}>
+            <img src="/logo.png" alt="YoyoSMM Logo" style={{ width: 38, height: 38, objectFit: "contain" }} />
             <div>
-              <div style={{ fontWeight:800, fontSize:14, color:N.text, letterSpacing:"-0.3px" }}>YoyoSMM</div>
+              <div style={{ fontWeight:850, fontSize:15, color:N.text, letterSpacing:"-0.3px" }}>YoyoSMM</div>
               <div style={{ fontSize:10, color:N.muted, marginTop:1, fontWeight:700 }}>Organic Delivery</div>
             </div>
           </Link>
