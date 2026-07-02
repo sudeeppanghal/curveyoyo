@@ -164,7 +164,11 @@ export default function AdminPage() {
 
     totalProfitInr?: number;
 
-  }>({ events: [], panels: [], orderStats: [], eventStats: [], totalDepositInr: 0, totalRevenueInr: 0, totalProfitInr: 0 });
+    dailyFinancials?: any[];
+
+    excludedAdminAccounts?: string[];
+
+  }>({ events: [], panels: [], orderStats: [], eventStats: [], totalDepositInr: 0, totalRevenueInr: 0, totalProfitInr: 0, dailyFinancials: [] });
 
   const [loading, setLoading] = useState(false);
 
@@ -195,6 +199,11 @@ export default function AdminPage() {
   const [fetchingServices, setFetchingServices] = useState(false);
 
   const [savingService, setSavingService] = useState(false);
+
+  const [chartMetric, setChartMetric] = useState<"profit" | "revenue">("profit");
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [servicePlatformFilter, setServicePlatformFilter] = useState(true);
+  const [syncingAll, setSyncingAll] = useState(false);
 
   // New Panel fields
 
@@ -696,6 +705,29 @@ export default function AdminPage() {
 
     }
 
+  };
+
+  const handleSyncAllServices = async () => {
+    if (!selectedPanelId) return;
+    setSyncingAll(true);
+    try {
+      const res = await fetch("/api/admin/services", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action: "sync_all", panelId: selectedPanelId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSaved(data.message || "Synced successfully across all API keys!");
+        setTimeout(() => setSaved(""), 4000);
+      } else {
+        setError(data.error || "Failed to sync");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+    }
+    setSyncingAll(false);
   };
 
   const handleSaveServicePrice = async () => {
@@ -1247,6 +1279,131 @@ export default function AdminPage() {
 
           ))}
 
+        </div>
+
+        {/* Financial & Profit Analytics Chart Component */}
+        <div style={{
+          borderRadius: 24,
+          padding: 28,
+          background: N.bg,
+          boxShadow: N.raised,
+          border: `1.5px solid ${N.border}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 20
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 900, color: N.text, margin: 0 }}>📊 Financial Performance & Profit Analytics</h2>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 20, background: "rgba(34, 197, 94, 0.1)", color: "#16a34a", border: "1px solid rgba(34, 197, 94, 0.2)" }}>
+                  ✨ Excludes Admin Account (arpitasumanekka@gmail.com)
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: N.muted, margin: "6px 0 0", fontWeight: 600 }}>
+                Live daily tracking of gross revenue vs net SMM delivery profit margins across all user orders
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setChartMetric("profit")}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 12,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  background: chartMetric === "profit" ? N.bg : "transparent",
+                  boxShadow: chartMetric === "profit" ? N.inset : "none",
+                  color: chartMetric === "profit" ? "#16a34a" : N.muted,
+                  transition: "all 0.2s ease"
+                }}
+              >
+                💰 Net Profit (₹)
+              </button>
+              <button
+                onClick={() => setChartMetric("revenue")}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 12,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  background: chartMetric === "revenue" ? N.bg : "transparent",
+                  boxShadow: chartMetric === "revenue" ? N.inset : "none",
+                  color: chartMetric === "revenue" ? "#a855f7" : N.muted,
+                  transition: "all 0.2s ease"
+                }}
+              >
+                📈 Gross Revenue (₹)
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+            <div style={{ padding: 16, borderRadius: 16, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase" }}>Net SMM Profit</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: "#16a34a" }}>₹ {(systemData.totalProfitInr ?? 0).toLocaleString()}</span>
+            </div>
+            <div style={{ padding: 16, borderRadius: 16, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase" }}>Total Order Revenue</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: "#a855f7" }}>₹ {(systemData.totalRevenueInr ?? 0).toLocaleString()}</span>
+            </div>
+            <div style={{ padding: 16, borderRadius: 16, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase" }}>Total User Deposits</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: "#3b82f6" }}>₹ {(systemData.totalDepositInr ?? 0).toLocaleString()}</span>
+            </div>
+            <div style={{ padding: 16, borderRadius: 16, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: N.muted, textTransform: "uppercase" }}>Avg Delivery Margin</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: "#f59e0b" }}>
+                {systemData.totalRevenueInr ? ((systemData.totalProfitInr! / systemData.totalRevenueInr!) * 100).toFixed(1) : "0"}%
+              </span>
+            </div>
+          </div>
+
+          {(!systemData.dailyFinancials || systemData.dailyFinancials.length === 0) ? (
+            <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", color: N.muted, fontWeight: 700, fontSize: 13 }}>
+              Loading financial analytics...
+            </div>
+          ) : (
+            <div style={{ padding: "16px 8px 0", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", height: 160, gap: 8, paddingBottom: 8, borderBottom: `1.5px dashed ${N.border}` }}>
+                {systemData.dailyFinancials.map((d: any, idx: number) => {
+                  const maxVal = Math.max(1, ...systemData.dailyFinancials!.map((x: any) => chartMetric === "profit" ? x.profit : x.revenue));
+                  const val = chartMetric === "profit" ? d.profit : d.revenue;
+                  const heightPct = Math.max(8, Math.min(100, (val / maxVal) * 100));
+                  const barColor = chartMetric === "profit" ? "linear-gradient(180deg, #22c55e 0%, #16a34a 100%)" : "linear-gradient(180deg, #c084fc 0%, #a855f7 100%)";
+
+                  return (
+                    <div key={idx} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", justifyContent: "flex-end" }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: chartMetric === "profit" ? "#16a34a" : "#a855f7", opacity: val > 0 ? 1 : 0.5 }}>
+                        ₹{val}
+                      </div>
+                      <div style={{
+                        width: "100%",
+                        maxWidth: 36,
+                        height: `${heightPct}%`,
+                        borderRadius: "8px 8px 4px 4px",
+                        background: val === 0 ? N.inset : barColor,
+                        boxShadow: val > 0 ? "0 4px 12px rgba(0,0,0,0.08)" : "none",
+                        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                        cursor: "pointer"
+                      }} title={`${d.date}: ₹${val} (${d.orders} orders)`} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                {systemData.dailyFinancials.map((d: any, idx: number) => (
+                  <div key={idx} style={{ flex: 1, textAlign: "center", fontSize: 10, fontWeight: 700, color: N.muted }}>
+                    {d.date}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tab switch bar */}
@@ -2328,6 +2485,34 @@ export default function AdminPage() {
 
                   </div>
 
+                  <div style={{ padding: 16, borderRadius: 16, background: "rgba(168, 85, 247, 0.06)", border: `1.5px solid rgba(168, 85, 247, 0.3)`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 900, color: N.accent }}>
+                        ⚡ Provider Auto-Sync Active ({adminPanels.find(p => p.id === selectedPanelId)?.apiUrl})
+                      </p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: N.muted, fontWeight: 600 }}>
+                        Setting default service IDs and markup prices here automatically applies to all linked API keys for this SMM provider!
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSyncAllServices}
+                      disabled={syncingAll}
+                      style={{
+                        padding: "10px 18px",
+                        borderRadius: 12,
+                        background: N.accent,
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        border: "none",
+                        cursor: syncingAll ? "not-allowed" : "pointer",
+                        boxShadow: "0 4px 12px rgba(168, 85, 247, 0.3)"
+                      }}
+                    >
+                      {syncingAll ? "Syncing..." : "🔄 Sync All API Keys Now"}
+                    </button>
+                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
 
                     {/* Left Panel: Pricing configuration form */}
@@ -2395,6 +2580,24 @@ export default function AdminPage() {
                       <div>
 
                         <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 6 }}>3. Choose SMM Service ID &amp; Original Rate (from SMM API)</label>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10, marginTop: 4 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input
+                              value={serviceSearch}
+                              onChange={e => setServiceSearch(e.target.value)}
+                              placeholder="🔍 Search services by ID, name, or category..."
+                              style={{ flex: 1, padding: "8px 12px", borderRadius: 8, fontSize: 11, background: N.inset, border: "none", color: N.text, outline: "none", fontWeight: 600 }}
+                            />
+                            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: N.muted, cursor: "pointer", whiteSpace: "nowrap" }}>
+                              <input
+                                type="checkbox"
+                                checked={servicePlatformFilter}
+                                onChange={e => setServicePlatformFilter(e.target.checked)}
+                              />
+                              Filter Platform ({pricingPlatform})
+                            </label>
+                          </div>
+                        </div>
 
                         {fetchingServices ? (
 
@@ -2448,7 +2651,31 @@ export default function AdminPage() {
 
                             <option value="">-- Select Service from API --</option>
 
-                            {liveServices.map(s => (
+                            {liveServices.filter(s => {
+                              if (serviceSearch) {
+                                const q = serviceSearch.toLowerCase();
+                                const match = String(s.service).includes(q) || String(s.name || "").toLowerCase().includes(q) || String(s.category || "").toLowerCase().includes(q);
+                                if (!match) return false;
+                              }
+                              if (servicePlatformFilter && pricingPlatform) {
+                                const p = pricingPlatform.toLowerCase();
+                                const kwMap: Record<string, string[]> = {
+                                  instagram: ["instagram", "ig", "insta", "reels"],
+                                  tiktok: ["tiktok", "tt", "tok"],
+                                  youtube: ["youtube", "yt", "shorts"],
+                                  telegram: ["telegram", "tg"],
+                                  facebook: ["facebook", "fb"],
+                                  twitter: ["twitter", " x ", "retweet"],
+                                };
+                                const kws = kwMap[p] || [p];
+                                const platMatch = kws.some(kw => String(s.name || "").toLowerCase().includes(kw) || String(s.category || "").toLowerCase().includes(kw));
+                                const anyPlatExists = liveServices.some(x => kws.some(kw => String(x.name || "").toLowerCase().includes(kw) || String(x.category || "").toLowerCase().includes(kw)));
+                                if (!platMatch && anyPlatExists) {
+                                  return false;
+                                }
+                              }
+                              return true;
+                            }).map(s => (
 
                               <option key={s.service} value={s.service}>
 

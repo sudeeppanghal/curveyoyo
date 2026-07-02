@@ -62,65 +62,151 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ services: saved });
 }
 
-// POST configure/upsert an admin service pricing
+// POST configure/upsert an admin service pricing OR sync across matching SMM API keys
 export async function POST(request: NextRequest) {
   if (!verifyAdmin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = await request.json();
-  const { panelId, platform, type, serviceId, originalRate, customRate, name, minQuantity } = body;
+  const { action, panelId, platform, type, serviceId, originalRate, customRate, name, minQuantity } = body;
 
-  if (!panelId || !platform || !type || !serviceId || originalRate === undefined || customRate === undefined) {
+  if (!panelId) {
+    return NextResponse.json({ error: "panelId is required" }, { status: 400 });
+  }
+
+  const sourcePanel = await prisma.panel.findUnique({ where: { id: panelId } });
+  if (!sourcePanel) {
+    return NextResponse.json({ error: "Panel not found" }, { status: 404 });
+  }
+
+  const cleanUrl = sourcePanel.apiUrl.trim().replace(/\/$/, "");
+
+  // ACTION: SYNC ALL SERVICES ACROSS ALL API KEYS FOR THIS SMM PROVIDER
+  if (action === "sync_all") {
+    const sourceServices = await prisma.adminService.findMany({ where: { panelId } });
+    const matchingPanels = await prisma.panel.findMany({
+      where: { apiUrl: cleanUrl }
+    });
+
+    let syncedPanelsCount = 0;
+    let syncedServicesCount = 0;
+
+    for (const p of matchingPanels) {
+      if (p.id !== panelId) {
+        // Sync serviceIds JSON
+        await prisma.panel.update({
+          where: { id: p.id },
+          data: { serviceIds: sourcePanel.serviceIds ?? undefined },
+        });
+      }
+      syncedPanelsCount++;
+
+      // Sync AdminService tables
+      for (const s of sourceServices) {
+        await prisma.adminService.upsert({
+          where: {
+            panelId_platform_type: {
+              panelId: p.id,
+              platform: s.platform,
+              type: s.type,
+            },
+          },
+          create: {
+            panelId: p.id,
+            platform: s.platform,
+            type: s.type,
+            serviceId: s.serviceId,
+            originalRate: s.originalRate,
+            customRate: s.customRate,
+            name: s.name,
+            minQuantity: s.minQuantity,
+          },
+          update: {
+            serviceId: s.serviceId,
+            originalRate: s.originalRate,
+            customRate: s.customRate,
+            name: s.name,
+            minQuantity: s.minQuantity,
+          },
+        });
+        syncedServicesCount++;
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: `Successfully synced ${sourceServices.length} services across ${syncedPanelsCount} API keys connected to ${cleanUrl}.`,
+      syncedPanelsCount,
+      syncedServicesCount,
+    });
+  }
+
+  // STANDARD SAVE: Save pricing and auto-apply to ALL matching API keys of this provider
+  if (!platform || !type || !serviceId || originalRate === undefined || customRate === undefined) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
   const uppercasePlatform = String(platform).toUpperCase() as any;
+  const typeLower = String(type).toLowerCase();
+  const platformLower = String(platform).toLowerCase();
 
-  const adminService = await prisma.adminService.upsert({
-    where: {
-      panelId_platform_type: {
-        panelId,
-        platform: uppercasePlatform,
-        type: String(type).toLowerCase(),
-      },
-    },
-    create: {
-      panelId,
-      platform: uppercasePlatform,
-      type: String(type).toLowerCase(),
-      serviceId: String(serviceId),
-      originalRate: parseFloat(originalRate),
-      customRate: parseFloat(customRate),
-      name: name ?? null,
-      minQuantity: minQuantity ? parseInt(minQuantity) : 10,
-    },
-    update: {
-      serviceId: String(serviceId),
-      originalRate: parseFloat(originalRate),
-      customRate: parseFloat(customRate),
-      name: name ?? null,
-      minQuantity: minQuantity ? parseInt(minQuantity) : 10,
-    },
+  // Find all panels sharing the same SMM API URL
+  const matchingPanels = await prisma.panel.findMany({
+    where: { apiUrl: cleanUrl }
   });
 
-  // Also update the panel's JSON serviceIds structure for backward compatibility/redundancy
-  const panel = await prisma.panel.findUnique({ where: { id: panelId } });
-  if (panel) {
-    const currentJson = (panel.serviceIds as Record<string, Record<string, string>> | null) ?? {};
-    const platformLower = String(platform).toLowerCase();
-    const typeLower = String(type).toLowerCase();
-    
+  let mainAdminService = null;
+
+  for (const p of matchingPanels) {
+    const s = await prisma.adminService.upsert({
+      where: {
+        panelId_platform_type: {
+          panelId: p.id,
+          platform: uppercasePlatform,
+          type: typeLower,
+        },
+      },
+      create: {
+        panelId: p.id,
+        platform: uppercasePlatform,
+        type: typeLower,
+        serviceId: String(serviceId),
+        originalRate: parseFloat(originalRate),
+        customRate: parseFloat(customRate),
+        name: name ?? null,
+        minQuantity: minQuantity ? parseInt(minQuantity) : 10,
+      },
+      update: {
+        serviceId: String(serviceId),
+        originalRate: parseFloat(originalRate),
+        customRate: parseFloat(customRate),
+        name: name ?? null,
+        minQuantity: minQuantity ? parseInt(minQuantity) : 10,
+      },
+    });
+
+    if (p.id === panelId) {
+      mainAdminService = s;
+    }
+
+    // Update panel JSON serviceIds structure
+    const currentJson = (p.serviceIds as Record<string, Record<string, string>> | null) ?? {};
     if (!currentJson[platformLower]) {
       currentJson[platformLower] = {};
     }
     currentJson[platformLower][typeLower] = String(serviceId);
 
     await prisma.panel.update({
-      where: { id: panelId },
+      where: { id: p.id },
       data: { serviceIds: currentJson },
     });
   }
 
-  return NextResponse.json({ ok: true, service: adminService });
+  return NextResponse.json({
+    ok: true,
+    service: mainAdminService,
+    syncedPanels: matchingPanels.length,
+    message: `Configured service applied to ${matchingPanels.length} API keys for ${cleanUrl}.`
+  });
 }
