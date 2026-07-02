@@ -17,6 +17,7 @@ interface Stats {
   totalOrders?: number; activeOrders?: number;
   viewsDelivered?: number; activePanels?: number;
   totalReels?: number; completedOrders?: number;
+  deliveringOrders?: number; totalViewsDelivered?: number;
 }
 
 function NeoCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -128,6 +129,7 @@ export default function DashboardPage() {
   const [trackerLoading, setTrackerLoading] = useState(false);
   const [walletMode, setWalletMode] = useState(false);
   const [activeRoutes, setActiveRoutes] = useState(482);
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
     setActiveRoutes(Math.floor(Math.random() * (1000 - 300 + 1)) + 300);
@@ -141,7 +143,10 @@ export default function DashboardPage() {
     fetch("/api/billing/status")
       .then(res => res.json())
       .then(data => {
-        if (data) setWalletMode(!!data.walletMode);
+        if (data) {
+          setWalletMode(!!data.walletMode);
+          if (data.email) setUserEmail(data.email);
+        }
       })
       .catch(() => {});
 
@@ -149,6 +154,7 @@ export default function DashboardPage() {
       .then((r) => r.json())
       .then((d) => {
         setStats(d.stats ?? d ?? {});
+        if (d.email) setUserEmail(d.email);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -207,6 +213,7 @@ export default function DashboardPage() {
     { label:"Create Order",    href:"/reels/new",    icon:"⚡", desc:"Start organic S-curve delivery" },
     { label:"Add New Reel",    href:"/reels/new",    icon:"🎬", desc:"Import a reel URL to track" },
     { label:"View Analytics",  href:"/analytics",    icon:"📊", desc:"Track views & engagement" },
+    ...(userEmail.toLowerCase() === "bizanomarketing.carrd.co@gmail.com" || stats?.activePanels !== undefined ? [{ label:"VIP Affiliate", href:"/affiliate", icon:"🤝", desc:"Earn 20% partner commissions" }] : []),
   ];
 
   const steps = [
@@ -223,6 +230,22 @@ export default function DashboardPage() {
         .neo-qa:active{box-shadow:inset 4px 4px 10px #c8d0e7,inset -2px -2px 6px #ffffff !important;transform:none}
         .neo-step:hover{box-shadow:6px 6px 16px #c8d0e7,-3px -3px 10px #ffffff !important}
       `}</style>
+
+      {/* VIP Partner Banner */}
+      {userEmail.toLowerCase() === "bizanomarketing.carrd.co@gmail.com" && (
+        <div style={{ padding:"18px 24px", borderRadius:20, background:"linear-gradient(135deg, #1e293b, #0f172a)", color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16, boxShadow:N.raised }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <span style={{ fontSize:28 }}>🤝</span>
+            <div>
+              <div style={{ fontSize:15, fontWeight:900, color:"#f59e0b", letterSpacing:"-0.3px" }}>VIP Partner Affiliate System Active</div>
+              <div style={{ fontSize:13, color:"#cbd5e1", fontWeight:600 }}>Earn 20% cash commission on every deposit made by your referrals!</div>
+            </div>
+          </div>
+          <Link href="/affiliate" style={{ padding:"10px 20px", borderRadius:12, background:"#d97706", color:"#fff", fontWeight:800, fontSize:13, textDecoration:"none", boxShadow:"0 4px 12px rgba(217,119,6,0.3)" }}>
+            Open Affiliate Dashboard →
+          </Link>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
@@ -396,8 +419,8 @@ export default function DashboardPage() {
       ) : (
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:16 }}>
           <StatCard label="Total Orders"    value={stats.totalOrders ?? 0}     sub="All time campaigns"           icon="📋" />
-          <StatCard label="Live Now"        value={stats.activeOrders ?? 0}    sub="Currently delivering"         icon="⚡" />
-          <StatCard label="Views Sent"      value={stats.viewsDelivered ?? 0}  sub="Total organic views"          icon="👁" />
+          <StatCard label="Live Now"        value={stats.activeOrders ?? stats.deliveringOrders ?? 0}    sub="Currently delivering"         icon="⚡" />
+          <StatCard label="Views Sent"      value={(stats.viewsDelivered ?? stats.totalViewsDelivered ?? 0).toLocaleString()}  sub="Total organic views"          icon="👁" />
           <StatCard label="Active Routes"   value={activeRoutes}               sub="Delivery paths online"        icon="🛡️" />
         </div>
       )}

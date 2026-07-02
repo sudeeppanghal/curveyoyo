@@ -25,6 +25,10 @@ model User {
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   walletMode       Boolean  @default(false) @map("wallet_mode")
   balance          Float    @default(0.0)
+  referredBy       String?  @map("referred_by")
+  affiliateCode    String?  @unique @map("affiliate_code")
+  affiliateClicks  Int      @default(0) @map("affiliate_clicks")
+  affiliateEarnings Float   @default(0.0) @map("affiliate_earnings")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -38,6 +42,8 @@ model User {
   curveTemplates  CurveTemplate[]
   upiPayments     UpiPayment[]
   supportTickets  SupportTicket[]
+  affiliateTx     AffiliateTransaction[] @relation("AffiliateEarnings")
+  referredTx      AffiliateTransaction[] @relation("ReferredUser")
 
   @@map("users")
 }
@@ -509,6 +515,21 @@ model TicketMessage {
   createdAt DateTime      @default(now()) @map("created_at")
 
   @@map("ticket_messages")
+}
+
+// ─────────────── AFFILIATE TRANSACTION ──────────────────────
+model AffiliateTransaction {
+  id               String   @id @default(cuid())
+  affiliateId      String   @map("affiliate_id")
+  affiliate        User     @relation("AffiliateEarnings", fields: [affiliateId], references: [id], onDelete: Cascade)
+  referredUserId   String   @map("referred_user_id")
+  referredUser     User     @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+  amountDeposit    Float    @map("amount_deposit")
+  commissionEarned Float    @map("commission_earned")
+  type             String   @default("DEPOSIT")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("affiliate_transactions")
 }
 
 

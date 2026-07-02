@@ -35,9 +35,10 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true); setError("");
     try {
+      const refCode = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("ref") || localStorage.getItem("yoyo_ref")) : undefined;
       const res = await fetch("/api/auth/signup", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, referredBy: refCode }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Signup failed"); return; }

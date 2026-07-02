@@ -16,20 +16,22 @@ export async function GET() {
   if (cached) return NextResponse.json(cached);
 
   // Compute real stats
-  const [totalOrders, completedOrders, deliveringOrders, panels, recentOrders] = await Promise.all([
+  const [totalOrders, completedOrders, deliveringOrders, panels, allUserOrders] = await Promise.all([
     prisma.order.count({ where: { userId: dbUser.id } }),
     prisma.order.count({ where: { userId: dbUser.id, status: "COMPLETED" } }),
-    prisma.order.count({ where: { userId: dbUser.id, status: "DELIVERING" } }),
+    prisma.order.count({ where: { userId: dbUser.id, status: { in: ["DELIVERING", "QUEUED", "PAUSED", "PENDING"] } } }),
     prisma.panel.count({ where: { userId: dbUser.id, isActive: true } }),
     prisma.order.findMany({
       where: { userId: dbUser.id },
       orderBy: { createdAt: "desc" },
-      take: 30,
-      select: { viewsDelivered: true, createdAt: true, status: true, curveStyle: true },
+      select: { viewsDelivered: true, viewsTarget: true, createdAt: true, status: true, curveStyle: true },
     }),
   ]);
 
-  const totalViewsDelivered = recentOrders.reduce((a, o) => a + o.viewsDelivered, 0);
+  const totalViewsDelivered = allUserOrders.reduce((a, o) => {
+    const delivered = o.viewsDelivered > 0 ? o.viewsDelivered : (o.status === "COMPLETED" ? (o.viewsTarget || 0) : 0);
+    return a + delivered;
+  }, 0);
 
   // Build 7-day chart (views delivered per day)
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -70,11 +72,14 @@ export async function GET() {
   });
 
   const stats = {
+    email: dbUser.email,
     totalOrders,
     completedOrders,
     deliveringOrders,
+    activeOrders: deliveringOrders,
     activePanels: panels,
     totalViewsDelivered,
+    viewsDelivered: totalViewsDelivered,
     weeklyChart,
     styleBreakdown: styleGroups.map((g) => ({ style: g.curveStyle, count: g._count })),
     successRate: totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0,

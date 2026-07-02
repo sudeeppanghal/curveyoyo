@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { processAffiliateCommission } from "@/lib/affiliate";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -77,6 +78,8 @@ export async function POST(request: NextRequest) {
         },
       }),
     ]);
+
+    await processAffiliateCommission(payment.userId, creditInr);
 
     return NextResponse.json({ ok: true, status: "CONFIRMED", creditedInr: creditInr });
   } else if (action === "reject") {

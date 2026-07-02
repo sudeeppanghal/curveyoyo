@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, name } = body;
+    const { email, password, name, referredBy } = body;
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -38,7 +38,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Create user record in Prisma (Wallet Mode)
-    await prisma.user.create({
+    let affiliateCodeToSet = undefined;
+    if (email.toLowerCase() === "bizanomarketing.carrd.co@gmail.com") {
+      affiliateCodeToSet = "BIZANO20";
+    }
+
+    const newUser = await prisma.user.create({
       data: {
         supabaseId: authData.user.id,
         email: authData.user.email!,
@@ -47,8 +52,32 @@ export async function POST(request: NextRequest) {
         trialEndsAt: null,
         walletMode: true,
         balance: 0.0,
+        referredBy: referredBy && typeof referredBy === "string" ? referredBy.toUpperCase() : undefined,
+        affiliateCode: affiliateCodeToSet,
       },
     });
+
+    if (referredBy && typeof referredBy === "string") {
+      const affiliateUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { affiliateCode: referredBy.toUpperCase() },
+            { id: referredBy }
+          ]
+        }
+      });
+      if (affiliateUser) {
+        await prisma.affiliateTransaction.create({
+          data: {
+            affiliateId: affiliateUser.id,
+            referredUserId: newUser.id,
+            amountDeposit: 0,
+            commissionEarned: 0,
+            type: "SIGNUP"
+          }
+        }).catch(() => {});
+      }
+    }
 
 
     return NextResponse.json({

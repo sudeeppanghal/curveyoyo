@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { prisma } from "@/lib/prisma";
 import MaintenanceGate from "./MaintenanceGate";
+import ReferralTracker from "@/components/ReferralTracker";
 import "./global.css";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,7 @@ export default async function RootLayout({
       </head>
       <body style={{ margin:0, padding:0, minHeight:"100vh", background:"#eef2f7", color:"#2d3748", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,sans-serif", WebkitFontSmoothing:"antialiased" }}>
         <MaintenanceGate initialMaintenance={isMaintenance} supportEmail={supportEmail}>
+          <ReferralTracker />
           {children}
         </MaintenanceGate>
       </body>

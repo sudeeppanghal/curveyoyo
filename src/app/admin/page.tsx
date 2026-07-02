@@ -70,7 +70,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates";
 
 const N = {
 
@@ -178,6 +178,24 @@ export default function AdminPage() {
   const [saved, setSaved] = useState("");
 
   const [error, setError] = useState("");
+
+  const [affiliateData, setAffiliateData] = useState<any>(null);
+  const [affiliateLoading, setAffiliateLoading] = useState(false);
+  const [affiliateSearchEmail, setAffiliateSearchEmail] = useState("bizanomarketing.carrd.co@gmail.com");
+
+  const fetchAffiliateStats = async (emailToSearch: string) => {
+    setAffiliateLoading(true);
+    try {
+      const res = await fetch(`/api/affiliate/stats?email=${encodeURIComponent(emailToSearch)}`, {
+        headers: { "x-admin-secret": localStorage.getItem("yoyo_admin_secret") || "" }
+      });
+      const d = await res.json();
+      if (d.success) setAffiliateData(d);
+      setAffiliateLoading(false);
+    } catch {
+      setAffiliateLoading(false);
+    }
+  };
 
   const [orderQuery, setOrderQuery] = useState("");
 
@@ -1441,7 +1459,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1458,7 +1476,8 @@ export default function AdminPage() {
               campaigns: "📦 ",
 
               system: "⚡ ",
-              tickets: "✉️ "
+              tickets: "✉️ ",
+              affiliates: "🤝 "
             };
 
             return (
@@ -3527,6 +3546,125 @@ export default function AdminPage() {
 
             </div>
 
+          )}
+
+          {tab === "affiliates" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: N.text }}>🤝 Affiliate & Partner Tracking</h2>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: N.muted }}>Monitor VIP affiliate links, conversion clicks, and 20% deposit commissions.</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <input
+                    type="text"
+                    value={affiliateSearchEmail}
+                    onChange={(e) => setAffiliateSearchEmail(e.target.value)}
+                    placeholder="Partner Email or Code"
+                    style={{ padding: "10px 16px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, fontSize: 13, fontWeight: 700 }}
+                  />
+                  <button
+                    onClick={() => fetchAffiliateStats(affiliateSearchEmail)}
+                    style={{ padding: "10px 20px", borderRadius: 12, background: N.accent, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", boxShadow: N.raisedSm }}
+                  >
+                    {affiliateLoading ? "Loading..." : "🔍 Inspect Partner"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick VIP Box for Bizano */}
+              <div style={{ padding: "20px 24px", borderRadius: 20, background: "linear-gradient(135deg, #1e293b, #0f172a)", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, boxShadow: N.raised }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#f59e0b", textTransform: "uppercase" }}>⭐ Special VIP Affiliate Account</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, marginTop: 4 }}>bizanomarketing.carrd.co@gmail.com</div>
+                  <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 2 }}>Assigned Referral Code: <b style={{ color: "#fff" }}>BIZANO20</b> · Commission: <b>20% on all deposits</b></div>
+                </div>
+                <button
+                  onClick={() => {
+                    setAffiliateSearchEmail("bizanomarketing.carrd.co@gmail.com");
+                    fetchAffiliateStats("bizanomarketing.carrd.co@gmail.com");
+                  }}
+                  style={{ padding: "12px 24px", borderRadius: 14, background: "#d97706", color: "#fff", fontWeight: 800, border: "none", cursor: "pointer", boxShadow: "0 4px 12px rgba(217,119,6,0.3)" }}
+                >
+                  📊 Load Bizano Stats Now
+                </button>
+              </div>
+
+              {affiliateData && affiliateData.affiliate && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+                    <div style={{ padding: 20, borderRadius: 18, background: N.bg, boxShadow: N.raised }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: N.muted }}>Total Link Clicks</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: N.text, marginTop: 6 }}>{affiliateData.affiliate.clicks || 0}</div>
+                    </div>
+                    <div style={{ padding: 20, borderRadius: 18, background: N.bg, boxShadow: N.raised }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: N.muted }}>Total Signups / Referrals</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: N.text, marginTop: 6 }}>{affiliateData.referredUsers?.length || 0}</div>
+                    </div>
+                    <div style={{ padding: 20, borderRadius: 18, background: N.bg, boxShadow: N.raised }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: N.muted }}>Total Earned Commission</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: "#16a34a", marginTop: 6 }}>₹{Number(affiliateData.affiliate.earnings || 0).toFixed(2)}</div>
+                    </div>
+                    <div style={{ padding: 20, borderRadius: 18, background: N.bg, boxShadow: N.raised }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: N.muted }}>Current Wallet Balance</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: N.text, marginTop: 6 }}>₹{Number(affiliateData.affiliate.balance || 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderRadius: 20, background: N.bg, boxShadow: N.raised, padding: 20 }}>
+                    <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 900, color: N.text }}>👥 Referred Accounts ({affiliateData.referredUsers?.length || 0})</h3>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${N.border}` }}>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Name</th>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Email</th>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Wallet Balance</th>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Joined</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {affiliateData.referredUsers?.map((u: any, i: number) => (
+                            <tr key={i} style={{ borderBottom: `1px solid ${N.border}` }}>
+                              <td style={{ padding: "12px 14px", fontWeight: 700 }}>{u.name}</td>
+                              <td style={{ padding: "12px 14px" }}>{u.email}</td>
+                              <td style={{ padding: "12px 14px", fontWeight: 800, color: "#16a34a" }}>₹{Number(u.balance || 0).toFixed(2)}</td>
+                              <td style={{ padding: "12px 14px", color: N.muted }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div style={{ borderRadius: 20, background: N.bg, boxShadow: N.raised, padding: 20 }}>
+                    <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 900, color: N.text }}>💰 Commission Log</h3>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${N.border}` }}>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Date</th>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Referred User</th>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Deposit Amount</th>
+                            <th style={{ padding: "10px 14px", color: N.muted }}>Commission Paid</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {affiliateData.transactions?.map((tx: any, i: number) => (
+                            <tr key={i} style={{ borderBottom: `1px solid ${N.border}` }}>
+                              <td style={{ padding: "12px 14px", color: N.muted }}>{new Date(tx.createdAt).toLocaleString()}</td>
+                              <td style={{ padding: "12px 14px", fontWeight: 700 }}>{tx.referredUser?.email || "User"}</td>
+                              <td style={{ padding: "12px 14px", fontWeight: 700 }}>₹{Number(tx.amountDeposit || 0).toFixed(2)}</td>
+                              <td style={{ padding: "12px 14px", fontWeight: 900, color: "#16a34a" }}>+₹{Number(tx.commissionEarned || 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {tab === "tickets" && (
