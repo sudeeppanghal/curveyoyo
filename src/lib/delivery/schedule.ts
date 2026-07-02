@@ -129,6 +129,15 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     return { ok: false, batchCount: 0, totalViews: 0, error: isWallet ? "No active admin panels configured" : "No active panels" };
   }
 
+  let viewsMinQty = 100;
+  try {
+    const platform = ((order as any).reel?.platform as string || "INSTAGRAM").toUpperCase();
+    const activeSvc = await prisma.adminService.findFirst({
+      where: { panelId: panelPool[0]?.id, platform: platform as any, type: "views" }
+    });
+    if (activeSvc && activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
+  } catch {}
+
   // Generate the S-curve batches
   const params: CurveParams = {
     totalViews: order.viewsTarget,
@@ -136,6 +145,7 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     warmupHours: order.warmupHours,
     peakHours: order.peakHours,
     style: order.curveStyle,
+    minQuantity: viewsMinQty,
   };
   const batches = generateDeliverySchedule(params);
 

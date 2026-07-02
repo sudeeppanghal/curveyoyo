@@ -109,13 +109,21 @@ async function handler(request: NextRequest) {
   const svcIds = panel.serviceIds as ServiceIds | null;
   const viewsServiceId = getServiceId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
 
+  let viewsMinQty = 100;
+  try {
+    const activeSvc = await prisma.adminService.findFirst({
+      where: { panelId: panel.id, platform: platform as any, type: "views" }
+    });
+    if (activeSvc && activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
+  } catch {}
+
   const startMs = Date.now();
 
   // ── 1. Place VIEWS order (with ±15% jitter for human-like variance) ────
   // CurvePioneer: "Real human traffic has variance. We add small random jitter
   // to each batch to prevent machine-flat delivery patterns."
   // The accumulation algorithm corrects for drift — totals always match target.
-  const jitteredViewsBatch = Math.max(100, applyJitter(viewsBatch, 0.15));
+  const jitteredViewsBatch = Math.max(viewsMinQty, applyJitter(viewsBatch, 0.15));
 
   let result = await placePanelOrder({
     apiUrl: panel.apiUrl,
@@ -150,12 +158,19 @@ async function handler(request: NextRequest) {
     if (failoverPanel) {
       const foSvcIds = failoverPanel.serviceIds as ServiceIds | null;
       const foViewsSvcId = getServiceId(foSvcIds, platform, "views") ?? order.panelServiceId ?? "1";
+      let foViewsMinQty = viewsMinQty;
+      try {
+        const foSvc = await prisma.adminService.findFirst({
+          where: { panelId: failoverPanel.id, platform: platform as any, type: "views" }
+        });
+        if (foSvc && foSvc.minQuantity > 0) foViewsMinQty = foSvc.minQuantity;
+      } catch {}
       result = await placePanelOrder({
         apiUrl: failoverPanel.apiUrl,
         apiKeyEncrypted: failoverPanel.apiKeyEncrypted,
         serviceId: foViewsSvcId,
         link: reelUrl,
-        quantity: Math.max(100, viewsBatch),
+        quantity: Math.max(foViewsMinQty, viewsBatch),
       });
       activePanel = failoverPanel;
       await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: failoverPanel.id } });

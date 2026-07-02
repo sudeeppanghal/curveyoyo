@@ -22,6 +22,7 @@ export interface CurveParams {
   // Timezone offset from UTC in hours (e.g. +5.5 for IST)
   tzOffsetHours?: number;
   intervalMinutes?: number;
+  minQuantity?: number;
 }
 
 export interface DeliveryBatch {
@@ -293,8 +294,8 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     distributedComments.push(roundedComments);
   }
 
-  // Enforce SMM minimum limit of 100 views per batch by merging smaller batches
-  const SMM_MIN = 100;
+  // Enforce SMM minimum limit (from AdminService or default 100) by merging smaller batches
+  const SMM_MIN = Math.max(10, params.minQuantity || 100);
   if (totalViews >= SMM_MIN) {
     let loopCount = 0;
     while (loopCount++ < 1000) {
