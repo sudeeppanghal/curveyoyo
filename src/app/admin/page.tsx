@@ -3137,7 +3137,7 @@ export default function AdminPage() {
 
                     <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
 
-                      {["User & Target Reel", "Speed & Curve", "Targets Overview", "Status", "Manual Overrides"].map((h) => (
+                      {["User & Reel", "Speed & Curve", "Progress (%)", "Views (Delivered / Target / Rem.)", "Engagement Tracking", "Status", "Manual Overrides"].map((h) => (
 
                         <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
 
@@ -3170,6 +3170,9 @@ export default function AdminPage() {
                       .map((o) => {
 
                         const statusColors: Record<string, string> = { DELIVERING: "#d97706", COMPLETED: "#16a34a", PAUSED: "#718096", CANCELLED: "#dc2626", FAILED: "#dc2626", QUEUED: "#2563eb" };
+                        const viewsDel = o.viewsDelivered || 0;
+                        const viewsRem = o.viewsRemaining !== undefined && o.viewsRemaining !== null ? o.viewsRemaining : Math.max(0, o.viewsTarget - viewsDel);
+                        const pct = o.status === "COMPLETED" ? 100 : (o.viewsTarget > 0 ? Math.min(100, Math.round((viewsDel / o.viewsTarget) * 100)) : 0);
 
                         return (
 
@@ -3211,19 +3214,50 @@ export default function AdminPage() {
                             </td>
 
                             <td style={{ padding: "14px 24px" }}>
+                              <div style={{ width: 110 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 11, fontWeight: 800, color: pct === 100 ? "#16a34a" : N.accent }}>
+                                  <span>{pct}%</span>
+                                  <span style={{ fontSize: 10, color: N.muted }}>{o.status === "COMPLETED" ? "Done" : `${viewsRem.toLocaleString()} rem.`}</span>
+                                </div>
+                                <div style={{ width: "100%", height: 8, background: "rgba(200, 208, 231, 0.4)", borderRadius: 999, overflow: "hidden" }}>
+                                  <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "#16a34a" : N.accent, borderRadius: 999, transition: "width 0.3s ease" }} />
+                                </div>
+                              </div>
+                            </td>
 
-                              <p style={{ color: N.text, margin: 0, fontWeight: 700, fontSize: 13 }}>👁 {o.viewsTarget.toLocaleString()} views</p>
-
-                              <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0", fontWeight: 600 }}>
-
-                                {o.likesTarget > 0 && `👍 ${o.likesTarget.toLocaleString()} `}
-
-                                {o.savesTarget > 0 && `🔖 ${o.savesTarget.toLocaleString()} `}
-
-                                {o.commentsTarget > 0 && `💬 ${o.commentsTarget.toLocaleString()}`}
-
+                            <td style={{ padding: "14px 24px" }}>
+                              <p style={{ color: "#16a34a", margin: 0, fontWeight: 800, fontSize: 13 }}>👁 {viewsDel.toLocaleString()} <span style={{ color: N.muted, fontSize: 11, fontWeight: 600 }}>/ {o.viewsTarget.toLocaleString()}</span></p>
+                              <p style={{ color: o.status === "COMPLETED" ? N.muted : "#d97706", fontSize: 11, margin: "4px 0 0", fontWeight: 700 }}>
+                                ⏳ {viewsRem.toLocaleString()} views left
                               </p>
+                            </td>
 
+                            <td style={{ padding: "14px 24px" }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, fontWeight: 700 }}>
+                                {o.likesTarget > 0 && (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.likesDelivered || 0) >= o.likesTarget ? "#16a34a" : N.text }}>
+                                    <span>👍</span> <span>{(o.likesDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.likesTarget.toLocaleString()}</span></span>
+                                  </div>
+                                )}
+                                {o.savesTarget > 0 && (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.savesDelivered || 0) >= o.savesTarget ? "#16a34a" : N.text }}>
+                                    <span>🔖</span> <span>{(o.savesDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.savesTarget.toLocaleString()}</span></span>
+                                  </div>
+                                )}
+                                {o.sharesTarget > 0 && (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.sharesDelivered || 0) >= o.sharesTarget ? "#16a34a" : N.text }}>
+                                    <span>📤</span> <span>{(o.sharesDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.sharesTarget.toLocaleString()}</span></span>
+                                  </div>
+                                )}
+                                {o.commentsTarget > 0 && (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.commentsDelivered || 0) >= o.commentsTarget ? "#16a34a" : N.text }}>
+                                    <span>💬</span> <span>{(o.commentsDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.commentsTarget.toLocaleString()}</span></span>
+                                  </div>
+                                )}
+                                {!(o.likesTarget > 0 || o.savesTarget > 0 || o.sharesTarget > 0 || o.commentsTarget > 0) && (
+                                  <span style={{ color: N.muted, fontStyle: "italic" }}>No extra engagement</span>
+                                )}
+                              </div>
                             </td>
 
                             <td style={{ padding: "14px 24px" }}>
