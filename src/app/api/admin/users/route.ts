@@ -21,7 +21,24 @@ export async function GET(request: NextRequest) {
     take: 10000,
   });
 
-  return NextResponse.json({ users });
+  const [spentGroup, cryptoGroup, upiGroup] = await Promise.all([
+    prisma.order.groupBy({ by: ['userId'], _sum: { priceCharged: true } }),
+    prisma.cryptoPayment.groupBy({ by: ['userId'], _sum: { amountUsdt: true }, where: { status: 'CONFIRMED' } }),
+    prisma.upiPayment.groupBy({ by: ['userId'], _sum: { amount: true }, where: { status: 'CONFIRMED' } }),
+  ]);
+
+  const spentMap = new Map(spentGroup.map(g => [g.userId, g._sum.priceCharged || 0]));
+  const cryptoMap = new Map(cryptoGroup.map(g => [g.userId, g._sum.amountUsdt || 0]));
+  const upiMap = new Map(upiGroup.map(g => [g.userId, g._sum.amount || 0]));
+
+  const enrichedUsers = users.map(user => ({
+    ...user,
+    totalSpent: spentMap.get(user.id) || 0,
+    totalDepositedUsdt: cryptoMap.get(user.id) || 0,
+    totalDepositedInr: upiMap.get(user.id) || 0,
+  }));
+
+  return NextResponse.json({ users: enrichedUsers });
 }
 
 /** PATCH /api/admin/users — upgrade, suspend, toggle wallet mode, or update balance */

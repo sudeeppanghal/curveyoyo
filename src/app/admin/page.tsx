@@ -1924,7 +1924,7 @@ export default function AdminPage() {
 
                       <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
 
-                        {["User / Email", "Joined", "Wallet", "Balance", "Plan", "Panels", "Campaigns", "Actions"].map((h) => (
+                        {["User / Email", "Joined", "Wallet", "Balance", "Deposited", "Spent", "Plan", "Panels", "Campaigns", "Actions"].map((h) => (
 
                           <th key={h} style={{ padding: "12px 8px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
 
@@ -2002,6 +2002,13 @@ export default function AdminPage() {
                             ) : (
                               <span style={{ fontSize: 12, color: N.muted, fontWeight: 600 }}>—</span>
                             )}
+                          </td>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}>
+                            ₹ {((u as any).totalDepositedInr || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}<br/>
+                            {((u as any).totalDepositedUsdt > 0) && <span style={{ fontSize: 10, color: N.muted }}>$ {((u as any).totalDepositedUsdt).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>}
+                          </td>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.accent, whiteSpace: "nowrap" }}>
+                            ₹ {((u as any).totalSpent || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </td>
                           <td style={{ padding: "12px 8px" }}>
                             <span style={{ fontSize: 10, fontWeight: 850, padding: "4px 8px", borderRadius: 6, background: PLAN_COLORS[u.plan] + "1A", color: PLAN_COLORS[u.plan] }}>{u.plan}</span>
