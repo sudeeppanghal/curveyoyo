@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 const N = {
   bg:        "#eef2f7",
@@ -23,8 +22,9 @@ export default function AutoOrdersPage() {
   const [form, setForm] = useState({
     username: "",
     platform: "INSTAGRAM",
-    templateId: "",
-    viewsTarget: 1000
+    templateIds: [] as string[],
+    viewsMin: 1000,
+    viewsMax: 5000,
   });
 
   useEffect(() => {
@@ -45,8 +45,8 @@ export default function AutoOrdersPage() {
       if (tempRes.ok) {
         const { curveTemplates } = await tempRes.json();
         setTemplates(curveTemplates);
-        if (curveTemplates.length > 0) {
-          setForm(prev => ({ ...prev, templateId: curveTemplates[0].id }));
+        if (curveTemplates.length > 0 && form.templateIds.length === 0) {
+          setForm(prev => ({ ...prev, templateIds: [curveTemplates[0].id] }));
         }
       }
     } catch (e) {
@@ -58,7 +58,8 @@ export default function AutoOrdersPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.username || !form.templateId) return alert("Username and Template required");
+    if (!form.username || form.templateIds.length === 0) return alert("Username and at least one Template are required.");
+    if (form.viewsMin >= form.viewsMax) return alert("Maximum views must be greater than Minimum views.");
     
     try {
       const res = await fetch("/api/auto-orders", {
@@ -67,7 +68,7 @@ export default function AutoOrdersPage() {
         body: JSON.stringify(form)
       });
       if (res.ok) {
-        alert("Auto-Order Subscription Created!");
+        alert("Auto-Order Tracker Created! We will now automatically send organic engagement to your new posts.");
         setForm({ ...form, username: "" });
         fetchData();
       } else {
@@ -80,7 +81,7 @@ export default function AutoOrdersPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this auto-order?")) return;
+    if (!confirm("Are you sure you want to stop tracking this account?")) return;
     try {
       const res = await fetch(`/api/auto-orders/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -98,7 +99,7 @@ export default function AutoOrdersPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "Default AI Pacing " + Math.floor(Math.random() * 1000),
+          name: "Organic Burst " + Math.floor(Math.random() * 1000),
           style: "SLOW_START",
           durationHours: 12,
           warmupHours: 2,
@@ -111,7 +112,7 @@ export default function AutoOrdersPage() {
         })
       });
       if (res.ok) {
-        alert("AI Template created successfully!");
+        alert("New Organic Burst Template created successfully! It is now available to select.");
         fetchData();
       } else {
         const err = await res.json();
@@ -124,140 +125,214 @@ export default function AutoOrdersPage() {
     }
   }
 
+  const toggleTemplate = (id: string) => {
+    setForm(prev => {
+      const selected = prev.templateIds.includes(id) 
+        ? prev.templateIds.filter(t => t !== id)
+        : [...prev.templateIds, id];
+      return { ...prev, templateIds: selected };
+    });
+  };
+
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, color: N.text, marginBottom: 8 }}>AI Social Media Automation 🚀</h1>
-      <p style={{ color: N.muted, marginBottom: 32 }}>Automatically place engagement orders whenever you post a new Reel or TikTok.</p>
+      <h1 style={{ fontSize: 26, fontWeight: 900, color: N.text, marginBottom: 8 }}>AI Organic Automation 🚀</h1>
+      <p style={{ color: N.muted, marginBottom: 32, fontSize: 15 }}>
+        Automatically track your social media profiles and deliver completely organic-looking, randomized engagement every time you post a new Reel or Video.
+      </p>
+
+      {/* WARNING BANNER */}
+      <div style={{ background: "#fff5f5", borderLeft: "5px solid #fc8181", padding: "16px 20px", borderRadius: "0 12px 12px 0", marginBottom: 32, boxShadow: "0 4px 10px rgba(229, 62, 62, 0.1)" }}>
+        <h4 style={{ color: "#c53030", margin: "0 0 6px 0", fontSize: 15, fontWeight: 800 }}>⚠️ Important Balance Warning</h4>
+        <p style={{ color: "#c53030", margin: 0, fontSize: 13, fontWeight: 600 }}>
+          Make sure you maintain sufficient wallet balance at all times. If your balance drops below the required amount when you post a new video, the auto-order will fail and will not be retried.
+        </p>
+      </div>
 
       {/* CREATE FORM */}
-      <div style={{ background: N.surface, boxShadow: N.raised, borderRadius: 20, padding: 32, marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: N.text, marginBottom: 20 }}>Create New Auto-Order</h2>
+      <div style={{ background: N.surface, boxShadow: N.raised, borderRadius: 24, padding: 36, marginBottom: 40 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: N.text, marginBottom: 24 }}>Add Profile Tracker</h2>
         
         {templates.length === 0 && (
-          <div style={{ padding: 20, background: "#fff5f5", border: "1px solid #fc8181", borderRadius: 12, marginBottom: 20 }}>
-            <p style={{ color: "#c53030", fontWeight: "bold", margin: 0, marginBottom: 12 }}>
-              Our AI requires a pacing template to know how to deliver your engagements. Let's create one quickly!
+          <div style={{ padding: 20, background: "rgba(217, 119, 6, 0.1)", borderRadius: 12, marginBottom: 24 }}>
+            <p style={{ color: N.accent, fontWeight: 800, margin: "0 0 12px 0" }}>
+              Our AI requires a pacing curve template to define how fast engagements arrive. Let's create one!
             </p>
             <button
               type="button"
               onClick={handleQuickTemplate}
-              style={{ padding: "10px 16px", background: "#e53e3e", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}
+              style={{ padding: "12px 20px", background: N.accentBg, color: "#fff", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 15px rgba(217, 119, 6, 0.3)" }}
             >
               Create Default AI Template
             </button>
           </div>
         )}
 
-        {templates.length > 0 && (
-          <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: N.muted, marginBottom: 8 }}>Platform</label>
-                <select 
-                  value={form.platform}
-                  onChange={e => setForm({...form, platform: e.target.value})}
-                  style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 600 }}
-                >
-                  <option value="INSTAGRAM">Instagram</option>
-                  <option value="TIKTOK">TikTok</option>
-                  <option value="FACEBOOK">Facebook</option>
-                </select>
-              </div>
-              
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: N.muted, marginBottom: 8 }}>Username / Handle</label>
-                <input 
-                  type="text" 
-                  value={form.username}
-                  onChange={e => setForm({...form, username: e.target.value})}
-                  placeholder="e.g. zuck"
-                  required
-                  style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 600 }}
-                />
-              </div>
+        <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {/* PROFILE SELECTION */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Platform</label>
+              <select 
+                value={form.platform}
+                onChange={e => setForm({...form, platform: e.target.value})}
+                style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 700, fontSize: 15 }}
+              >
+                <option value="INSTAGRAM">Instagram</option>
+                <option value="TIKTOK">TikTok</option>
+                <option value="FACEBOOK">Facebook</option>
+              </select>
             </div>
+            
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Username / Handle</label>
+              <input 
+                type="text" 
+                value={form.username}
+                onChange={e => setForm({...form, username: e.target.value})}
+                placeholder="e.g. zuck"
+                required
+                style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 700, fontSize: 15 }}
+              />
+            </div>
+          </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div style={{ height: 1, background: `linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent)` }} />
+
+          {/* VIEWS RANDOMIZATION */}
+          <div>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: N.text, marginBottom: 8 }}>Randomized Engagement Range (Looks Organic)</label>
+            <p style={{ color: N.muted, fontSize: 12, marginBottom: 16, fontWeight: 600 }}>Set a lower and upper limit. Every new reel will receive a randomized number of views and engagements within this range.</p>
+            
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
               <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: N.muted, marginBottom: 8 }}>Target Views per Post</label>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Minimum Views</label>
                 <input 
                   type="number" 
-                  value={form.viewsTarget}
-                  onChange={e => setForm({...form, viewsTarget: parseInt(e.target.value) || 0})}
-                  min="100"
+                  value={form.viewsMin}
+                  onChange={e => setForm({...form, viewsMin: parseInt(e.target.value) || 0})}
+                  min="500"
                   required
-                  style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 600 }}
+                  style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 15 }}
                 />
               </div>
-
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <label style={{ fontSize: 13, fontWeight: 700, color: N.muted }}>AI Pacing Template</label>
-                  <button type="button" onClick={handleQuickTemplate} style={{ fontSize: 11, fontWeight: 800, color: N.accent, background: "none", border: "none", cursor: "pointer" }}>+ New Template</button>
-                </div>
-                <select 
-                  value={form.templateId}
-                  onChange={e => setForm({...form, templateId: e.target.value})}
-                  style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 600 }}
-                >
-                  {templates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.style})</option>
-                  ))}
-                </select>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Maximum Views</label>
+                <input 
+                  type="number" 
+                  value={form.viewsMax}
+                  onChange={e => setForm({...form, viewsMax: parseInt(e.target.value) || 0})}
+                  min="500"
+                  required
+                  style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 15 }}
+                />
               </div>
             </div>
+          </div>
 
-            <button 
-              type="submit"
-              style={{
-                marginTop: 10,
-                padding: "16px",
-                borderRadius: 12,
-                border: "none",
-                background: N.accentBg,
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 15,
-                cursor: "pointer",
-                boxShadow: "0 4px 15px rgba(217, 119, 6, 0.4)"
-              }}
-            >
-              Start AI Auto-Ordering
-            </button>
-          </form>
-        )}
+          <div style={{ height: 1, background: `linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent)` }} />
+
+          {/* TEMPLATE MULTI-SELECT */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 800, color: N.text }}>AI Pacing Graphs</label>
+              <button type="button" onClick={handleQuickTemplate} style={{ fontSize: 12, fontWeight: 800, color: N.accent, background: "none", border: "none", cursor: "pointer", padding: "6px 12px", borderRadius: 8, backgroundColor: "rgba(217, 119, 6, 0.1)" }}>+ Add New Graph</button>
+            </div>
+            <p style={{ color: N.muted, fontSize: 12, marginBottom: 16, fontWeight: 600 }}>Select multiple graphs! The AI will randomly pick one of your selected graphs for every new post to ensure no two posts look exactly the same.</p>
+            
+            {templates.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                {templates.map(t => {
+                  const isSelected = form.templateIds.includes(t.id);
+                  return (
+                    <div 
+                      key={t.id} 
+                      onClick={() => toggleTemplate(t.id)}
+                      style={{ 
+                        padding: "12px 16px", 
+                        borderRadius: 12, 
+                        background: isSelected ? N.accentBg : N.bg, 
+                        boxShadow: isSelected ? "0 4px 15px rgba(217, 119, 6, 0.3)" : N.raisedSm,
+                        color: isSelected ? "#fff" : N.text,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: "pointer",
+                        border: isSelected ? "none" : `1px solid rgba(0,0,0,0.02)`,
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      {t.name} <span style={{ opacity: 0.8, fontSize: 11, marginLeft: 4 }}>({t.style})</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <button 
+            type="submit"
+            disabled={templates.length === 0}
+            style={{
+              marginTop: 16,
+              padding: "18px",
+              borderRadius: 16,
+              border: "none",
+              background: templates.length === 0 ? N.faint : N.accentBg,
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: 16,
+              cursor: templates.length === 0 ? "not-allowed" : "pointer",
+              boxShadow: templates.length === 0 ? "none" : "0 8px 25px rgba(217, 119, 6, 0.4)",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+          >
+            Start Tracking & Automating 🔥
+          </button>
+        </form>
       </div>
 
       {/* LIST */}
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: N.text, marginBottom: 20 }}>Your Active Trackers</h2>
+      <h2 style={{ fontSize: 20, fontWeight: 800, color: N.text, marginBottom: 20 }}>Your Active Trackers</h2>
       
-      {loading ? <p>Loading...</p> : subs.length === 0 ? (
-        <p style={{ color: N.muted }}>You don't have any auto-orders set up yet.</p>
+      {loading ? <p style={{ color: N.muted, fontWeight: 600 }}>Loading trackers...</p> : subs.length === 0 ? (
+        <p style={{ color: N.muted, fontWeight: 600 }}>You don't have any auto-orders set up yet.</p>
       ) : (
-        <div style={{ display: "grid", gap: 20 }}>
+        <div style={{ display: "grid", gap: 24 }}>
           {subs.map(sub => (
-            <div key={sub.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: N.surface, boxShadow: N.raised, borderRadius: 20, padding: 24 }}>
+            <div key={sub.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: N.surface, boxShadow: N.raised, borderRadius: 24, padding: "24px 32px" }}>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 800, color: N.text }}>@{sub.username}</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>@{sub.username}</h3>
                   <span style={{ 
-                    fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 8,
+                    fontSize: 10, fontWeight: 800, padding: "6px 10px", borderRadius: 8, textTransform: "uppercase",
                     background: sub.status === "ACTIVE" ? "#dcfce7" : "#fee2e2",
                     color: sub.status === "ACTIVE" ? "#166534" : "#991b1b"
                   }}>
                     {sub.status}
                   </span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: N.muted, background: "rgba(0,0,0,0.05)", padding: "4px 8px", borderRadius: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: N.muted, background: "rgba(0,0,0,0.05)", padding: "6px 10px", borderRadius: 8 }}>
                     {sub.platform}
                   </span>
                 </div>
-                <p style={{ fontSize: 13, color: N.muted, fontWeight: 600, margin: 0 }}>
-                  Target: <strong style={{ color: N.text }}>{sub.viewsTarget} Views</strong> • 
-                  Template: <strong style={{ color: N.text }}>{sub.template?.name}</strong>
-                </p>
+                
+                <div style={{ display: "flex", gap: 24 }}>
+                  <div>
+                    <p style={{ fontSize: 11, color: N.muted, fontWeight: 700, margin: "0 0 4px 0", textTransform: "uppercase" }}>Random Views</p>
+                    <p style={{ fontSize: 14, color: N.text, fontWeight: 800, margin: 0 }}>
+                      {sub.viewsMin?.toLocaleString()} - {sub.viewsMax?.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, color: N.muted, fontWeight: 700, margin: "0 0 4px 0", textTransform: "uppercase" }}>AI Graphs Selected</p>
+                    <p style={{ fontSize: 14, color: N.text, fontWeight: 800, margin: 0 }}>
+                      {sub.templateIds?.length || 1} {sub.templateIds?.length === 1 ? 'Graph' : 'Graphs'}
+                    </p>
+                  </div>
+                </div>
+
                 {sub.lastPostId && (
-                  <p style={{ fontSize: 12, color: N.faint, marginTop: 6, margin: 0 }}>
-                    Last scanned post: {sub.lastPostId}
+                  <p style={{ fontSize: 12, color: N.accent, fontWeight: 700, marginTop: 12, margin: "12px 0 0 0" }}>
+                    Last tracked post: {sub.lastPostId}
                   </p>
                 )}
               </div>
@@ -265,16 +340,19 @@ export default function AutoOrdersPage() {
               <button 
                 onClick={() => handleDelete(sub.id)}
                 style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
+                  padding: "12px 20px",
+                  borderRadius: 12,
                   border: "none",
                   background: N.bg,
                   boxShadow: N.raisedSm,
                   color: "#dc2626",
-                  fontWeight: 700,
+                  fontWeight: 800,
                   fontSize: 13,
                   cursor: "pointer",
+                  transition: "background 0.2s"
                 }}
+                onMouseOver={e => e.currentTarget.style.background = "#fee2e2"}
+                onMouseOut={e => e.currentTarget.style.background = N.bg}
               >
                 Delete Tracker
               </button>

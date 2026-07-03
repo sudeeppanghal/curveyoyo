@@ -1961,7 +1961,7 @@ export default function AdminPage() {
 
                         <tr key={u.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
-                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, maxWidth: 200, wordBreak: "break-all" }}>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, minWidth: 180, wordBreak: "break-word" }}>
                             {u.name && <div style={{ fontSize: 13, fontWeight: 800, color: N.text }}>{u.name}</div>}
                             <div style={{ fontSize: u.name ? 11 : 12, color: u.name ? N.muted : N.text, fontWeight: 600 }}>{u.email}</div>
                           </td>
