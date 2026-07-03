@@ -1973,9 +1973,9 @@ export default function NewReelPage() {
         <div style={{ borderRadius:24, padding:28, background:N.bg, boxShadow:N.raised, display:"flex", flexDirection:"column", gap:20, animation:"fadeUp 0.3s ease" }}>
           <h2 style={{ fontSize:14, fontWeight:800, color:N.text, margin:0 }}>4. Confirm Campaign</h2>
 
-          {((totalLikes > 0 && totalLikes < 10) || (totalSaves > 0 && totalSaves < 10) || (totalShares > 0 && totalShares < 10) || (totalComments > 0 && totalComments < 5)) && (
+          {((totalLikes > 0 && totalLikes < 50) || (totalSaves > 0 && totalSaves < 50) || (totalShares > 0 && totalShares < 50) || (totalComments > 0 && totalComments < 20)) && (
             <div style={{ padding: 14, borderRadius: 14, background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444", fontSize: 12, fontWeight: 700, lineHeight: 1.4 }}>
-              ⚠️ Supplier Minimum Notice: Your order contains engagement metrics below supplier minimum thresholds (Likes: 10, Saves: 10, Shares/Reposts: 10, Comments: 5). Because they are below the minimum limit, those specific metrics cannot and will not be delivered.
+              ⚠️ Organic Pacing Warning: Your total engagement targets (e.g., Likes: {totalLikes}) are quite low. Our AI splits your delivery into multiple small micro-batches over time. Supplier panels require a strict minimum (usually 10 per request). Because your micro-batches may be smaller than 10, the supplier may reject them, resulting in non-delivery. We recommend ordering more views or increasing engagement percentages so your targets exceed 50!
             </div>
           )}
 
