@@ -46,9 +46,14 @@ const RATES: Record<string, number> = {
   AGGRESSIVE: 2.0,
   WHOP:       0.65,
   CLIPSTAKE:  1.0,
-  CLIPSTAR:   1.5,
-  PICSART:    0.75,
-  CROSSWAVE:  0.9,
+  CROSSWAVE:       0.9,
+  VYRO:            1.6,
+  CLIPPING_NET:    1.1,
+  CONTENT_REWARDS: 0.85,
+  PROMOTE_FUN:     2.2,
+  CLIP_AFFILIATES: 0.75,
+  OVERLAP_AI:      0.6,
+  GENNI:           1.3,
 };
 
 /**

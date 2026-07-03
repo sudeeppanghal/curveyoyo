@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { sendTelegramAlert } from "@/lib/telegram";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -67,6 +68,13 @@ export async function POST(request: NextRequest) {
     }
   });
 
+  sendTelegramAlert(
+    `🎫 *New Support Ticket Opened!*\n\n` +
+    `👤 *User:* \`${dbUser.email}\`\n` +
+    `📌 *Subject:* ${subject.trim()}\n` +
+    `💬 *Message:* ${message.trim().slice(0, 300)}`
+  ).catch(console.error);
+
   return NextResponse.json({ ticket }, { status: 201 });
 }
 
@@ -95,6 +103,13 @@ export async function PUT(request: NextRequest) {
       message: message.trim()
     }
   });
+
+  sendTelegramAlert(
+    `📩 *New Ticket Reply from User!*\n\n` +
+    `👤 *User:* \`${dbUser.email}\`\n` +
+    `📌 *Ticket Subject:* ${ticket.subject}\n` +
+    `💬 *Reply:* ${message.trim().slice(0, 300)}`
+  ).catch(console.error);
 
   if (ticket.status !== "OPEN") {
     await prisma.supportTicket.update({

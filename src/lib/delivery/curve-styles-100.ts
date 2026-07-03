@@ -118,9 +118,9 @@ export const CURVE_100_LIST: CurveStyleConfig[] = [
     evalCurve: (t, p) => Math.exp(-p * 4.5) + 0.15
   },
   {
-    id: "CROSSWAVE", num: 17, label: "Multiple Spikes", desc: "Oscillatory crest/trough waves simulating syndication pulses.",
-    warmup: 4, peak: 8, icon: "🌊", category: "Standard",
-    stroke: "#1e90ff", glow: "rgba(30, 144, 255, 0.45)", stop: "#1268b8",
+    id: "CROSSWAVE", num: 17, label: "CrossWave Pulse", desc: "Multi-account syndication waves simulating algorithmic cross-posting.",
+    warmup: 4, peak: 8, icon: "🌊", category: "Clipping Platforms",
+    stroke: "#06b6d4", glow: "rgba(6, 182, 212, 0.45)", stop: "#0e7490",
     evalCurve: (t, p) => 0.5 + 0.4 * Math.sin(p * 6 * Math.PI)
   },
   {
@@ -130,9 +130,9 @@ export const CURVE_100_LIST: CurveStyleConfig[] = [
     evalCurve: (t, p) => Math.exp(-Math.pow((p - 0.5) / 0.08, 2)) + 0.08
   },
   {
-    id: "WHOP", num: 19, label: "Plateau", desc: "Commerce activity profile — sustained high-volume plateau.",
-    warmup: 5, peak: 10, icon: "💳", category: "Standard",
-    stroke: "#ff6347", glow: "rgba(255, 99, 71, 0.45)", stop: "#b84531",
+    id: "WHOP", num: 19, label: "Whop Plateau", desc: "Sustained high-volume commerce plateau matching community product drops.",
+    warmup: 5, peak: 10, icon: "💳", category: "Clipping Platforms",
+    stroke: "#10b981", glow: "rgba(16, 185, 129, 0.45)", stop: "#047857",
     evalCurve: (t, p) => (p > 0.25 && p < 0.75) ? 1.0 : (p <= 0.25 ? p * 4 : (1 - p) * 4)
   },
   {
@@ -636,6 +636,49 @@ export const CURVE_100_LIST: CurveStyleConfig[] = [
     warmup: 4, peak: 10, icon: "🎛️", category: "Pro Formations",
     stroke: "#ff0055", glow: "rgba(255, 0, 85, 0.45)", stop: "#c0003c",
     evalCurve: (t, p) => 0.2 + 0.5 * (1 / (1 + Math.exp(-6 * (p - 0.4)))) + 0.2 * Math.sin(p * 4 * Math.PI)
+  },
+  // ── Clipping Platforms ──
+  {
+    id: "VYRO", num: 101, label: "Vyro AI Spike", desc: "Aggressive explosive initial reach with steady organic retention.",
+    warmup: 2, peak: 6, icon: "⚡", category: "Clipping Platforms",
+    stroke: "#8b5cf6", glow: "rgba(139, 92, 246, 0.45)", stop: "#5b21b6",
+    evalCurve: (t, p) => Math.pow(p, 0.4) + 0.1
+  },
+  {
+    id: "CLIPPING_NET", num: 102, label: "Clipping.net Ladder", desc: "Step-wise stair-ladder growth matching streamer highlight drops.",
+    warmup: 3, peak: 8, icon: "🪜", category: "Clipping Platforms",
+    stroke: "#f97316", glow: "rgba(249, 115, 22, 0.45)", stop: "#c2410c",
+    evalCurve: (t, p) => Math.floor(p * 5) / 5 + 0.1 * ((p * 5) % 1)
+  },
+  {
+    id: "CONTENT_REWARDS", num: 103, label: "Bounty Ramp", desc: "Calibrated linear-to-exponential escalation passing PPV anti-cheat audits.",
+    warmup: 4, peak: 10, icon: "🏆", category: "Clipping Platforms",
+    stroke: "#f59e0b", glow: "rgba(245, 158, 11, 0.45)", stop: "#b45309",
+    evalCurve: (t, p) => 3 * p * p - 2 * Math.pow(p, 3) + 0.1
+  },
+  {
+    id: "PROMOTE_FUN", num: 104, label: "FOMO Blast", desc: "Parabolic late-stage acceleration curve building into a massive contest frenzy.",
+    warmup: 6, peak: 14, icon: "🚀", category: "Clipping Platforms",
+    stroke: "#ec4899", glow: "rgba(236, 72, 153, 0.45)", stop: "#be185d",
+    evalCurve: (t, p) => Math.pow(p, 2.2) + 0.1
+  },
+  {
+    id: "CLIP_AFFILIATES", num: 105, label: "Prime Bell-Curve", desc: "Gaussian distribution centered specifically around prime shopping hours.",
+    warmup: 4, peak: 12, icon: "🛍️", category: "Clipping Platforms",
+    stroke: "#3b82f6", glow: "rgba(59, 130, 246, 0.45)", stop: "#1d4ed8",
+    evalCurve: (t, p) => Math.exp(-Math.pow((p - 0.6) * 3, 2)) + 0.15
+  },
+  {
+    id: "OVERLAP_AI", num: 106, label: "Algorithmic Drip", desc: "Ultra-smooth continuous drip delivery simulating natural FYP algorithmic discovery.",
+    warmup: 6, peak: 16, icon: "🤖", category: "Clipping Platforms",
+    stroke: "#6366f1", glow: "rgba(99, 102, 241, 0.45)", stop: "#4338ca",
+    evalCurve: (t, p) => Math.log(1 + p * 9) / Math.log(10) + 0.1
+  },
+  {
+    id: "GENNI", num: 107, label: "Smart Oscillation", desc: "Intelligent pulsating pattern mimicking real-time user share bursts.",
+    warmup: 3, peak: 9, icon: "✨", category: "Clipping Platforms",
+    stroke: "#f43f5e", glow: "rgba(244, 63, 94, 0.45)", stop: "#be123c",
+    evalCurve: (t, p) => p + 0.15 * Math.sin(p * Math.PI * 4) + 0.1
   }
 ];
 

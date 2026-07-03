@@ -213,6 +213,7 @@ export default function DashboardPage() {
     { label:"Create Order",    href:"/reels/new",    icon:"⚡", desc:"Start organic S-curve delivery" },
     { label:"Add New Reel",    href:"/reels/new",    icon:"🎬", desc:"Import a reel URL to track" },
     { label:"View Analytics",  href:"/analytics",    icon:"📊", desc:"Track views & engagement" },
+    { label:"Clipping Graphs", href:"/analytics",    icon:"📈", desc:"Explore Whop, CrossWave & clipping algorithms" },
     ...(userEmail.toLowerCase() === "bizanomarketing.carrd.co@gmail.com" || stats?.activePanels !== undefined ? [{ label:"VIP Affiliate", href:"/affiliate", icon:"🤝", desc:"Earn 20% partner commissions" }] : []),
   ];
 

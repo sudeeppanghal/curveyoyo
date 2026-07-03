@@ -74,6 +74,62 @@ const HOMEPAGE_CURVES_INFO: Record<string, { label: string; icon: string; bestFo
     why: "Oscillatory crests and troughs simulating multiple syndication shares across different networks.",
     duration: "48h - 120h",
     details: "Warmup: 4h · Peak: 8h. Periodic wave patterns mimicking platform sharing schedules."
+  },
+  VYRO: {
+    label: "Vyro",
+    icon: "⚡",
+    bestFor: "Vyro AI Video & Edits Monetization",
+    why: "Aggressive explosive initial reach in the first few hours (algorithmic hook test), settling into a solid organic retention tail.",
+    duration: "12h - 48h",
+    details: "Warmup: 2h · Peak: 6h. Optimized for AI short-form virality."
+  },
+  CLIPPING_NET: {
+    label: "Clipping.net",
+    icon: "🪜",
+    bestFor: "Clipping.net Streamer Highlights & Twitch Clips",
+    why: "Step-wise progressive stair-ladder growth matching post-stream clip compilation releases and community sharing triggers.",
+    duration: "24h - 72h",
+    details: "Warmup: 3h · Peak: 8h. Step-ladder accumulation for clip drops."
+  },
+  CONTENT_REWARDS: {
+    label: "Content Rewards",
+    icon: "🏆",
+    bestFor: "Pay-per-view Creator Bounty Platforms",
+    why: "Calibrated linear-to-exponential escalation that passes PPV anti-bot audit checks with zero sudden velocity anomalies.",
+    duration: "24h - 96h",
+    details: "Warmup: 4h · Peak: 10h. Algorithmic bounty ramp for payout verification."
+  },
+  PROMOTE_FUN: {
+    label: "Promote.fun",
+    icon: "🚀",
+    bestFor: "Promote.fun Memecoin, Crypto & Viral Contests",
+    why: "Parabolic late-stage acceleration curve that starts slow and builds into a massive viral frenzy toward the end of the campaign window.",
+    duration: "12h - 36h",
+    details: "Warmup: 6h · Peak: 14h. Parabolic FOMO acceleration curve."
+  },
+  CLIP_AFFILIATES: {
+    label: "ClipAffiliates",
+    icon: "🛍️",
+    bestFor: "TikTok Shop & E-commerce Affiliate Clippers",
+    why: "Heavy distribution centered specifically around prime evening shopping hours (6 PM - 11 PM) when conversion rates peak.",
+    duration: "24h - 48h",
+    details: "Warmup: 4h · Peak: 12h. Gaussian distribution for prime conversion windows."
+  },
+  OVERLAP_AI: {
+    label: "Overlap AI",
+    icon: "🤖",
+    bestFor: "AI-Generated Podcasting & Split-Screen Edits",
+    why: "Ultra-smooth continuous drip delivery that simulates organic FYP (For You Page) algorithmic discovery over multi-day spans.",
+    duration: "48h - 168h",
+    details: "Warmup: 6h · Peak: 16h. Logarithmic steady drip crawl."
+  },
+  GENNI: {
+    label: "Genni",
+    icon: "✨",
+    bestFor: "Genni AI Smart Clips & Automated UGC Campaigns",
+    why: "Intelligent pulsating delivery pattern that mimics natural real-time user share bursts and saves cascades.",
+    duration: "24h - 72h",
+    details: "Warmup: 3h · Peak: 9h. Pulsating smart algorithmic oscillation."
   }
 };
 
@@ -137,7 +193,7 @@ const grid = (cols: string, gap: number): React.CSSProperties => ({
 export default function Home() {
   const [activeFeature, setActiveFeature] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const [curveStyle, setCurveStyle] = useState<"ORGANIC"|"UNIVERSAL"|"WHOP"|"CLIPSTAKE"|"CLIPSTAR"|"PICSART"|"CROSSWAVE">("ORGANIC");
+  const [curveStyle, setCurveStyle] = useState<string>("ORGANIC");
   const [duration, setDuration] = useState(24);
   const [openFaq, setOpenFaq] = useState<number|null>(null);
   useEffect(() => {
@@ -297,15 +353,15 @@ export default function Home() {
               <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase", color:C.textMuted, marginBottom:16 }}>
                 1. Choose Delivery Style
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(90px, 1fr))", gap:10, marginBottom:28 }}>
-                {(["ORGANIC","UNIVERSAL","WHOP","CLIPSTAKE","CLIPSTAR","PICSART","CROSSWAVE"] as const).map(s => (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(105px, 1fr))", gap:8, marginBottom:28 }}>
+                {(["ORGANIC","UNIVERSAL","WHOP","CROSSWAVE","VYRO","CLIPPING_NET","CONTENT_REWARDS","PROMOTE_FUN","CLIP_AFFILIATES","OVERLAP_AI","GENNI","CLIPSTAKE","CLIPSTAR","PICSART"] as const).map(s => (
                   <button key={s} onClick={() => setCurveStyle(s)} style={{
                     padding:"10px 4px", borderRadius:12, border:"none",
                     background: curveStyle===s ? C.bg : "transparent",
                     color: curveStyle===s ? C.amber : C.textMuted,
                     fontSize:11, fontWeight:800, cursor:"pointer", transition:"all 0.2s",
                     boxShadow: curveStyle===s ? C.inset : C.raisedSm,
-                  }}>{s}</button>
+                  }}>{HOMEPAGE_CURVES_INFO[s]?.label || s}</button>
                 ))}
               </div>
               <div style={{ ...flex("center","space-between"), marginBottom:12 }}>
@@ -496,7 +552,7 @@ export default function Home() {
   );
 }
 /* ─── Curve Chart ─────────────────────────────────── */
-function CurveChart({ style, duration }: { style: "ORGANIC" | "UNIVERSAL" | "WHOP" | "CLIPSTAKE" | "CLIPSTAR" | "PICSART" | "CROSSWAVE"; duration:number }) {
+function CurveChart({ style, duration }: { style: string; duration:number }) {
   const N = 26;
   const pts: number[] = [];
   for (let i = 0; i < N; i++) {
@@ -525,6 +581,28 @@ function CurveChart({ style, duration }: { style: "ORGANIC" | "UNIVERSAL" | "WHO
       v = 45 + 35 * Math.sin((x * Math.PI * 3.5) / duration) * Math.sin((x * Math.PI * 0.8) / duration);
     } else if (style === "CROSSWAVE") {
       v = 50 + 30 * Math.sin((x * Math.PI * 4) / duration) * Math.cos((x * Math.PI * 1.5) / duration);
+    } else if (style === "VYRO") {
+      v = 85 * Math.pow(x / duration, 0.35) + 15 * Math.exp(-x / (duration * 0.3));
+    } else if (style === "CLIPPING_NET") {
+      const steps = 5;
+      const progress = x / duration;
+      v = 20 + 70 * (Math.floor(progress * steps) / steps) + 10 * Math.sin(progress * Math.PI * 8);
+    } else if (style === "CONTENT_REWARDS") {
+      const p = x / duration;
+      v = 15 + 85 * (3 * p * p - 2 * Math.pow(p, 3));
+    } else if (style === "PROMOTE_FUN") {
+      const p = x / duration;
+      v = 10 + 90 * Math.pow(p, 2.4);
+    } else if (style === "CLIP_AFFILIATES") {
+      const peak = duration * 0.75;
+      const sigma = duration * 0.15;
+      v = 95 * Math.exp(-Math.pow(x - peak, 2) / (2 * Math.pow(sigma, 2))) + 15;
+    } else if (style === "OVERLAP_AI") {
+      const p = x / duration;
+      v = 25 + 75 * (Math.log(1 + p * 9) / Math.log(10));
+    } else if (style === "GENNI") {
+      const p = x / duration;
+      v = 30 + 55 * p + 20 * Math.sin(p * Math.PI * 5);
     }
     pts.push(Math.max(3, v + Math.sin(i * 1.2) * 1.0));
   }
@@ -541,7 +619,14 @@ function CurveChart({ style, duration }: { style: "ORGANIC" | "UNIVERSAL" | "WHO
     CLIPSTAKE: { color: "#ef4444", glow: "rgba(239, 68, 68, 0.4)",   dot: "#fee2e2", gradStart: "#fca5a5" }, // Red
     CLIPSTAR:  { color: "#3b82f6", glow: "rgba(59, 130, 246, 0.4)",  dot: "#eff6ff", gradStart: "#93c5fd" }, // Blue
     PICSART:   { color: "#ec4899", glow: "rgba(236, 72, 153, 0.4)",  dot: "#fdf2f8", gradStart: "#fbcfe8" }, // Pink
-    CROSSWAVE: { color: "#06b6d4", glow: "rgba(6, 182, 212, 0.4)",   dot: "#ecfeff", gradStart: "#67e8f9" }, // Cyan
+    CROSSWAVE:       { color: "#06b6d4", glow: "rgba(6, 182, 212, 0.4)",   dot: "#ecfeff", gradStart: "#67e8f9" }, // Cyan
+    VYRO:            { color: "#8b5cf6", glow: "rgba(139, 92, 246, 0.4)",  dot: "#f5f3ff", gradStart: "#c4b5fd" }, // Violet
+    CLIPPING_NET:    { color: "#f97316", glow: "rgba(249, 115, 22, 0.4)",  dot: "#fff7ed", gradStart: "#fdba74" }, // Orange
+    CONTENT_REWARDS: { color: "#f59e0b", glow: "rgba(245, 158, 11, 0.4)",  dot: "#fffbeb", gradStart: "#fde68a" }, // Amber
+    PROMOTE_FUN:     { color: "#ec4899", glow: "rgba(236, 72, 153, 0.4)",  dot: "#fdf2f8", gradStart: "#fbcfe8" }, // Pink
+    CLIP_AFFILIATES: { color: "#3b82f6", glow: "rgba(59, 130, 246, 0.4)",  dot: "#eff6ff", gradStart: "#93c5fd" }, // Blue
+    OVERLAP_AI:      { color: "#6366f1", glow: "rgba(99, 102, 241, 0.4)",  dot: "#eef2ff", gradStart: "#a5b4fc" }, // Indigo
+    GENNI:           { color: "#f43f5e", glow: "rgba(244, 63, 94, 0.4)",   dot: "#fff1f2", gradStart: "#fda4af" }, // Rose
   };
   const theme = COLOR_MAP[style] || COLOR_MAP.ORGANIC;
   return (

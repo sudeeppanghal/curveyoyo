@@ -994,7 +994,7 @@ export default function NewReelPage() {
   const [selectedViewsService, setSelectedViewsService] = useState<"views" | "reach_impressions_views">("views");
   const [durationDays, setDurationDays] = useState(7);
   const [style, setStyle] = useState<CurveStyle>("ORGANIC");
-  const [selectedCategory, setSelectedCategory] = useState("All (100)");
+  const [selectedCategory, setSelectedCategory] = useState("All (107)");
 
   // Step 3 ── Engagement
   const [engEnabled, setEngEnabled] = useState(true);
@@ -1768,15 +1768,15 @@ export default function NewReelPage() {
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
                     <div>
-                      <h3 style={{ fontSize: 16, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0", letterSpacing: "-0.3px" }}>3. Drip Pacing &amp; Flow Settings (100 Neon Growth Graphs)</h3>
-                      <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select from 100 specialized neon animated growth algorithms to customize your delivery profile</p>
+                      <h3 style={{ fontSize: 16, fontWeight: 900, color: "#f3e8ff", margin: "0 0 4px 0", letterSpacing: "-0.3px" }}>3. Drip Pacing &amp; Flow Settings (107 Neon Growth Graphs &amp; Clipping Profiles)</h3>
+                      <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, margin: 0 }}>Select from 107 specialized neon animated growth algorithms &amp; clipping platform profiles to customize your delivery</p>
                     </div>
                   </div>
 
                   {/* Category Filter Tabs */}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, padding: "4px 0" }}>
                     {[
-                      "All (100)", "Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized",
+                      "All (107)", "Clipping Platforms", "Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized",
                       "Patterns", "Cycles & Trends", "Technical Formations", "Chart Patterns", "Pro Formations"
                     ].map((cat) => {
                       const isCatActive = selectedCategory === cat;
@@ -1814,7 +1814,7 @@ export default function NewReelPage() {
                     scrollBehavior: "smooth"
                   }}>
                     {CURVE_100_LIST
-                      .filter((item) => selectedCategory === "All (100)" || item.category === selectedCategory)
+                      .filter((item) => selectedCategory === "All (107)" || item.category === selectedCategory)
                       .map((item) => {
                         const s = item.id;
                         const isSelected = style === s;

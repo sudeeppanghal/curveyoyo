@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { verifyTRC20, verifyBEP20 } from "@/lib/crypto-verify";
 import { sendPaymentConfirmedEmail } from "@/lib/email";
+import { sendTelegramAlert } from "@/lib/telegram";
 
 /**
  * POST /api/billing/submit-payment
@@ -51,6 +52,16 @@ export async function POST(request: NextRequest) {
           status: "PENDING",
         },
       });
+
+      sendTelegramAlert(
+        `💰 *New Crypto Deposit Submitted!*\n\n` +
+        `👤 *User:* \`${dbUser.email}\`\n` +
+        `💵 *Amount:* \`$${usdtAmount} USDT\`\n` +
+        `🌐 *Network:* \`${network}\`\n` +
+        `🔗 *TXID:* \`${cleanTxHash}\`\n\n` +
+        `⏳ *Status:* Pending Admin Verification`
+      ).catch(console.error);
+
       return NextResponse.json({
         ok: true,
         message: "✅ Crypto deposit request submitted! Admin will verify and credit INR balance within 10-15 minutes.",
@@ -88,6 +99,14 @@ export async function POST(request: NextRequest) {
         status: "PENDING",
       },
     });
+
+    sendTelegramAlert(
+      `💸 *New UPI Deposit Submitted!*\n\n` +
+      `👤 *User:* \`${dbUser.email}\`\n` +
+      `₹ *Amount:* \`₹${amount.toLocaleString()}\`\n` +
+      `🔢 *UTR Number:* \`${cleanUtr}\`\n\n` +
+      `⏳ *Status:* Pending Admin Verification`
+    ).catch(console.error);
 
     return NextResponse.json({
       ok: true,

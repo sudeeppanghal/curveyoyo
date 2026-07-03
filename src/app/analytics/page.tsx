@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { CURVE_DESCRIPTIONS_100, STYLE_NEON_COLORS_100 } from "@/lib/delivery/curve-styles-100";
 
 const N = {
   bg:       "#eef2f7",
@@ -21,8 +22,6 @@ interface Stats {
   plan: string; trialEndsAt: string | null; lifetimeUnlocked: boolean;
 }
 
-const STYLE_ICONS: Record<string, string> = { ORGANIC: "🌅", FAST: "⚡", AGGRESSIVE: "🔥" };
-
 function NeoCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return <div style={{ borderRadius:20, padding:24, background:N.bg, boxShadow:N.raised, ...style }}>{children}</div>;
 }
@@ -39,6 +38,145 @@ function NeoBar({ views, max, label }: { views: number; max: number; label: stri
         </span>
       </div>
     </div>
+  );
+}
+
+function ClippingPlatformExplorer() {
+  const platforms = [
+    "WHOP", "CROSSWAVE", "VYRO", "CLIPPING_NET", "CONTENT_REWARDS",
+    "PROMOTE_FUN", "CLIP_AFFILIATES", "OVERLAP_AI", "GENNI"
+  ];
+  const [selected, setSelected] = useState<string>("WHOP");
+  const info = CURVE_DESCRIPTIONS_100[selected] || { label: selected, desc: "", icon: "📊", warmup: 4, peak: 8 };
+  const neon = STYLE_NEON_COLORS_100[selected] || { stroke: "#d97706", glow: "rgba(217, 119, 6, 0.4)", stop: "#ea580c" };
+
+  const N_PTS = 26;
+  const duration = 24;
+  const pts: number[] = [];
+  for (let i = 0; i < N_PTS; i++) {
+    const x = (i / (N_PTS - 1)) * duration;
+    let v = 0;
+    if (selected === "WHOP") {
+      v = (x > 6 && x < 18) ? 1.0 : (x <= 6 ? (x/6) : ((24-x)/6));
+    } else if (selected === "CROSSWAVE") {
+      v = 0.5 + 0.4 * Math.sin((x / duration) * 6 * Math.PI);
+    } else if (selected === "VYRO") {
+      v = Math.pow(x / duration, 0.35);
+    } else if (selected === "CLIPPING_NET") {
+      v = Math.floor((x / duration) * 5) / 5;
+    } else if (selected === "CONTENT_REWARDS") {
+      const p = x / duration;
+      v = 3 * p * p - 2 * Math.pow(p, 3);
+    } else if (selected === "PROMOTE_FUN") {
+      v = Math.pow(x / duration, 2.2);
+    } else if (selected === "CLIP_AFFILIATES") {
+      v = Math.exp(-Math.pow(((x / duration) - 0.7) * 3, 2));
+    } else if (selected === "OVERLAP_AI") {
+      v = Math.log(1 + (x / duration) * 9) / Math.log(10);
+    } else if (selected === "GENNI") {
+      const p = x / duration;
+      v = p + 0.15 * Math.sin(p * Math.PI * 4);
+    }
+    pts.push(Math.max(0.05, Math.min(1.0, v)));
+  }
+  const max = Math.max(...pts, 1);
+  const W = 500, H = 140, pad = 16;
+  const xs = pts.map((_, i) => pad + (i / (N_PTS - 1)) * (W - 2 * pad));
+  const ys = pts.map(p => H - pad - (p / max) * (H - 2 * pad));
+  const line = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
+  const area = line + ` L ${xs[N_PTS - 1].toFixed(1)} ${H - pad} L ${xs[0].toFixed(1)} ${H - pad} Z`;
+
+  return (
+    <NeoCard>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 900, color: N.text, margin: "0 0 4px", letterSpacing: "-0.3px" }}>
+            🎯 Clipping Platforms — Customized Pacing Graphs
+          </h3>
+          <p style={{ fontSize: 12, color: N.muted, margin: 0, fontWeight: 600 }}>
+            Specialized algorithm delivery curves tuned to Whop, CrossWave, Vyro, and 6 other monetization platforms
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+        {platforms.map((pKey) => {
+          const item = CURVE_DESCRIPTIONS_100[pKey] || { label: pKey, icon: "📊" };
+          const isSel = selected === pKey;
+          return (
+            <button
+              key={pKey}
+              onClick={() => setSelected(pKey)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 12,
+                border: "none",
+                background: isSel ? "linear-gradient(135deg, #2d3748, #1a202c)" : N.bg,
+                color: isSel ? "#ffffff" : N.text,
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+                boxShadow: isSel ? "0 4px 12px rgba(0,0,0,0.25)" : N.raisedSm,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                transition: "all 0.2s"
+              }}
+            >
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: 20, borderRadius: 16, background: N.bg, boxShadow: N.inset, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 24 }}>{info.icon}</span>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: N.text }}>{info.label} Delivery Profile</div>
+              <div style={{ fontSize: 11, color: N.muted, fontWeight: 700 }}>Warmup: {info.warmup}h · Peak: {info.peak}h</div>
+            </div>
+          </div>
+          <Link
+            href="/reels/new"
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              background: "linear-gradient(135deg, #d97706, #ea580c)",
+              color: "#ffffff",
+              fontSize: 11,
+              fontWeight: 800,
+              textDecoration: "none",
+              boxShadow: N.raisedSm
+            }}
+          >
+            Use {info.label} Curve →
+          </Link>
+        </div>
+
+        <p style={{ fontSize: 12, color: N.text, margin: 0, fontWeight: 600, lineHeight: 1.5 }}>
+          {info.desc}
+        </p>
+
+        <div style={{ height: H, position: "relative", marginTop: 8 }}>
+          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+            <defs>
+              <linearGradient id={`grad-${selected}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={neon.stroke} stopOpacity="0.35" />
+                <stop offset="100%" stopColor={neon.stroke} stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+            <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
+            <line x1={pad} y1={(H - pad)/2} x2={W - pad} y2={(H - pad)/2} stroke="rgba(0,0,0,0.05)" strokeDasharray="4 4" strokeWidth="1" />
+            <path d={area} fill={`url(#grad-${selected})`} />
+            <path d={line} fill="none" stroke={neon.stroke} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 2px 6px ${neon.glow})` }} />
+            <circle cx={xs[N_PTS - 1]} cy={ys[N_PTS - 1]} r="5" fill={neon.stroke} stroke="#ffffff" strokeWidth="2" style={{ filter: `drop-shadow(0 0 4px ${neon.stroke})` }} />
+          </svg>
+        </div>
+      </div>
+    </NeoCard>
   );
 }
 
@@ -166,6 +304,9 @@ export default function AnalyticsPage() {
         )}
       </NeoCard>
 
+      {/* Clipping Platform Graphs Card */}
+      <ClippingPlatformExplorer />
+
       {/* Bottom row */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:20 }}>
         {/* Curve style breakdown */}
@@ -175,10 +316,10 @@ export default function AnalyticsPage() {
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
               {stats.styleBreakdown.map(({ style, count }) => (
                 <div key={style} style={{ display:"flex", alignItems:"center", gap:12 }}>
-                  <span style={{ fontSize:20 }}>{STYLE_ICONS[style] ?? "📊"}</span>
+                  <span style={{ fontSize:20 }}>{CURVE_DESCRIPTIONS_100[style]?.icon ?? "📊"}</span>
                   <div style={{ flex:1 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                      <span style={{ fontSize:13, color:N.text, fontWeight:700 }}>{style.charAt(0) + style.slice(1).toLowerCase()}</span>
+                      <span style={{ fontSize:13, color:N.text, fontWeight:700 }}>{CURVE_DESCRIPTIONS_100[style]?.label || (style.charAt(0) + style.slice(1).toLowerCase())}</span>
                       <span style={{ fontSize:13, fontWeight:800, color:N.accent }}>{count}</span>
                     </div>
                     <div style={{ height:6, borderRadius:6, overflow:"hidden", background:N.bg, boxShadow:N.inset }}>

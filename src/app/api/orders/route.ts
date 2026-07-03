@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/redis";
 import { calculateEngagementTargets } from "@/lib/delivery/curve";
+import { sendTelegramAlert } from "@/lib/telegram";
 import crypto from "crypto";
 
 /* ── GET /api/orders ── */
@@ -270,6 +271,15 @@ export async function POST(request: NextRequest) {
     headers: { "Content-Type": "application/json", "x-internal-key": process.env.NEXTAUTH_SECRET ?? "" },
     body: JSON.stringify({ orderId: order.id }),
   }).catch(console.error);
+
+  sendTelegramAlert(
+    `🚀 *New Order Placed!*\n\n` +
+    `👤 *User:* \`${dbUser.email}\`\n` +
+    `🎯 *Views Target:* \`${views.toLocaleString()}\`\n` +
+    `📱 *Platform:* \`${platform}\`\n` +
+    `💵 *Price Charged:* \`₹${totalPrice.toLocaleString()}\`\n` +
+    `🔗 *Reel URL:* ${reelUrl}`
+  ).catch(console.error);
 
     return NextResponse.json({ orderId: order.id, order, message: "Order created and delivery scheduled!" }, { status: 201 });
   } catch (err: any) {
