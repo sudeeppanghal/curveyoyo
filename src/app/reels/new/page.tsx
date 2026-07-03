@@ -303,7 +303,7 @@ function CurvePreview({
     if (isPlaying) {
       playTimerRef.current = setInterval(() => {
         setPlayHour((h) => {
-          if (h >= durationHours - 1) {
+          if (h >= batches.length - 1 || h >= durationHours - 1) {
             setIsPlaying(false);
             return 0;
           }
@@ -360,10 +360,11 @@ function CurvePreview({
   const curveInfo = CURVE_DESCRIPTIONS[style] || CURVE_DESCRIPTIONS["ORGANIC"] || { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic", num: 6 };
 
   // Determine current active simulation batch
-  const currentBatchIdx = isPlaying ? playHour : (batches.length - 1);
-  const currentBatch = batches[currentBatchIdx];
-  const currentPt = viewsPts[currentBatchIdx];
-  const dispatchPct = Math.round((currentBatch.views / maxVal) * 100);
+  const safeIdx = Math.max(0, Math.min(isPlaying ? playHour : (batches.length - 1), batches.length - 1));
+  const currentBatchIdx = isNaN(safeIdx) ? 0 : safeIdx;
+  const currentBatch = batches[currentBatchIdx] || { hour: 0, views: 0, likes: 0, saves: 0, shares: 0, comments: 0 };
+  const currentPt = viewsPts[currentBatchIdx] || { x: 0, y: 0 };
+  const dispatchPct = Math.round(((currentBatch.views || 0) / maxVal) * 100);
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (draggingIdx === null || !onChangeSchedule || !svgRef.current) return;
@@ -1776,8 +1777,7 @@ export default function NewReelPage() {
                   {/* Category Filter Tabs */}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, padding: "4px 0" }}>
                     {[
-                      "All (107)", "Clipping Platforms", "Classic", "Standard", "Waves & Pulses", "Surge Peaks", "Specialized",
-                      "Patterns", "Cycles & Trends", "Technical Formations", "Chart Patterns", "Pro Formations"
+                      "All (107)", "Whop Clips", "Clipster", "Content Rewards", "Clipstake", "Crosswave", "Picksart", "Pearpop", "JoinBrands", "Trend.io", "Insense"
                     ].map((cat) => {
                       const isCatActive = selectedCategory === cat;
                       return (

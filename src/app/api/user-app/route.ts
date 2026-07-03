@@ -33,22 +33,39 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: false, error: "Email and password required" }, { status: 400, headers: corsHeaders });
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+      let { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       });
 
       if (error || !data.user) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: email.trim().toLowerCase() },
+        // Fallback to lowercase email just in case
+        const resLower = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        if (!resLower.error && resLower.data.user) {
+          data = resLower.data;
+          error = null as any;
+        }
+      }
+
+      if (error || !data.user) {
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            email: {
+              equals: email.trim(),
+              mode: "insensitive",
+            },
+          },
         });
         if (existingUser) {
           return NextResponse.json({
             ok: false,
-            error: "You registered via Google on our website without a password. Please visit www.yoyosmm.online, set your password in account settings/reset password, and then sign in here."
+            error: "Incorrect password. If you registered via Google on our website without a password, please visit www.yoyosmm.online and click Forgot Password / Reset Password to set one."
           }, { status: 401, headers: corsHeaders });
         }
-        return NextResponse.json({ ok: false, error: "Invalid email or password" }, { status: 401, headers: corsHeaders });
+        return NextResponse.json({ ok: false, error: "No account found with this email. Please sign up first." }, { status: 401, headers: corsHeaders });
       }
 
       let dbUser = await prisma.user.findUnique({
@@ -56,8 +73,13 @@ export async function POST(request: NextRequest) {
       });
 
       if (!dbUser) {
-        dbUser = await prisma.user.findUnique({
-          where: { email: email.trim().toLowerCase() },
+        dbUser = await prisma.user.findFirst({
+          where: {
+            email: {
+              equals: email.trim(),
+              mode: "insensitive",
+            },
+          },
         });
       }
 
@@ -112,7 +134,14 @@ export async function POST(request: NextRequest) {
       }
 
       const cleanEmail = email.trim().toLowerCase();
-      const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
+      const existing = await prisma.user.findFirst({
+        where: {
+          email: {
+            equals: cleanEmail,
+            mode: "insensitive",
+          },
+        },
+      });
       if (existing) {
         return NextResponse.json({ ok: false, error: "An account with this email already exists." }, { status: 409, headers: corsHeaders });
       }
@@ -128,19 +157,32 @@ export async function POST(request: NextRequest) {
       }
 
       const userId = data.user?.id || "temp_" + Date.now();
-      const dbUser = await prisma.user.upsert({
-        where: { email: cleanEmail },
-        create: {
-          supabaseId: userId,
-          email: cleanEmail,
-          name: name || cleanEmail.split("@")[0],
-          balance: 0.0,
-          walletMode: true,
-        },
-        update: {
-          name: name || cleanEmail.split("@")[0],
+      
+      const existingDb = await prisma.user.findFirst({
+        where: {
+          email: {
+            equals: cleanEmail,
+            mode: "insensitive",
+          },
         },
       });
+      const dbUser = existingDb
+        ? await prisma.user.update({
+            where: { id: existingDb.id },
+            data: {
+              supabaseId: userId,
+              name: name || existingDb.name || cleanEmail.split("@")[0],
+            },
+          })
+        : await prisma.user.create({
+            data: {
+              supabaseId: userId,
+              email: cleanEmail,
+              name: name || cleanEmail.split("@")[0],
+              balance: 0.0,
+              walletMode: true,
+            },
+          });
 
       sendTelegramAlert(
         `🎉 *New Mobile App User Signup!*\n\n` +

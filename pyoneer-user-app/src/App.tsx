@@ -12,32 +12,15 @@ import { Haptics, ImpactStyle } from "@capacitor/haptics";
 const API_URL = "https://www.yoyosmm.online/api/user-app";
 
 // ── Curve Styles (Matching Backend & Web Design System) ──
-interface CurveConfig {
-  id: string;
-  label: string;
-  desc: string;
-  icon: string;
-  stroke: string;
-  glow: string;
-  evalCurve: (p: number) => number;
-}
+import { CURVE_100_LIST, type CurveStyleConfig } from "./curve-styles-100";
 
-const POPULAR_CURVES: CurveConfig[] = [
-  { id: "ORGANIC", label: "Gradual Organic Wave", desc: "Natural human-like growth pattern that mirrors viral trends.", icon: "🌱", stroke: "#10b981", glow: "rgba(16,185,129,0.4)", evalCurve: (p) => Math.pow(p, 1.8) },
-  { id: "SLOW_START", label: "Slow Start Momentum", desc: "Gentle initial pacing that builds steady acceleration over time.", icon: "🐢", stroke: "#ff0055", glow: "rgba(255,0,85,0.4)", evalCurve: (p) => Math.pow(p, 2.5) },
-  { id: "FAST", label: "Sudden Viral Burst", desc: "High-speed instant volume compression for immediate rankings.", icon: "⚡", stroke: "#00ffff", glow: "rgba(0,255,255,0.4)", evalCurve: (p) => Math.pow(p, 0.35) },
-  { id: "LATE_TAKEOFF", label: "Late Takeoff Surge", desc: "Minimal early views followed by an explosive final-hour surge.", icon: "🛫", stroke: "#39ff14", glow: "rgba(57,255,20,0.4)", evalCurve: (p) => p < 0.5 ? 0.15 : Math.pow((p - 0.5) / 0.5, 3) },
-  { id: "WHOP", label: "Whop Algorithm", desc: "Optimized creator funnel pacing tailored for Whop communities.", icon: "🟣", stroke: "#a855f7", glow: "rgba(168,85,247,0.4)", evalCurve: (p) => Math.sin(p * Math.PI / 2) },
-  { id: "CROSSWAVE", label: "CrossWave Momentum", desc: "Interlocking wave distribution for cross-platform algorithm triggers.", icon: "🌊", stroke: "#3b82f6", glow: "rgba(59,130,246,0.4)", evalCurve: (p) => (p + Math.sin(p * Math.PI * 2) * 0.1) },
-  { id: "VYRO", label: "Vyro Acceleration", desc: "Aggressive algorithmic spike engineered for explore page reach.", icon: "🔥", stroke: "#f97316", glow: "rgba(249,115,22,0.4)", evalCurve: (p) => Math.pow(p, 0.6) },
-  { id: "CLIPPING_NET", label: "Clipping.net Curve", desc: "Structured incremental step growth for clipping network syndication.", icon: "✂️", stroke: "#ec4899", glow: "rgba(236,72,153,0.4)", evalCurve: (p) => Math.floor(p * 5) / 5 },
-  { id: "CONTENT_REWARDS", label: "Content Rewards Pacing", desc: "Steady linear payout curve designed for reward qualification.", icon: "🏆", stroke: "#fbbf24", glow: "rgba(251,191,36,0.4)", evalCurve: (p) => p },
-  { id: "PROMOTE_FUN", label: "Promote.fun Surge", desc: "Dynamic viral pulse that triggers platform promotion bots.", icon: "🎉", stroke: "#06b6d4", glow: "rgba(6,182,212,0.4)", evalCurve: (p) => Math.pow(p, 1.2) },
-  { id: "OVERLAP_AI", label: "Overlap AI Synthesis", desc: "AI-generated neural distribution matching real user behavior.", icon: "🤖", stroke: "#8b5cf6", glow: "rgba(139,92,246,0.4)", evalCurve: (p) => 1 - Math.pow(1 - p, 3) },
+const CATEGORIES = [
+  "All (107)",
+  ...Array.from(new Set(CURVE_100_LIST.map(c => c.category)))
 ];
 
 // ── SVG Graph Renderer Component ──
-function GrowthCurveGraph({ curve, progressPct = 0 }: { curve: CurveConfig; progressPct?: number }) {
+function GrowthCurveGraph({ curve, progressPct = 0 }: { curve: CurveStyleConfig; progressPct?: number }) {
   const width = 340;
   const height = 120;
   const pad = 16;
@@ -47,7 +30,7 @@ function GrowthCurveGraph({ curve, progressPct = 0 }: { curve: CurveConfig; prog
 
   for (let i = 0; i <= 20; i++) {
     const p = i / 20;
-    const val = Math.max(0, Math.min(1, curve.evalCurve(p)));
+    const val = Math.max(0, Math.min(1, curve.evalCurve(p, p, 20)));
     const x = pad + p * graphW;
     const y = height - pad - val * graphH;
     points.push(`${x},${y}`);
@@ -58,7 +41,7 @@ function GrowthCurveGraph({ curve, progressPct = 0 }: { curve: CurveConfig; prog
 
   // Progress dot position
   const currP = Math.min(1, Math.max(0, progressPct / 100));
-  const currVal = Math.max(0, Math.min(1, curve.evalCurve(currP)));
+  const currVal = Math.max(0, Math.min(1, curve.evalCurve(currP, currP, 20)));
   const dotX = pad + currP * graphW;
   const dotY = height - pad - currVal * graphH;
 
@@ -128,6 +111,7 @@ export default function App() {
   const [reelUrl, setReelUrl] = useState<string>("");
   const [viewsTarget, setViewsTarget] = useState<number>(5000);
   const [selectedCurve, setSelectedCurve] = useState<string>("ORGANIC");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All (107)");
   const [engEnabled, setEngEnabled] = useState<boolean>(true);
   const [likesPct, setLikesPct] = useState<number>(4.0);
   const [savesPct, setSavesPct] = useState<number>(2.0);
@@ -480,7 +464,7 @@ export default function App() {
   const activeOrdersCount = orders.filter(o => o.status === "DELIVERING" || o.status === "QUEUED" || o.status === "PAUSED").length;
   const completedOrdersCount = orders.filter(o => o.status === "COMPLETED").length;
   const totalSpent = orders.reduce((acc, o) => acc + (o.priceCharged || 0), 0);
-  const selectedCurveObj = POPULAR_CURVES.find(c => c.id === selectedCurve) || POPULAR_CURVES[0];
+  const selectedCurveObj = CURVE_100_LIST.find(c => c.id === selectedCurve) || CURVE_100_LIST[0];
 
   return (
     <div style={{ minHeight: "100vh", paddingBottom: 88, background: "radial-gradient(circle at top left, rgba(251,191,36,0.08), transparent 40%), var(--bg-main)" }}>
@@ -694,18 +678,40 @@ export default function App() {
                   <GrowthCurveGraph curve={selectedCurveObj} />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, maxHeight: 240, overflowY: "auto", paddingRight: 4 }}>
-                  {POPULAR_CURVES.map((c) => (
+                {/* Categories */}
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, marginBottom: 12, scrollbarWidth: "none" }}>
+                  {CATEGORIES.map(cat => (
+                    <button
+                      type="button"
+                      key={cat}
+                      onClick={() => { setSelectedCategory(cat); triggerHaptic(); }}
+                      style={{
+                        padding: "6px 12px", borderRadius: 20, whiteSpace: "nowrap", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                        background: selectedCategory === cat ? "var(--gold)" : "rgba(0,0,0,0.3)",
+                        color: selectedCategory === cat ? "#000" : "#fff",
+                        border: selectedCategory === cat ? "none" : "1px solid var(--border)"
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10, maxHeight: 300, overflowY: "auto", padding: "4px 6px 12px 2px" }}>
+                  {CURVE_100_LIST
+                    .filter((item) => selectedCategory === "All (107)" || item.category === selectedCategory)
+                    .map((c) => (
                     <button
                       type="button"
                       key={c.id}
                       onClick={() => { setSelectedCurve(c.id); triggerHaptic(); }}
-                      style={{ padding: 12, borderRadius: 14, border: selectedCurve === c.id ? `2px solid ${c.stroke}` : "1px solid var(--border)", background: selectedCurve === c.id ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.3)", textAlign: "left", cursor: "pointer", transition: "all 0.2s" }}
+                      style={{ padding: "12px 8px", borderRadius: 14, border: selectedCurve === c.id ? `2px solid ${c.stroke}` : "1px solid var(--border)", background: selectedCurve === c.id ? "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.3) 100%)" : "rgba(0,0,0,0.3)", textAlign: "left", cursor: "pointer", transition: "all 0.2s", display: "flex", flexDirection: "column", gap: 6, boxShadow: selectedCurve === c.id ? `0 0 15px ${c.glow}` : "none" }}
                     >
-                      <div style={{ fontSize: 13, fontWeight: 800, color: selectedCurve === c.id ? c.stroke : "#fff", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                        <span>{c.icon}</span> {c.label}
+                      <div style={{ fontSize: 20 }}>{c.icon}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: selectedCurve === c.id ? c.stroke : "#fff" }}>
+                        {c.label}
                       </div>
-                      <p style={{ fontSize: 10, color: "var(--text-muted)", lineClamp: 2, overflow: "hidden" }}>{c.desc}</p>
+                      <p style={{ fontSize: 10, color: "var(--text-muted)", lineClamp: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{c.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -810,7 +816,7 @@ export default function App() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {orders.map((o) => {
-                  const curve = POPULAR_CURVES.find(c => c.id === o.curveStyle) || POPULAR_CURVES[0];
+                  const curve = CURVE_100_LIST.find(c => c.id === o.curveStyle) || CURVE_100_LIST[0];
                   return (
                     <div key={o.id} className="glass-panel" style={{ padding: 20 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
