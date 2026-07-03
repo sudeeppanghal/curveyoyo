@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       cryptoAll, cryptoToday, cryptoMonth,
       activeOrdersCount, openTicketsCount,
       pendingUpiCount, pendingCryptoCount,
-      recentUpi, recentCrypto, recentOrdersRaw, recentTicketsRaw
+      recentUpi, recentCrypto, recentOrdersRaw, activeOrdersRaw, recentTicketsRaw
     ] = await Promise.all([
       prisma.upiPayment.aggregate({ where: { status: "CONFIRMED" }, _sum: { amount: true } }),
       prisma.upiPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfToday } }, _sum: { amount: true } }),
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       prisma.upiPayment.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
       prisma.cryptoPayment.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
       prisma.order.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } }, reel: { select: { url: true, platform: true } } } }),
+      prisma.order.findMany({ where: { status: { in: ["PENDING", "QUEUED", "DELIVERING"] } }, take: 50, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } }, reel: { select: { url: true, platform: true } } } }),
       prisma.supportTicket.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
     ]);
 
@@ -88,18 +89,30 @@ export async function GET(request: NextRequest) {
       })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 20);
 
-    const recentOrders = recentOrdersRaw.map((o) => ({
-      id: o.id,
-      userEmail: o.user?.email || "Unknown",
-      userName: o.user?.name || "User",
-      platform: o.reel?.platform || "INSTAGRAM",
-      reelUrl: o.reel?.url || "",
-      viewsTarget: o.viewsTarget,
-      cost: o.priceCharged,
-      curveStyle: o.curveStyle,
-      status: o.status,
-      createdAt: o.createdAt,
-    }));
+    const mapOrder = (o: any) => {
+      const delivered = o.viewsDelivered || 0;
+      const target = o.viewsTarget || 0;
+      const progressPct = target > 0 ? Math.min(100, Math.round((delivered / target) * 100)) : 0;
+      return {
+        id: o.id,
+        userEmail: o.user?.email || "Unknown",
+        userName: o.user?.name || "User",
+        platform: o.reel?.platform || "INSTAGRAM",
+        reelUrl: o.reel?.url || "",
+        viewsTarget: target,
+        viewsDelivered: delivered,
+        viewsStart: o.viewsStart || 0,
+        progressPct,
+        cost: o.priceCharged,
+        curveStyle: o.curveStyle || "NATURAL",
+        status: o.status,
+        createdAt: o.createdAt,
+        updatedAt: o.updatedAt || o.createdAt,
+      };
+    };
+
+    const recentOrders = recentOrdersRaw.map(mapOrder);
+    const activeOrders = activeOrdersRaw.map(mapOrder);
 
     const recentTickets = recentTicketsRaw.map((t) => ({
       id: t.id,
@@ -115,6 +128,7 @@ export async function GET(request: NextRequest) {
       stats,
       recentDeposits,
       recentOrders,
+      activeOrders,
       recentTickets,
       serverTime: now.toISOString(),
     }, { status: 200, headers: corsHeaders });

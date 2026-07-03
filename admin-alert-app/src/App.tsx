@@ -47,10 +47,14 @@ interface OrderItem {
   platform: string;
   reelUrl: string;
   viewsTarget: number;
+  viewsDelivered?: number;
+  viewsStart?: number;
+  progressPct?: number;
   cost: number;
   curveStyle: string;
   status: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface TicketItem {
@@ -71,9 +75,9 @@ interface ToastAlert {
 }
 
 export default function App() {
-  // Config state
-  const [apiUrl, setApiUrl] = useState(() => localStorage.getItem("pyoneer_alert_url") || "http://localhost:3000");
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("pyoneer_alert_key") || "pyoneer-admin-secret");
+  // Config state - hardcoded to live production URL and secret by default!
+  const [apiUrl, setApiUrl] = useState(() => localStorage.getItem("pyoneer_alert_url") || "https://www.yoyosmm.online");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("pyoneer_alert_key") || "yoyosmm_admin_sec_9e3a1f8b4d0c7e2d5a6c8e9b");
   const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("pyoneer_alert_interval")) || 10);
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem("pyoneer_alert_sound") !== "false");
   const [showSettings, setShowSettings] = useState(false);
@@ -90,11 +94,12 @@ export default function App() {
   });
   const [deposits, setDeposits] = useState<DepositItem[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [activeOrders, setActiveOrders] = useState<OrderItem[]>([]);
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "deposits" | "orders" | "tickets">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "deposits" | "orders" | "active_orders" | "tickets">("all");
 
   // PWA install state
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -154,10 +159,12 @@ export default function App() {
       
       const newDeposits: DepositItem[] = data.recentDeposits || [];
       const newOrders: OrderItem[] = data.recentOrders || [];
+      const newActiveOrders: OrderItem[] = data.activeOrders || [];
       const newTickets: TicketItem[] = data.recentTickets || [];
 
       setDeposits(newDeposits);
       setOrders(newOrders);
+      setActiveOrders(newActiveOrders);
       setTickets(newTickets);
       setLastUpdated(new Date());
       setError(null);
@@ -429,6 +436,13 @@ export default function App() {
           🚀 Recent Orders ({orders.length})
         </button>
         <button
+          onClick={() => setActiveTab("active_orders")}
+          className={`btn-secondary ${activeTab === "active_orders" ? "glow-border-purple" : ""}`}
+          style={{ background: activeTab === "active_orders" ? "rgba(168,85,247,0.2)" : "", color: activeTab === "active_orders" ? "#c084fc" : "" }}
+        >
+          ⚡ Active Progress ({activeOrders.length})
+        </button>
+        <button
           onClick={() => setActiveTab("tickets")}
           className={`btn-secondary ${activeTab === "tickets" ? "glow-border-green" : ""}`}
           style={{ background: activeTab === "tickets" ? "rgba(34,197,94,0.2)" : "", color: activeTab === "tickets" ? "#4ade80" : "" }}
@@ -501,7 +515,58 @@ export default function App() {
           </div>
         )}
 
-        {/* 3. Tickets Stream */}
+        {/* 3. Active Orders Progress Stream */}
+        {(activeTab === "all" || activeTab === "active_orders") && (
+          <div className="glass-panel" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 900, color: "#c084fc", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <Zap size={20} /> ACTIVE ORDERS PROGRESS ({activeOrders.length})
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto", paddingRight: 6 }}>
+              {activeOrders.length === 0 ? (
+                <div style={{ padding: 30, textAlign: "center", color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>No active boost orders running</div>
+              ) : (
+                activeOrders.map((o) => {
+                  const progress = o.progressPct || 0;
+                  const delivered = (o.viewsDelivered || 0).toLocaleString();
+                  const target = o.viewsTarget.toLocaleString();
+                  return (
+                    <div key={o.id} className="glass-card" style={{ padding: 14, borderLeft: "4px solid #a855f7" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <span className="badge badge-purple">{o.platform} • {o.curveStyle}</span>
+                        <span className="badge badge-cyan">{o.status}</span>
+                      </div>
+                      
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                        <span style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>
+                          {delivered} / <span style={{ color: "#c084fc" }}>{target}</span> views
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "#4ade80" }}>{progress}%</span>
+                      </div>
+
+                      {/* Glowing Progress Bar */}
+                      <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", marginBottom: 10 }}>
+                        <div style={{ width: `${progress}%`, height: "100%", background: "linear-gradient(90deg, #38bdf8, #a855f7)", borderRadius: 4, transition: "width 0.5s ease" }} />
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>
+                        <span>User: <strong style={{ color: "#e2e8f0" }}>{o.userEmail}</strong></span>
+                        <span style={{ color: "#fbbf24" }}>₹{o.cost.toFixed(2)}</span>
+                      </div>
+
+                      {o.reelUrl && (
+                        <a href={o.reelUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#38bdf8", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6 }}>
+                          View Target Reel <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 4. Tickets Stream */}
         {(activeTab === "all" || activeTab === "tickets") && (
           <div className="glass-panel" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 16, fontWeight: 900, color: "#4ade80", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
