@@ -2036,9 +2036,8 @@ export default function AdminPage() {
                           </td>
                           <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, textAlign: "center" }}>{u._count?.panels ?? 0}</td>
                           <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, textAlign: "center" }}>{u._count?.orders ?? 0}</td>
-                          <td style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>
-
-                            <div style={{ display: "flex", gap: 10 }}>
+                          <td style={{ padding: "12px 8px" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, minWidth: 220 }}>
 
                               {u.plan !== "LIFETIME" && (
 
