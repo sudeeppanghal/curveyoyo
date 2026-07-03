@@ -36,14 +36,14 @@ export default function AutoOrdersPage() {
     try {
       const [subsRes, tempRes] = await Promise.all([
         fetch("/api/auto-orders"),
-        fetch("/api/curve-templates")
+        fetch("/api/templates")
       ]);
       if (subsRes.ok) {
         const { autoOrders } = await subsRes.json();
         setSubs(autoOrders);
       }
       if (tempRes.ok) {
-        const { curveTemplates } = await tempRes.json();
+        const { templates: curveTemplates } = await tempRes.json();
         setTemplates(curveTemplates);
         if (curveTemplates.length > 0 && form.templateIds.length === 0) {
           setForm(prev => ({ ...prev, templateIds: [curveTemplates[0].id] }));
