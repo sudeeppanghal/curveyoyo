@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         },
       },
     },
-    take: 200,
+    take: 1000,
   });
 
   return NextResponse.json({ payments });

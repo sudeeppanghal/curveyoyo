@@ -110,7 +110,7 @@ export default function App() {
   const [platform, setPlatform] = useState<string>("INSTAGRAM");
   const [reelUrl, setReelUrl] = useState<string>("");
   const [viewsTarget, setViewsTarget] = useState<number>(5000);
-  const [selectedCurve, setSelectedCurve] = useState<string>("ORGANIC");
+  const [selectedCurve, setSelectedCurve] = useState<string>("SLOW_START");
   const [selectedCategory, setSelectedCategory] = useState<string>("All (107)");
   const [engEnabled, setEngEnabled] = useState<boolean>(true);
   const [likesPct, setLikesPct] = useState<number>(4.0);

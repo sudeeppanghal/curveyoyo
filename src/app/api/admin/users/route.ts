@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       _count: { select: { orders: true, panels: true } },
       subscription: { select: { status: true, paidAt: true } },
     },
-    take: 200,
+    take: 10000,
   });
 
   return NextResponse.json({ users });

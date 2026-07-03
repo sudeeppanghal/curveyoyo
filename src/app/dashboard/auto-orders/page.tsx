@@ -93,7 +93,7 @@ export default function AutoOrdersPage() {
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, color: N.text, marginBottom: 8 }}>Auto-Orders 🚀</h1>
+      <h1 style={{ fontSize: 24, fontWeight: 800, color: N.text, marginBottom: 8 }}>AI Social Media Automation 🚀</h1>
       <p style={{ color: N.muted, marginBottom: 32 }}>Automatically place engagement orders whenever you post a new Reel or TikTok.</p>
 
       {/* CREATE FORM */}
