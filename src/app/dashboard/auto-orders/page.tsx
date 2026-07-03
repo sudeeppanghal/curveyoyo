@@ -91,6 +91,39 @@ export default function AutoOrdersPage() {
     }
   }
 
+  async function handleQuickTemplate() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Default AI Pacing " + Math.floor(Math.random() * 1000),
+          style: "SLOW_START",
+          durationHours: 12,
+          warmupHours: 2,
+          peakHours: 4,
+          decayHours: 6,
+          likesRatioPct: 4.0,
+          savesRatioPct: 2.0,
+          sharesRatioPct: 0.5,
+          commentsRatioPct: 0.2
+        })
+      });
+      if (res.ok) {
+        alert("AI Template created successfully!");
+        fetchData();
+      } else {
+        const err = await res.json();
+        alert("Failed to create template: " + err.error);
+      }
+    } catch (e) {
+      alert("Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
       <h1 style={{ fontSize: 24, fontWeight: 800, color: N.text, marginBottom: 8 }}>AI Social Media Automation 🚀</h1>
@@ -100,9 +133,22 @@ export default function AutoOrdersPage() {
       <div style={{ background: N.surface, boxShadow: N.raised, borderRadius: 20, padding: 32, marginBottom: 40 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: N.text, marginBottom: 20 }}>Create New Auto-Order</h2>
         
-        {templates.length === 0 ? (
-          <p style={{ color: "red", fontWeight: "bold" }}>You must create a Curve Template first on the Reels page before using Auto-Orders.</p>
-        ) : (
+        {templates.length === 0 && (
+          <div style={{ padding: 20, background: "#fff5f5", border: "1px solid #fc8181", borderRadius: 12, marginBottom: 20 }}>
+            <p style={{ color: "#c53030", fontWeight: "bold", margin: 0, marginBottom: 12 }}>
+              Our AI requires a pacing template to know how to deliver your engagements. Let's create one quickly!
+            </p>
+            <button
+              type="button"
+              onClick={handleQuickTemplate}
+              style={{ padding: "10px 16px", background: "#e53e3e", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}
+            >
+              Create Default AI Template
+            </button>
+          </div>
+        )}
+
+        {templates.length > 0 && (
           <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <div>
@@ -145,7 +191,10 @@ export default function AutoOrdersPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: N.muted, marginBottom: 8 }}>Engagement Template</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: N.muted }}>AI Pacing Template</label>
+                  <button type="button" onClick={handleQuickTemplate} style={{ fontSize: 11, fontWeight: 800, color: N.accent, background: "none", border: "none", cursor: "pointer" }}>+ New Template</button>
+                </div>
                 <select 
                   value={form.templateId}
                   onChange={e => setForm({...form, templateId: e.target.value})}
@@ -173,7 +222,7 @@ export default function AutoOrdersPage() {
                 boxShadow: "0 4px 15px rgba(217, 119, 6, 0.4)"
               }}
             >
-              Start Auto-Ordering
+              Start AI Auto-Ordering
             </button>
           </form>
         )}
