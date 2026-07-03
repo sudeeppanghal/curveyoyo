@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fetchLatestInstagramPost } from "@/lib/scraper/apify";
+import { fetchLatestInstagramPost, fetchLatestTiktokPost, fetchLatestFacebookPost } from "@/lib/scraper/apify";
 import { calculateEngagementTargets } from "@/lib/delivery/curve";
 import { sendTelegramAlert } from "@/lib/telegram";
 
-export const maxDuration = 300; // 5 minutes max duration for scraping
+export const maxDuration = 300; // Allow 5 minutes for cron execution
+export const dynamic = 'force-dynamic'; // Prevent caching
 
 export async function GET(request: NextRequest) {
   // Simple cron authentication
@@ -21,19 +22,24 @@ export async function GET(request: NextRequest) {
   const results = [];
 
   for (const sub of activeSubs) {
-    if (sub.platform !== "INSTAGRAM") continue; // Support IG first
-
-    const post = await fetchLatestInstagramPost(sub.username);
+    let post: { id: string, url: string } | null = null;
+    if (sub.platform === "INSTAGRAM") {
+      post = await fetchLatestInstagramPost(sub.username);
+    } else if (sub.platform === "TIKTOK") {
+      post = await fetchLatestTiktokPost(sub.username);
+    } else if (sub.platform === "FACEBOOK") {
+      post = await fetchLatestFacebookPost(sub.username);
+    }
     
     if (post && post.id !== sub.lastPostId) {
       // It's a new post! Place an order.
       try {
-        const url = post.url || `https://instagram.com/reel/${post.id}/`;
+        const url = post.url;
         
         // 1. Calculate price
         const adminPanel = await prisma.panel.findFirst({
-          where: { type: "ADMIN", isActive: true },
-          include: { services: true }
+          where: { userId: null, isActive: true },
+          include: { adminServices: true }
         });
         
         if (!adminPanel) {
@@ -41,7 +47,7 @@ export async function GET(request: NextRequest) {
         }
 
         const getRate = (type: string, fallback: number) => {
-          const s = adminPanel.services.find(x => x.type === type);
+          const s = adminPanel.adminServices.find(x => x.type === type);
           return s ? s.customRate : fallback;
         };
 
@@ -79,11 +85,17 @@ export async function GET(request: NextRequest) {
             data: { balance: { decrement: totalPrice } }
           });
 
+          let reel = await tx.reel.findFirst({ where: { url, userId: sub.user.id } });
+          if (!reel) {
+            reel = await tx.reel.create({
+              data: { url, platform: sub.platform as any, userId: sub.user.id }
+            });
+          }
+
           await tx.order.create({
             data: {
               userId: sub.user.id,
-              url,
-              platform: "INSTAGRAM",
+              reelId: reel.id,
               panelId: adminPanel.id,
               status: "PENDING",
               priceCharged: totalPrice,
@@ -93,12 +105,11 @@ export async function GET(request: NextRequest) {
               sharesTarget: engTargets.sharesTarget,
               commentsTarget: engTargets.commentsTarget,
               curveStyle: sub.template.style,
-              customSchedule: {
-                durationHours: sub.template.durationHours,
-                warmupHours: sub.template.warmupHours,
-                peakHours: sub.template.peakHours,
-                decayHours: sub.template.decayHours
-              }
+              durationHours: sub.template.durationHours,
+              warmupHours: sub.template.warmupHours,
+              peakHours: sub.template.peakHours,
+              decayHours: sub.template.decayHours,
+              viewsRemaining: sub.viewsTarget,
             }
           });
 

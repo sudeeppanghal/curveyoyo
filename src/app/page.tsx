@@ -508,6 +508,104 @@ export default function Home() {
           </div>
         </div>
       </section>
+      {/* ══ CUSTOM DEVELOPMENT PROMOTION ════════════════════ */}
+      <section style={{ padding: "80px 24px" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+          <div style={{ 
+            background: C.bg, 
+            borderRadius: 32, 
+            padding: wide ? 60 : 32, 
+            boxShadow: C.raisedLg, 
+            display: "flex", 
+            flexDirection: wide ? "row" : "column", 
+            alignItems: "center", 
+            gap: 48,
+            position: "relative",
+            overflow: "hidden"
+          }}>
+            {/* Background decoration */}
+            <div style={{ position: "absolute", top: -100, right: -100, width: 300, height: 300, background: C.grad, borderRadius: "50%", filter: "blur(80px)", opacity: 0.15 }} />
+            
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "inline-block", padding: "8px 16px", borderRadius: 20, background: C.amberLight, color: C.amber, fontWeight: 800, fontSize: 13, letterSpacing: "0.08em", marginBottom: 20 }}>
+                ✨ WE BUILD DREAM PROJECTS
+              </div>
+              <h2 style={{ fontSize: wide ? 42 : 32, fontWeight: 900, color: C.text, letterSpacing: "-0.03em", lineHeight: 1.1, marginBottom: 24 }}>
+                Need Custom <span style={{ color: C.amber }}>Software</span> or a Stunning <span style={{ color: C.amber }}>App</span>?
+              </h2>
+              <p style={{ fontSize: 16, color: C.textMuted, lineHeight: 1.6, fontWeight: 500, marginBottom: 32 }}>
+                We provide the <strong style={{ color: C.text }}>best presentation at affordable prices</strong>. From custom websites to mobile apps and software tools, we ensure top-tier graphics, seamless animations, and the best icons for your brand.
+              </p>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 40 }}>
+                {[
+                  { label: "Custom Websites", icon: "🌐" },
+                  { label: "Mobile Apps (iOS/Android)", icon: "📱" },
+                  { label: "Software & Dashboards", icon: "💻" },
+                  { label: "Premium Graphics & UI/UX", icon: "🎨" }
+                ].map(item => (
+                  <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: C.bg, boxShadow: C.insetSm, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                      {item.icon}
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <a 
+                href="https://t.me/thefathersmm" 
+                target="_blank" 
+                rel="noreferrer"
+                style={{ 
+                  display: "inline-flex", 
+                  alignItems: "center", 
+                  gap: 12, 
+                  padding: "16px 32px", 
+                  borderRadius: 16, 
+                  background: "linear-gradient(135deg, #0088cc 0%, #0077b5 100%)", 
+                  color: "#fff", 
+                  textDecoration: "none",
+                  fontWeight: 800, 
+                  fontSize: 16, 
+                  boxShadow: "0 8px 24px rgba(0, 136, 204, 0.4)",
+                  transition: "transform 0.2s"
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                Contact @thefathersmm
+              </a>
+            </div>
+
+            {/* Visual Side */}
+            <div style={{ flex: wide ? "0 0 380px" : "1", width: "100%", position: "relative" }}>
+              <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 24, background: C.bg, boxShadow: C.inset, padding: 32, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
+                {/* Mockup Elements */}
+                <div style={{ width: "100%", height: 12, borderRadius: 6, background: C.raised, marginBottom: 24, opacity: 0.5 }} />
+                <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+                  <div style={{ width: 60, height: 60, borderRadius: 16, background: C.grad, boxShadow: C.raisedSm }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ width: "80%", height: 10, borderRadius: 5, background: C.raised, marginBottom: 12, opacity: 0.8 }} />
+                    <div style={{ width: "50%", height: 10, borderRadius: 5, background: C.raised, opacity: 0.4 }} />
+                  </div>
+                </div>
+                <div style={{ width: "100%", height: 100, borderRadius: 16, background: C.raisedSm, padding: 16, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} style={{ width: "12%", height: i * 15 + 10, borderRadius: 4, background: C.grad, opacity: 0.8 }} />
+                  ))}
+                </div>
+                
+                {/* Floating Badge */}
+                <div style={{ position: "absolute", bottom: -20, right: -20, background: "#fff", padding: "16px 24px", borderRadius: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: "50%", background: C.emerald, boxShadow: `0 0 10px ${C.emerald}` }} />
+                  <span style={{ fontSize: 14, fontWeight: 800, color: C.text }}>Ready to Build</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ══ FOOTER ═════════════════════════════════════════ */}
       <footer style={{ borderTop:`1px solid #c8d0e7`, background:C.bg, padding:"60px 24px 40px", boxShadow:"inset 0 10px 20px rgba(200, 208, 231, 0.2)" }}>
         <div style={{ maxWidth:1100, margin:"0 auto" }}>

@@ -6,11 +6,13 @@ const N = {
   bg:        "#eef2f7",
   surface:   "#eef2f7",
   raised:    "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
+  raisedSm:  "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
   inset:     "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
   accent:    "#d97706",
   accentBg:  "linear-gradient(135deg, #d97706, #ea580c)",
   text:      "#2d3748",
   muted:     "#718096",
+  faint:     "#a0aec0",
 };
 
 export default function AutoOrdersPage() {
@@ -111,8 +113,8 @@ export default function AutoOrdersPage() {
                   style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 600 }}
                 >
                   <option value="INSTAGRAM">Instagram</option>
-                  <option value="TIKTOK" disabled>TikTok (Coming Soon)</option>
-                  <option value="FACEBOOK" disabled>Facebook (Coming Soon)</option>
+                  <option value="TIKTOK">TikTok</option>
+                  <option value="FACEBOOK">Facebook</option>
                 </select>
               </div>
               

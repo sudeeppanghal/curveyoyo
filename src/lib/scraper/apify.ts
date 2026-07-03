@@ -55,3 +55,49 @@ export async function fetchLatestInstagramPost(username: string): Promise<{ id: 
   
   return null;
 }
+export async function fetchLatestTiktokPost(username: string): Promise<{ id: string, url: string } | null> {
+  const client = await getNextApifyClient();
+  const input = {
+    "profiles": [username],
+    "resultsPerPage": 1,
+    "shouldDownloadVideos": false
+  };
+
+  try {
+    const run = await client.actor("clockwork/tiktok-scraper").call(input);
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    if (items && items.length > 0) {
+      const post = items[0] as any;
+      return {
+        id: post.id || post.videoMeta?.id || post.webVideoUrl,
+        url: post.webVideoUrl || post.videoUrl
+      };
+    }
+  } catch (error) {
+    console.error(`Apify TikTok Scraper Error for ${username}:`, error);
+  }
+  return null;
+}
+
+export async function fetchLatestFacebookPost(username: string): Promise<{ id: string, url: string } | null> {
+  const client = await getNextApifyClient();
+  const input = {
+    "startUrls": [{ "url": `https://www.facebook.com/${username}` }],
+    "resultsLimit": 1
+  };
+
+  try {
+    const run = await client.actor("apify/facebook-pages-scraper").call(input);
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    if (items && items.length > 0) {
+      const post = items[0] as any;
+      return {
+        id: post.postId || post.url,
+        url: post.url
+      };
+    }
+  } catch (error) {
+    console.error(`Apify Facebook Scraper Error for ${username}:`, error);
+  }
+  return null;
+}
