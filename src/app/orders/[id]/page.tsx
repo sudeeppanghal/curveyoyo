@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 /* ── Types ── */
-interface ChartPoint { hour: number; planned: number; actual: number; status: string; scheduledAt?: string; responseData?: any }
+interface ChartPoint { hour: number; planned: number; actual: number; likes?: number; saves?: number; shares?: number; comments?: number; status: string; scheduledAt?: string; responseData?: any }
 interface OrderStatus {
   order: {
     id: string; status: string; viewsTarget: number; viewsDelivered: number;
@@ -48,6 +48,7 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string; la
 
 /* ── Dual-layer delivery chart ── */
 function DeliveryChart({ data }: { data: ChartPoint[] }) {
+  const [mode, setMode] = useState<"velocity" | "cumulative">("velocity");
   if (!data.length) return null;
 
   // Calculate cumulative planned and actual views
@@ -64,18 +65,22 @@ function DeliveryChart({ data }: { data: ChartPoint[] }) {
   });
 
   const W = 600, H = 180, pad = 30;
-  const maxVal = Math.max(cumulativeData.at(-1)!.cumulativePlanned, 1);
+  const maxVal = mode === "velocity"
+    ? Math.max(...data.map(d => d.planned), 1)
+    : Math.max(cumulativeData.at(-1)!.cumulativePlanned, 1);
 
-  const toX = (i: number) => pad + (i / Math.max(cumulativeData.length - 1, 1)) * (W - 2 * pad);
+  const toX = (i: number) => pad + (i / Math.max(data.length - 1, 1)) * (W - 2 * pad);
   const toY = (v: number) => H - pad - (v / maxVal) * (H - 2 * pad);
 
-  const plannedPts = cumulativeData.map((d, i) => ({ x: toX(i), y: toY(d.cumulativePlanned) }));
+  const plannedPts = mode === "velocity"
+    ? data.map((d, i) => ({ x: toX(i), y: toY(d.planned) }))
+    : cumulativeData.map((d, i) => ({ x: toX(i), y: toY(d.cumulativePlanned) }));
   
   // Find the last executed batch index so actual line doesn't extend into future scheduled batches
   const lastExecutedIdx = data.findLastIndex((d) => d.status === "DONE" || d.status === "FAILED");
-  const actualPts = cumulativeData
-    .slice(0, lastExecutedIdx !== -1 ? lastExecutedIdx + 1 : 0)
-    .map((d, i) => ({ x: toX(i), y: toY(d.cumulativeActual) }));
+  const actualPts = mode === "velocity"
+    ? data.slice(0, lastExecutedIdx !== -1 ? lastExecutedIdx + 1 : 0).map((d, i) => ({ x: toX(i), y: toY(d.actual) }))
+    : cumulativeData.slice(0, lastExecutedIdx !== -1 ? lastExecutedIdx + 1 : 0).map((d, i) => ({ x: toX(i), y: toY(d.cumulativeActual) }));
 
   const makePath = (pts: { x: number; y: number }[]) =>
     pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
@@ -91,10 +96,44 @@ function DeliveryChart({ data }: { data: ChartPoint[] }) {
 
   return (
     <div>
-      <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:12, fontSize:11 }}>
-        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"rgba(217,119,6,0.5)" }} /> Planned Growth</span>
-        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"#16a34a" }} /> Actual Growth</span>
-        <span style={{ color:N.muted, marginLeft:"auto", fontWeight:600 }}>{data.length} batches</span>
+      <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:12, fontSize:11, flexWrap:"wrap" }}>
+        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"rgba(217,119,6,0.5)" }} /> {mode === "velocity" ? "Planned Batch Velocity" : "Planned Cumulative Growth"}</span>
+        <span style={{ display:"flex", alignItems:"center", gap:6, color:N.muted, fontWeight:700 }}><span style={{ width:12, height:3, borderRadius:4, display:"inline-block", background:"#16a34a" }} /> {mode === "velocity" ? "Actual Batch Velocity" : "Actual Cumulative Growth"}</span>
+        <span style={{ color:N.muted, fontWeight:600 }}>{data.length} batches</span>
+        <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+          <button
+            onClick={() => setMode("velocity")}
+            style={{
+              padding: "4px 10px",
+              borderRadius: 6,
+              fontSize: 10,
+              fontWeight: 800,
+              cursor: "pointer",
+              border: mode === "velocity" ? "1px solid #d97706" : "1px solid rgba(255,255,255,0.1)",
+              background: mode === "velocity" ? "rgba(217,119,6,0.2)" : "rgba(255,255,255,0.05)",
+              color: mode === "velocity" ? "#fbbf24" : "#a78bfa",
+              transition: "all 0.2s",
+            }}
+          >
+            ⚡ Velocity Pacing Shape
+          </button>
+          <button
+            onClick={() => setMode("cumulative")}
+            style={{
+              padding: "4px 10px",
+              borderRadius: 6,
+              fontSize: 10,
+              fontWeight: 800,
+              cursor: "pointer",
+              border: mode === "cumulative" ? "1px solid #d97706" : "1px solid rgba(255,255,255,0.1)",
+              background: mode === "cumulative" ? "rgba(217,119,6,0.2)" : "rgba(255,255,255,0.05)",
+              color: mode === "cumulative" ? "#fbbf24" : "#a78bfa",
+              transition: "all 0.2s",
+            }}
+          >
+            📈 Cumulative Progress
+          </button>
+        </div>
       </div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ borderRadius:12, background: "#120324", padding: "16px 0", overflow: "visible" }}>
         <defs>
@@ -340,7 +379,7 @@ export default function OrderDetailPage() {
       {/* ── Live delivery chart ── */}
       <div style={{ borderRadius:24, padding:24, background:N.bg, boxShadow:N.raised }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-          <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:0 }}>📈 Delivery Chart — Planned vs Actual</h3>
+          <h3 style={{ fontSize:14, fontWeight:800, color:N.text, margin:0 }}>📈 Delivery Pacing Shape & Growth Chart</h3>
           <button onClick={fetchStatus} style={{ border:"none", background:"none", fontSize:12, color:N.accent, fontWeight:800, cursor:"pointer" }} className="neo-btn">↻ Refresh</button>
         </div>
         {chartData.length > 0 ? (
@@ -414,11 +453,11 @@ export default function OrderDetailPage() {
                   bSaves = resData.engagementFired.saves ?? 0;
                   bShares = resData.engagementFired.shares ?? 0;
                   bComments = resData.engagementFired.comments ?? 0;
-                } else if (resData && resData.customEngagement) {
-                  bLikes = resData.customEngagement.likes ?? 0;
-                  bSaves = resData.customEngagement.saves ?? 0;
-                  bShares = resData.customEngagement.shares ?? 0;
-                  bComments = resData.customEngagement.comments ?? 0;
+                } else if (row.likes !== undefined || (resData && resData.customEngagement)) {
+                  bLikes = row.likes ?? resData?.customEngagement?.likes ?? 0;
+                  bSaves = row.saves ?? resData?.customEngagement?.saves ?? 0;
+                  bShares = row.shares ?? resData?.customEngagement?.shares ?? 0;
+                  bComments = row.comments ?? resData?.customEngagement?.comments ?? 0;
                 } else if (!isCustomOrder) {
                   // Fallback for scheduled standard orders (not fired yet)
                   const scale = order.viewsTarget > 0 ? row.planned / order.viewsTarget : 0;

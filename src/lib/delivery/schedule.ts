@@ -146,6 +146,11 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     peakHours: order.peakHours,
     style: order.curveStyle,
     minQuantity: viewsMinQty,
+    engagementEnabled: order.engagementEnabled,
+    likesRatioPct: order.likesRatioPct ?? 0,
+    savesRatioPct: order.savesRatioPct ?? 0,
+    sharesRatioPct: order.sharesRatioPct ?? 0,
+    commentsRatioPct: order.commentsRatioPct ?? 0,
   };
   const batches = generateDeliverySchedule(params);
 
@@ -167,6 +172,14 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
       viewsBatch: batch.views,
       scheduledAt: new Date(now.getTime() + delayMs),
       status: "SCHEDULED" as const,
+      responseData: {
+        customEngagement: {
+          likes: batch.likes ?? 0,
+          saves: batch.saves ?? 0,
+          shares: batch.shares ?? 0,
+          comments: batch.comments ?? 0,
+        }
+      }
     };
   });
 

@@ -51,10 +51,16 @@ export async function GET(
   const chartData = order.deliveryEvents.map((e) => {
     const firstEventTime = order.deliveryEvents[0]?.scheduledAt.getTime() ?? new Date().getTime();
     const hourOffset = Math.round((e.scheduledAt.getTime() - firstEventTime) / (1000 * 60 * 60));
+    const eng = (e.responseData as any)?.customEngagement;
+    const scale = order.viewsTarget > 0 ? e.viewsBatch / order.viewsTarget : 0;
     return {
       hour: hourOffset,
       planned: e.viewsBatch,
       actual: e.status === "DONE" ? e.viewsBatch : 0,
+      likes: eng?.likes ?? (order.likesTarget > 0 ? Math.round(order.likesTarget * scale) : 0),
+      saves: eng?.saves ?? (order.savesTarget > 0 ? Math.round(order.savesTarget * scale) : 0),
+      shares: eng?.shares ?? (order.sharesTarget > 0 ? Math.round(order.sharesTarget * scale) : 0),
+      comments: eng?.comments ?? (order.commentsTarget > 0 ? Math.round(order.commentsTarget * scale) : 0),
       status: e.status,
       scheduledAt: e.scheduledAt,
       responseData: e.responseData,

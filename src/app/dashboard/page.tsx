@@ -76,31 +76,18 @@ function LiveCountdown({ targetDateStr, fallbackHour }: { targetDateStr?: string
 function DashboardMiniChart({ data }: { data: any[] }) {
   if (!data.length) return null;
 
-  // Calculate cumulative planned and actual views
-  let runningPlanned = 0;
-  let runningActual = 0;
-  const cumulativeData = data.map((d) => {
-    runningPlanned += d.planned;
-    runningActual += d.status === "DONE" ? d.planned : 0;
-    return {
-      ...d,
-      cumulativePlanned: runningPlanned,
-      cumulativeActual: runningActual,
-    };
-  });
-
   const W = 350, H = 100, pad = 10;
-  const maxVal = Math.max(cumulativeData.at(-1)!.cumulativePlanned, 1);
+  const maxVal = Math.max(...data.map(d => d.planned), 1);
 
-  const toX = (i: number) => pad + (i / Math.max(cumulativeData.length - 1, 1)) * (W - 2 * pad);
+  const toX = (i: number) => pad + (i / Math.max(data.length - 1, 1)) * (W - 2 * pad);
   const toY = (v: number) => H - pad - (v / maxVal) * (H - 2 * pad);
 
-  const plannedPts = cumulativeData.map((d, i) => ({ x: toX(i), y: toY(d.cumulativePlanned) }));
+  const plannedPts = data.map((d, i) => ({ x: toX(i), y: toY(d.planned) }));
   
   const lastExecutedIdx = data.findLastIndex((d) => d.status === "DONE" || d.status === "FAILED");
-  const actualPts = cumulativeData
+  const actualPts = data
     .slice(0, lastExecutedIdx !== -1 ? lastExecutedIdx + 1 : 0)
-    .map((d, i) => ({ x: toX(i), y: toY(d.cumulativeActual) }));
+    .map((d, i) => ({ x: toX(i), y: toY(d.actual) }));
 
   const makePath = (pts: { x: number; y: number }[]) =>
     pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
