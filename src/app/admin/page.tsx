@@ -27,6 +27,7 @@ interface AdminSettings {
   upiQrCode: string | null;
 
   minDeposit: number;
+  apifyKeys: string | null;
 
 }
 
@@ -138,6 +139,7 @@ export default function AdminPage() {
     upiQrCode: "",
 
     minDeposit: 500,
+    apifyKeys: "",
 
   });
 
@@ -1746,6 +1748,13 @@ export default function AdminPage() {
 
                     }} />
 
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🕷️ Apify API Keys (Comma Separated)</label>
+                  <input type="text" value={settings.apifyKeys ?? ""} onChange={(e) => setSettings((p) => ({ ...p, apifyKeys: e.target.value }))}
+                    placeholder="apify_api_key1, apify_api_key2"
+                    className="neo-input"
+                    style={{ width: "100%", padding: "14px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: N.text, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", boxSizing: "border-box" }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>💎 USDT (TRC20) Wallet Address</label>

@@ -44,6 +44,7 @@ model User {
   supportTickets  SupportTicket[]
   affiliateTx     AffiliateTransaction[] @relation("AffiliateEarnings")
   referredTx      AffiliateTransaction[] @relation("ReferredUser")
+  autoSubscriptions AutoSubscription[]
 
   @@map("users")
 }
@@ -387,6 +388,7 @@ model AdminSettings {
   upiId           String?  @map("upi_id")
   upiQrCode       String?  @map("upi_qr_code")
   minDeposit      Float    @default(500.0) @map("min_deposit")
+  apifyKeys       String?  @map("apify_keys") @db.Text
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("admin_settings")
@@ -458,6 +460,7 @@ model CurveTemplate {
   sharesRatioPct  Float       @default(0.5) @map("shares_ratio_pct")
   commentsRatioPct Float      @default(0.2) @map("comments_ratio_pct")
   
+  autoSubscriptions AutoSubscription[]
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
@@ -539,4 +542,20 @@ model AffiliateTransaction {
   @@map("affiliate_transactions")
 }
 
+// ─────────────── AUTO SUBSCRIPTION ──────────────────────
+model AutoSubscription {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId  String   @map("template_id")
+  template    CurveTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  platform    String   @default("INSTAGRAM") // "INSTAGRAM", "TIKTOK", "FACEBOOK"
+  username    String
+  lastPostId  String?  @map("last_post_id")
+  status      String   @default("ACTIVE") // "ACTIVE", "PAUSED", "INSUFFICIENT_FUNDS"
+  viewsTarget Int      @default(1000) @map("views_target") // Optional custom target if they want
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
+  @@map("auto_subscriptions")
+}
