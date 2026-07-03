@@ -44,19 +44,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { platform, username, templateId, viewsTarget } = await request.json();
+    const { platform, username, templateIds, viewsMin, viewsMax } = await request.json();
 
-    if (!platform || !username || !templateId) {
+    if (!platform || !username || !templateIds || !Array.isArray(templateIds) || templateIds.length === 0) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // Verify template belongs to user
-    const template = await prisma.curveTemplate.findUnique({
-      where: { id: templateId, userId: dbUser.id }
+    // Verify templates belong to user
+    const templates = await prisma.curveTemplate.findMany({
+      where: { id: { in: templateIds }, userId: dbUser.id }
     });
 
-    if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    if (templates.length !== templateIds.length) {
+      return NextResponse.json({ error: "One or more templates not found" }, { status: 404 });
     }
 
     const autoSub = await prisma.autoSubscription.create({
@@ -64,10 +64,11 @@ export async function POST(request: NextRequest) {
         userId: dbUser.id,
         platform,
         username: username.trim(),
-        templateId,
-        viewsTarget: viewsTarget || 1000
-      },
-      include: { template: true }
+        templateIds,
+        templateId: templateIds[0], // fallback for legacy safety
+        viewsMin: Number(viewsMin) || 1000,
+        viewsMax: Number(viewsMax) || 5000,
+      }
     });
 
     return NextResponse.json({ autoSubscription: autoSub }, { status: 201 });

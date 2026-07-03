@@ -51,15 +51,36 @@ export async function GET(request: NextRequest) {
           return s ? s.customRate : fallback;
         };
 
+        // Calculate random views
+        const targetViews = Math.floor(Math.random() * (sub.viewsMax - sub.viewsMin + 1)) + sub.viewsMin;
+
+        // Pick random template
+        let templateIdToUse = sub.templateId;
+        if (sub.templateIds && sub.templateIds.length > 0) {
+          templateIdToUse = sub.templateIds[Math.floor(Math.random() * sub.templateIds.length)];
+        }
+        
+        if (!templateIdToUse) {
+          throw new Error("No template found for auto subscription");
+        }
+
+        const template = await prisma.curveTemplate.findUnique({
+          where: { id: templateIdToUse }
+        });
+
+        if (!template) {
+          throw new Error("Template not found in DB");
+        }
+
         const engTargets = calculateEngagementTargets(
-          sub.viewsTarget,
-          sub.template.likesRatioPct,
-          sub.template.savesRatioPct,
-          sub.template.sharesRatioPct,
-          sub.template.commentsRatioPct
+          targetViews,
+          template.likesRatioPct,
+          template.savesRatioPct,
+          template.sharesRatioPct,
+          template.commentsRatioPct
         );
 
-        const viewsCost = (sub.viewsTarget / 1000) * getRate("views", 3.0);
+        const viewsCost = (targetViews / 1000) * getRate("views", 3.0);
         const likesCost = (engTargets.likesTarget / 1000) * getRate("likes", 5.0);
         const savesCost = (engTargets.savesTarget / 1000) * getRate("saves", 5.0);
         const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
@@ -73,7 +94,7 @@ export async function GET(request: NextRequest) {
             data: { status: "INSUFFICIENT_FUNDS" }
           });
           
-          sendTelegramAlert(`⚠️ *Auto-Order Paused*\nUser: \`${sub.user.email}\`\nReason: Insufficient funds for new post @${sub.username}`).catch(console.error);
+          sendTelegramAlert(`⚠️ *Auto-Order Paused*\nUser: \`${sub.user.email}\`\nReason: Insufficient funds for new post @${sub.username} (Requires ₹${totalPrice})`).catch(console.error);
           results.push({ username: sub.username, status: "PAUSED_FUNDS" });
           continue;
         }
@@ -99,17 +120,17 @@ export async function GET(request: NextRequest) {
               panelId: adminPanel.id,
               status: "PENDING",
               priceCharged: totalPrice,
-              viewsTarget: sub.viewsTarget,
+              viewsTarget: targetViews,
               likesTarget: engTargets.likesTarget,
               savesTarget: engTargets.savesTarget,
               sharesTarget: engTargets.sharesTarget,
               commentsTarget: engTargets.commentsTarget,
-              curveStyle: sub.template.style,
-              durationHours: sub.template.durationHours,
-              warmupHours: sub.template.warmupHours,
-              peakHours: sub.template.peakHours,
-              decayHours: sub.template.decayHours,
-              viewsRemaining: sub.viewsTarget,
+              curveStyle: template.style,
+              durationHours: template.durationHours,
+              warmupHours: template.warmupHours,
+              peakHours: template.peakHours,
+              decayHours: template.decayHours,
+              viewsRemaining: targetViews,
             }
           });
 
@@ -119,7 +140,7 @@ export async function GET(request: NextRequest) {
           });
         });
 
-        sendTelegramAlert(`🚀 *Auto-Order Placed!*\nUser: \`${sub.user.email}\`\nReel: ${url}\nTarget: ${sub.viewsTarget} views`).catch(console.error);
+        sendTelegramAlert(`🚀 *Auto-Order Placed!*\nUser: \`${sub.user.email}\`\nReel: ${url}\nTarget: ${targetViews} views (Template: ${template.name})`).catch(console.error);
         results.push({ username: sub.username, status: "ORDER_PLACED", url });
 
       } catch (err) {

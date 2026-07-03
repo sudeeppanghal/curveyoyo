@@ -542,18 +542,21 @@ model AffiliateTransaction {
   @@map("affiliate_transactions")
 }
 
-// ─────────────── AUTO SUBSCRIPTION ──────────────────────
+// ─────────────── AUTO SUBSCRIPTION ───────────────
 model AutoSubscription {
   id          String   @id @default(cuid())
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateId  String   @map("template_id")
-  template    CurveTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId  String?  @map("template_id") // Kept for backward compatibility
+  templateIds String[] @default([]) @map("template_ids")
+  template    CurveTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
   platform    String   @default("INSTAGRAM") // "INSTAGRAM", "TIKTOK", "FACEBOOK"
   username    String
   lastPostId  String?  @map("last_post_id")
   status      String   @default("ACTIVE") // "ACTIVE", "PAUSED", "INSUFFICIENT_FUNDS"
-  viewsTarget Int      @default(1000) @map("views_target") // Optional custom target if they want
+  viewsTarget Int      @default(0) @map("views_target") // Kept for backward compatibility
+  viewsMin    Int      @default(1000) @map("views_min")
+  viewsMax    Int      @default(5000) @map("views_max")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
