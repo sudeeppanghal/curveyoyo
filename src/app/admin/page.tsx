@@ -185,6 +185,27 @@ export default function AdminPage() {
   const [affiliateLoading, setAffiliateLoading] = useState(false);
   const [affiliateSearchEmail, setAffiliateSearchEmail] = useState("bizanomarketing.carrd.co@gmail.com");
 
+  const [historyUser, setHistoryUser] = useState<any>(null);
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openUserHistory = async (u: any) => {
+    setHistoryUser(u);
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/admin/users/" + u.id + "/history", {
+        headers: { "x-admin-secret": localStorage.getItem("yoyo_admin_secret") || "" }
+      });
+      const data = await res.json();
+      setHistoryData(data.deposits || []);
+    } catch {
+      alert("Error loading history");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+
   const fetchAffiliateStats = async (emailToSearch: string) => {
     setAffiliateLoading(true);
     try {
@@ -2053,7 +2074,11 @@ export default function AdminPage() {
 
                               )}
 
-                              <button onClick={() => impersonateUser(u.id)} className="neo-btn"
+                                                            <button onClick={() => openUserHistory(u)} className="neo-btn"
+                                style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}>
+                                History
+                              </button>
+<button onClick={() => impersonateUser(u.id)} className="neo-btn"
 
                                 style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#2563eb", boxShadow: N.raisedSm }}>
 
@@ -4017,6 +4042,70 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+      {/* USER HISTORY MODAL */}
+      {historyUser && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: N.bg, borderRadius: 24, padding: 32, width: 700, maxWidth: "90%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: N.text, margin: 0 }}>User History</h3>
+                <p style={{ fontSize: 13, color: N.muted, margin: 0 }}>{historyUser.email}</p>
+              </div>
+              <button onClick={() => setHistoryUser(null)} style={{ background: "none", border: "none", fontSize: 24, color: N.muted, cursor: "pointer" }}>&times;</button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+              <div style={{ background: N.bg, padding: 16, borderRadius: 12, boxShadow: N.inset }}>
+                <p style={{ fontSize: 11, color: N.muted, fontWeight: 700, margin: 0 }}>Total Orders</p>
+                <p style={{ fontSize: 18, color: N.text, fontWeight: 800, margin: 0 }}>{historyUser._count?.orders || 0}</p>
+              </div>
+              <div style={{ background: N.bg, padding: 16, borderRadius: 12, boxShadow: N.inset }}>
+                <p style={{ fontSize: 11, color: N.muted, fontWeight: 700, margin: 0 }}>Total Deposited</p>
+                <p style={{ fontSize: 18, color: "#16a34a", fontWeight: 800, margin: 0 }}>? {(historyUser.totalDepositedInr || 0).toLocaleString()} <span style={{fontSize: 12, color: N.muted}}>/ </span></p>
+              </div>
+              <div style={{ background: N.bg, padding: 16, borderRadius: 12, boxShadow: N.inset }}>
+                <p style={{ fontSize: 11, color: N.muted, fontWeight: 700, margin: 0 }}>Total Spent</p>
+                <p style={{ fontSize: 18, color: N.accent, fontWeight: 800, margin: 0 }}>? {(historyUser.totalSpent || 0).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: N.text, marginBottom: 12 }}>Deposit History</h4>
+            {historyLoading ? (
+              <p style={{ fontSize: 13, color: N.muted }}>Loading deposits...</p>
+            ) : historyData.length === 0 ? (
+              <p style={{ fontSize: 13, color: N.muted }}>No deposit records found.</p>
+            ) : (
+              <div style={{ background: N.bg, borderRadius: 12, boxShadow: N.inset, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${N.border}` }}>
+                      <th style={{ padding: "12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: N.muted }}>Date</th>
+                      <th style={{ padding: "12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: N.muted }}>Type</th>
+                      <th style={{ padding: "12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: N.muted }}>Amount</th>
+                      <th style={{ padding: "12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: N.muted }}>TxID / UTR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyData.map(dep => (
+                      <tr key={dep.id} style={{ borderBottom: `1px solid ${N.border}` }}>
+                        <td style={{ padding: "12px", fontSize: 12, color: N.text, fontWeight: 600 }}>{new Date(dep.date).toLocaleString()}</td>
+                        <td style={{ padding: "12px", fontSize: 12, color: N.text, fontWeight: 700 }}>
+                          <span style={{ padding: "4px 8px", background: dep.type === "Crypto" ? "#f59e0b1A" : "#3b82f61A", color: dep.type === "Crypto" ? "#d97706" : "#2563eb", borderRadius: 6 }}>{dep.type}</span>
+                        </td>
+                        <td style={{ padding: "12px", fontSize: 13, color: "#16a34a", fontWeight: 800 }}>
+                          {dep.currency === "INR" ? "₹" : "$"} {dep.amount}
+                        </td>
+                        <td style={{ padding: "12px", fontSize: 11, color: N.muted, fontFamily: "monospace" }}>{dep.txId}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
         </div>
 
