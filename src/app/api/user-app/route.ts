@@ -4,8 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { sendTelegramAlert } from "@/lib/telegram";
 import crypto from "crypto";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export const dynamic = "force-dynamic";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder";
 
 // Create a standalone Supabase client that doesn't rely on Next.js cookie store
 const supabase = createServerClient(supabaseUrl, supabaseAnonKey);
@@ -37,6 +39,15 @@ export async function POST(request: NextRequest) {
       });
 
       if (error || !data.user) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: email.trim().toLowerCase() },
+        });
+        if (existingUser) {
+          return NextResponse.json({
+            ok: false,
+            error: "You registered via Google on our website without a password. Please visit www.yoyosmm.online, set your password in account settings/reset password, and then sign in here."
+          }, { status: 401, headers: corsHeaders });
+        }
         return NextResponse.json({ ok: false, error: "Invalid email or password" }, { status: 401, headers: corsHeaders });
       }
 
@@ -61,46 +72,8 @@ export async function POST(request: NextRequest) {
             walletMode: true,
           },
         });
-      }
 
-      return NextResponse.json({
-        ok: true,
-        token: data.session?.access_token || data.user.id,
-        user: {
-          id: dbUser.id,
-          email: dbUser.email,
-          name: dbUser.name || dbUser.email.split("@")[0],
-          balance: dbUser.balance,
-          walletMode: dbUser.walletMode,
-          plan: dbUser.plan,
-        },
-      }, { headers: corsHeaders });
-    }
-
-    // ── 1.5. GOOGLE SIGN-IN FOR OLD & NEW MOBILE USERS ──
-    if (action === "google_signin") {
-      if (!email) {
-        return NextResponse.json({ ok: false, error: "Google Email address required" }, { status: 400, headers: corsHeaders });
-      }
-      const cleanEmail = email.trim().toLowerCase();
-      let dbUser = await prisma.user.findUnique({
-        where: { email: cleanEmail },
-      });
-
-      if (!dbUser) {
-        // Create user automatically if first time signing in with Google on mobile
-        const fakeId = "google_" + Math.random().toString(36).substring(2, 15);
-        dbUser = await prisma.user.create({
-          data: {
-            supabaseId: fakeId,
-            email: cleanEmail,
-            name: name || cleanEmail.split("@")[0],
-            balance: 0.0,
-            walletMode: true,
-          },
-        });
-
-        // Notify admin
+        // Notify admin about new app signup
         try {
           const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
           const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -110,7 +83,7 @@ export async function POST(request: NextRequest) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 chat_id: CHAT_ID,
-                text: `🚨 <b>New YoYo SMM App User (Google Login)</b>\n\n👤 <b>Name:</b> ${dbUser.name}\n📧 <b>Email:</b> ${dbUser.email}\n📱 <b>Platform:</b> Android App`,
+                text: `🚨 <b>New YoYo SMM App User (Signup)</b>\n\n👤 <b>Name:</b> ${dbUser.name}\n📧 <b>Email:</b> ${dbUser.email}\n📱 <b>Platform:</b> Android App`,
                 parse_mode: "HTML"
               })
             });
@@ -120,7 +93,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         ok: true,
-        token: dbUser.supabaseId || dbUser.id,
+        token: data.session?.access_token || data.user.id,
         user: {
           id: dbUser.id,
           email: dbUser.email,
@@ -568,7 +541,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: false, error: "Ticket not found" }, { status: 404, headers: corsHeaders });
       }
 
-      await prisma.supportMessage.create({
+      await prisma.ticketMessage.create({
         data: { ticketId, sender: "USER", message: String(message).trim() },
       });
       await prisma.supportTicket.update({
