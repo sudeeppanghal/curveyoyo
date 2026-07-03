@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { processTicketAutoReply } from "@/lib/ai/ticket-responder";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -75,6 +76,9 @@ export async function POST(request: NextRequest) {
     `💬 *Message:* ${message.trim().slice(0, 300)}`
   ).catch(console.error);
 
+  // Trigger AI Auto-Responder in the background
+  processTicketAutoReply(ticket.id, dbUser.id).catch(console.error);
+
   return NextResponse.json({ ticket }, { status: 201 });
 }
 
@@ -117,6 +121,9 @@ export async function PUT(request: NextRequest) {
       data: { status: "OPEN" }
     });
   }
+
+  // Trigger AI Auto-Responder in the background
+  processTicketAutoReply(ticketId, dbUser.id).catch(console.error);
 
   return NextResponse.json({ ticketMessage });
 }
