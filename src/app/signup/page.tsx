@@ -49,8 +49,8 @@ export default function SignupPage() {
 
   const handleGoogle = async () => {
     await createClient().auth.signInWithOAuth({
-      provider:"google",
-      options:{ redirectTo:`${window.location.origin}/api/auth/callback` },
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/dashboard` },
     });
   };
 
@@ -135,7 +135,7 @@ export default function SignupPage() {
                   <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07Z"/>
                   <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31Z"/>
                 </svg>
-                Sign up with Google
+                Continue with Google
               </button>
 
               <p style={{ textAlign:"center", fontSize:13, color:N.muted, marginTop:22, fontWeight:600 }}>

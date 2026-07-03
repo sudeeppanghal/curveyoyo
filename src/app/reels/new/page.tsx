@@ -633,7 +633,7 @@ function CurvePreview({
               Hour: {Math.round(currentBatch.hour)}h
             </span>
             <span style={{ fontSize: 10, fontWeight: 700, color: "#d946ef" }}>
-              Views: {currentBatch.views.toLocaleString()}
+              Views: {(currentBatch?.views ?? 0).toLocaleString()}
             </span>
           </div>
         )}
@@ -994,7 +994,7 @@ export default function NewReelPage() {
   const [views, setViews] = useState(10000);
   const [selectedViewsService, setSelectedViewsService] = useState<"views" | "reach_impressions_views">("views");
   const [durationDays, setDurationDays] = useState(7);
-  const [style, setStyle] = useState<CurveStyle>("ORGANIC");
+  const [style, setStyle] = useState<CurveStyle>("SLOW_START");
   const [selectedCategory, setSelectedCategory] = useState("All (107)");
 
   // Step 3 ── Engagement
@@ -1534,7 +1534,7 @@ export default function NewReelPage() {
                   >
                     {customSchedule.map((b, idx) => (
                       <option key={idx} value={idx}>
-                        Batch #{idx + 1} (Offset: {Math.round(b.hour * 10) / 10}h - {b.views.toLocaleString()} views)
+                        Batch #{idx + 1} (Offset: {Math.round(b.hour * 10) / 10}h - {(b?.views ?? 0).toLocaleString()} views)
                       </option>
                     ))}
                   </select>
@@ -2071,7 +2071,7 @@ export default function NewReelPage() {
                     }}>
                       <span style={{ color: N.muted }}>#{idx + 1}</span>
                       <span style={{ color: "#d97706" }}>{timeText}</span>
-                      <span style={{ textAlign: "right", fontWeight: 800 }}>{batch.views.toLocaleString()}</span>
+                      <span style={{ textAlign: "right", fontWeight: 800 }}>{(batch?.views ?? 0).toLocaleString()}</span>
                       <span style={{ textAlign: "right", fontSize: 11, color: "#16a34a" }}>{engStr}</span>
                     </div>
                   );
