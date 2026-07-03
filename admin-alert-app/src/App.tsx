@@ -16,6 +16,8 @@ import {
   Play
 } from "lucide-react";
 import { sound } from "./sound";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { KeepAwake } from "@capacitor-community/keep-awake";
 
 interface Stats {
   totalDepositsLifetime: number;
@@ -78,8 +80,9 @@ export default function App() {
   // Config state - hardcoded to live production URL and secret by default!
   const [apiUrl, setApiUrl] = useState(() => localStorage.getItem("pyoneer_alert_url") || "https://www.yoyosmm.online");
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("pyoneer_alert_key") || "yoyosmm_admin_sec_9e3a1f8b4d0c7e2d5a6c8e9b");
-  const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("pyoneer_alert_interval")) || 10);
+  const [pollInterval, setPollInterval] = useState(() => Number(localStorage.getItem("pyoneer_alert_interval")) || 5);
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem("pyoneer_alert_sound") !== "false");
+  const [keepAwakeEnabled, setKeepAwakeEnabled] = useState(() => localStorage.getItem("pyoneer_keep_awake") !== "false");
   const [showSettings, setShowSettings] = useState(false);
 
   // Data state
@@ -114,6 +117,17 @@ export default function App() {
     sound.enabled = soundEnabled;
     localStorage.setItem("pyoneer_alert_sound", String(soundEnabled));
   }, [soundEnabled]);
+
+  // Manage 24/7 KeepAwake & Native Notifications
+  useEffect(() => {
+    LocalNotifications.requestPermissions().catch(err => console.log("Notif perm err:", err));
+    if (keepAwakeEnabled) {
+      KeepAwake.keepAwake().catch(err => console.log("KeepAwake err:", err));
+    } else {
+      KeepAwake.allowSleep().catch(err => console.log("AllowSleep err:", err));
+    }
+    localStorage.setItem("pyoneer_keep_awake", String(keepAwakeEnabled));
+  }, [keepAwakeEnabled]);
 
   // Capture PWA install event
   useEffect(() => {
@@ -179,6 +193,16 @@ export default function App() {
             seenIdsRef.current.add(d.id);
             if (new Date(d.createdAt).getTime() > Date.now() - 30 * 60 * 1000) { // only alert if created within 30m
               sound.playDeposit();
+              LocalNotifications.schedule({
+                notifications: [
+                  {
+                    title: `💰 NEW DEPOSIT (${d.type})`,
+                    body: `₹${d.amount.toLocaleString()} received from ${d.userEmail}`,
+                    id: Math.floor(Math.random() * 1000000),
+                    schedule: { at: new Date(Date.now() + 100) }
+                  }
+                ]
+              }).catch(err => console.log("Notif err:", err));
               newToasts.push({
                 id: d.id,
                 type: "deposit",
@@ -195,6 +219,16 @@ export default function App() {
             seenIdsRef.current.add(o.id);
             if (new Date(o.createdAt).getTime() > Date.now() - 30 * 60 * 1000) {
               sound.playOrder();
+              LocalNotifications.schedule({
+                notifications: [
+                  {
+                    title: `🚀 NEW ORDER PLACED`,
+                    body: `${o.viewsTarget.toLocaleString()} views (${o.curveStyle}) by ${o.userEmail}`,
+                    id: Math.floor(Math.random() * 1000000),
+                    schedule: { at: new Date(Date.now() + 100) }
+                  }
+                ]
+              }).catch(err => console.log("Notif err:", err));
               newToasts.push({
                 id: o.id,
                 type: "order",
@@ -211,6 +245,16 @@ export default function App() {
             seenIdsRef.current.add(t.id);
             if (new Date(t.createdAt).getTime() > Date.now() - 30 * 60 * 1000) {
               sound.playTicket();
+              LocalNotifications.schedule({
+                notifications: [
+                  {
+                    title: `🎫 NEW SUPPORT TICKET`,
+                    body: `"${t.subject}" opened by ${t.userEmail}`,
+                    id: Math.floor(Math.random() * 1000000),
+                    schedule: { at: new Date(Date.now() + 100) }
+                  }
+                ]
+              }).catch(err => console.log("Notif err:", err));
               newToasts.push({
                 id: t.id,
                 type: "ticket",
@@ -294,6 +338,16 @@ export default function App() {
           >
             {soundEnabled ? <Volume2 size={18} color="#fbbf24" /> : <VolumeX size={18} color="#ef4444" />}
             <span>{soundEnabled ? "Sound ON" : "Muted"}</span>
+          </button>
+
+          <button
+            onClick={() => setKeepAwakeEnabled(!keepAwakeEnabled)}
+            className="btn-secondary"
+            title={keepAwakeEnabled ? "24/7 Keep Awake Active (Prevents screen and processor from sleeping)" : "Normal Sleep Allowed"}
+            style={{ padding: "8px 14px", borderColor: keepAwakeEnabled ? "#22c55e" : "", background: keepAwakeEnabled ? "rgba(34,197,94,0.15)" : "" }}
+          >
+            <Zap size={18} color={keepAwakeEnabled ? "#4ade80" : "#94a3b8"} />
+            <span style={{ color: keepAwakeEnabled ? "#4ade80" : "", fontWeight: 700 }}>{keepAwakeEnabled ? "🔒 24/7 Active" : "Sleep Normal"}</span>
           </button>
 
           <button onClick={fetchFeed} className="btn-secondary" style={{ padding: "8px 14px" }} title="Refresh Now">
@@ -412,54 +466,54 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Filter Tabs ── */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+      {/* ── Segmented Scrollable Filter Pill Bar ── */}
+      <div className="tab-bar-scroll">
         <button
           onClick={() => setActiveTab("all")}
           className={`btn-secondary ${activeTab === "all" ? "glow-border-gold" : ""}`}
-          style={{ background: activeTab === "all" ? "rgba(251,191,36,0.2)" : "", color: activeTab === "all" ? "#fbbf24" : "" }}
+          style={{ background: activeTab === "all" ? "rgba(251,191,36,0.25)" : "", color: activeTab === "all" ? "#fbbf24" : "" }}
         >
-          🌐 All Live Streams ({deposits.length + orders.length + tickets.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("deposits")}
-          className={`btn-secondary ${activeTab === "deposits" ? "glow-border-gold" : ""}`}
-          style={{ background: activeTab === "deposits" ? "rgba(251,191,36,0.2)" : "", color: activeTab === "deposits" ? "#fbbf24" : "" }}
-        >
-          💰 Recent Deposits ({deposits.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("orders")}
-          className={`btn-secondary ${activeTab === "orders" ? "glow-border-cyan" : ""}`}
-          style={{ background: activeTab === "orders" ? "rgba(6,182,212,0.2)" : "", color: activeTab === "orders" ? "#22d3ee" : "" }}
-        >
-          🚀 Recent Orders ({orders.length})
+          🌐 All Live Streams ({deposits.length + orders.length + activeOrders.length + tickets.length})
         </button>
         <button
           onClick={() => setActiveTab("active_orders")}
           className={`btn-secondary ${activeTab === "active_orders" ? "glow-border-purple" : ""}`}
-          style={{ background: activeTab === "active_orders" ? "rgba(168,85,247,0.2)" : "", color: activeTab === "active_orders" ? "#c084fc" : "" }}
+          style={{ background: activeTab === "active_orders" ? "rgba(168,85,247,0.25)" : "", color: activeTab === "active_orders" ? "#c084fc" : "" }}
         >
           ⚡ Active Progress ({activeOrders.length})
         </button>
         <button
+          onClick={() => setActiveTab("deposits")}
+          className={`btn-secondary ${activeTab === "deposits" ? "glow-border-gold" : ""}`}
+          style={{ background: activeTab === "deposits" ? "rgba(251,191,36,0.25)" : "", color: activeTab === "deposits" ? "#fbbf24" : "" }}
+        >
+          💰 Deposits ({deposits.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("orders")}
+          className={`btn-secondary ${activeTab === "orders" ? "glow-border-cyan" : ""}`}
+          style={{ background: activeTab === "orders" ? "rgba(6,182,212,0.25)" : "", color: activeTab === "orders" ? "#22d3ee" : "" }}
+        >
+          🚀 Orders ({orders.length})
+        </button>
+        <button
           onClick={() => setActiveTab("tickets")}
           className={`btn-secondary ${activeTab === "tickets" ? "glow-border-green" : ""}`}
-          style={{ background: activeTab === "tickets" ? "rgba(34,197,94,0.2)" : "", color: activeTab === "tickets" ? "#4ade80" : "" }}
+          style={{ background: activeTab === "tickets" ? "rgba(34,197,94,0.25)" : "", color: activeTab === "tickets" ? "#4ade80" : "" }}
         >
-          🎫 Support Tickets ({tickets.length})
+          🎫 Support ({tickets.length})
         </button>
       </div>
 
-      {/* ── Columnar Live Stream Grid ── */}
-      <div className="grid-feeds" style={{ gridTemplateColumns: activeTab === "all" ? "repeat(auto-fit, minmax(360px, 1fr))" : "1fr" }}>
+      {/* ── Columnar Live Stream Grid (Mobile Optimized) ── */}
+      <div className={`grid-feeds ${activeTab === "all" ? "grid-feeds-multi" : ""}`}>
         {/* 1. Deposits Stream */}
         {(activeTab === "all" || activeTab === "deposits") && (
-          <div className="glass-panel" style={{ padding: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 900, color: "#fbbf24", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-              <DollarSign size={20} /> LIVE DEPOSIT FEED
+          <div className="glass-panel" style={{ padding: 18 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 900, color: "#fbbf24", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, letterSpacing: "0.03em" }}>
+              <DollarSign size={18} /> LIVE DEPOSIT FEED ({deposits.length})
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto", paddingRight: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {deposits.length === 0 ? (
                 <div style={{ padding: 30, textAlign: "center", color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>No recent deposits found</div>
               ) : (
@@ -484,11 +538,11 @@ export default function App() {
 
         {/* 2. Orders Stream */}
         {(activeTab === "all" || activeTab === "orders") && (
-          <div className="glass-panel" style={{ padding: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 900, color: "#22d3ee", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-              <Zap size={20} /> LIVE BOOST ORDER FEED
+          <div className="glass-panel" style={{ padding: 18 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 900, color: "#22d3ee", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, letterSpacing: "0.03em" }}>
+              <Zap size={18} /> LIVE BOOST ORDER FEED ({orders.length})
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto", paddingRight: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {orders.length === 0 ? (
                 <div style={{ padding: 30, textAlign: "center", color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>No recent orders found</div>
               ) : (
@@ -500,11 +554,11 @@ export default function App() {
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
                       <span style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>{o.viewsTarget.toLocaleString()} Views</span>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: "#fbbf24" }}>₹{o.cost.toFixed(2)}</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#fbbf24" }}>₹{o.cost.toFixed(2)}</span>
                     </div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>User: <strong style={{ color: "#e2e8f0" }}>{o.userEmail}</strong></div>
                     {o.reelUrl && (
-                      <a href={o.reelUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#38bdf8", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                      <a href={o.reelUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#38bdf8", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6 }}>
                         View Reel <ExternalLink size={10} />
                       </a>
                     )}
@@ -517,11 +571,11 @@ export default function App() {
 
         {/* 3. Active Orders Progress Stream */}
         {(activeTab === "all" || activeTab === "active_orders") && (
-          <div className="glass-panel" style={{ padding: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 900, color: "#c084fc", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-              <Zap size={20} /> ACTIVE ORDERS PROGRESS ({activeOrders.length})
+          <div className="glass-panel" style={{ padding: 18 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 900, color: "#c084fc", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, letterSpacing: "0.03em" }}>
+              <Zap size={18} /> ACTIVE ORDERS PROGRESS ({activeOrders.length})
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto", paddingRight: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {activeOrders.length === 0 ? (
                 <div style={{ padding: 30, textAlign: "center", color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>No active boost orders running</div>
               ) : (
@@ -568,11 +622,11 @@ export default function App() {
 
         {/* 4. Tickets Stream */}
         {(activeTab === "all" || activeTab === "tickets") && (
-          <div className="glass-panel" style={{ padding: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 900, color: "#4ade80", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-              <MessageSquare size={20} /> LIVE SUPPORT TICKETS
+          <div className="glass-panel" style={{ padding: 18 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 900, color: "#4ade80", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, letterSpacing: "0.03em" }}>
+              <MessageSquare size={18} /> LIVE SUPPORT TICKETS ({tickets.length})
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 600, overflowY: "auto", paddingRight: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {tickets.length === 0 ? (
                 <div style={{ padding: 30, textAlign: "center", color: "var(--text-muted)", fontSize: 13, fontWeight: 600 }}>No recent tickets found</div>
               ) : (
