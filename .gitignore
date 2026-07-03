@@ -36,4 +36,6 @@ Thumbs.db
 .vercel
 .env*
 
+# Android APK builds
+*.apk
 .env*

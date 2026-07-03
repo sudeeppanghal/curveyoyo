@@ -77,6 +77,61 @@ export async function POST(request: NextRequest) {
       }, { headers: corsHeaders });
     }
 
+    // ── 1.5. GOOGLE SIGN-IN FOR OLD & NEW MOBILE USERS ──
+    if (action === "google_signin") {
+      if (!email) {
+        return NextResponse.json({ ok: false, error: "Google Email address required" }, { status: 400, headers: corsHeaders });
+      }
+      const cleanEmail = email.trim().toLowerCase();
+      let dbUser = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+      });
+
+      if (!dbUser) {
+        // Create user automatically if first time signing in with Google on mobile
+        const fakeId = "google_" + Math.random().toString(36).substring(2, 15);
+        dbUser = await prisma.user.create({
+          data: {
+            supabaseId: fakeId,
+            email: cleanEmail,
+            name: name || cleanEmail.split("@")[0],
+            balance: 0.0,
+            walletMode: true,
+          },
+        });
+
+        // Notify admin
+        try {
+          const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+          const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+          if (BOT_TOKEN && CHAT_ID) {
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: `🚨 <b>New YoYo SMM App User (Google Login)</b>\n\n👤 <b>Name:</b> ${dbUser.name}\n📧 <b>Email:</b> ${dbUser.email}\n📱 <b>Platform:</b> Android App`,
+                parse_mode: "HTML"
+              })
+            });
+          }
+        } catch (e) {}
+      }
+
+      return NextResponse.json({
+        ok: true,
+        token: dbUser.supabaseId || dbUser.id,
+        user: {
+          id: dbUser.id,
+          email: dbUser.email,
+          name: dbUser.name || dbUser.email.split("@")[0],
+          balance: dbUser.balance,
+          walletMode: dbUser.walletMode,
+          plan: dbUser.plan,
+        },
+      }, { headers: corsHeaders });
+    }
+
     // ── 2. SIGNUP ──
     if (action === "signup") {
       if (!email || !password) {
