@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { CurveStyle } from "@prisma/client";
 
+import { CURVE_100_LIST } from "@/lib/delivery/curve-styles-100";
+
 // GET all curve templates for logged-in user
 export async function GET() {
   const supabase = await createClient();
@@ -12,10 +14,30 @@ export async function GET() {
   const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const templates = await prisma.curveTemplate.findMany({
+  const dbTemplates = await prisma.curveTemplate.findMany({
     where: { userId: dbUser.id },
     orderBy: { createdAt: "desc" },
   });
+
+  const globalTemplates = CURVE_100_LIST.map(c => ({
+    id: c.id,
+    userId: "global",
+    name: c.label,
+    style: c.id,
+    durationHours: c.warmup + c.peak + 10,
+    warmupHours: c.warmup,
+    peakHours: c.peak,
+    decayHours: 10,
+    likesRatioPct: 4.0,
+    savesRatioPct: 2.0,
+    sharesRatioPct: 0.5,
+    commentsRatioPct: 0.2,
+    repostsRatioPct: 0.1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
+
+  const templates = [...dbTemplates, ...globalTemplates];
 
   return NextResponse.json({ templates });
 }

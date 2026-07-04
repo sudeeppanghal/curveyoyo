@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { CURVE_100_LIST } from "@/lib/delivery/curve-styles-100";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -55,12 +56,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // Verify templates belong to user
-    const templates = await prisma.curveTemplate.findMany({
+    const globalIds = CURVE_100_LIST.map(c => c.id);
+
+    // Verify templates belong to user OR are global
+    const dbTemplates = await prisma.curveTemplate.findMany({
       where: { id: { in: templateIds }, userId: dbUser.id }
     });
 
-    if (templates.length !== templateIds.length) {
+    const validTemplateIds = new Set([
+      ...dbTemplates.map(t => t.id),
+      ...globalIds
+    ]);
+
+    const allValid = templateIds.every((id: string) => validTemplateIds.has(id));
+
+    if (!allValid) {
       return NextResponse.json({ error: "One or more templates not found" }, { status: 404 });
     }
 

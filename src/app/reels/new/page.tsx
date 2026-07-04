@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { generateDeliverySchedule, generateRawSchedule, calculateEngagementTargets, DeliveryBatch } from "@/lib/delivery/curve";
 import { CURVE_DESCRIPTIONS_100 as CURVE_DESCRIPTIONS, STYLE_NEON_COLORS_100 as STYLE_NEON_COLORS, CURVE_100_LIST } from "@/lib/delivery/curve-styles-100";
+import { motion } from "framer-motion";
 
 // ── Types ───────────────────────────────────────────────────────
 type Platform = "INSTAGRAM" | "TIKTOK" | "FACEBOOK";
@@ -718,17 +719,25 @@ function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean 
           <stop offset="100%" stopColor={neon.stroke} stopOpacity="0.0" />
         </linearGradient>
       </defs>
-      <path d={fillD} fill={`url(#${gradId})`} />
-      <path
+      <motion.path 
+        d={fillD} 
+        fill={`url(#${gradId})`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 0.5 }}
+      />
+      <motion.path
         d={pathD}
         fill="none"
         stroke={neon.stroke}
         strokeWidth={active ? "2.5" : "2"}
         strokeLinecap="round"
         strokeLinejoin="round"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
         style={{
           filter: active ? `drop-shadow(0 0 8px ${neon.stroke})` : `drop-shadow(0 0 3px ${neon.stroke})`,
-          transition: "all 0.25s ease"
         }}
       />
     </svg>

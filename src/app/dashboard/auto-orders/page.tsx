@@ -54,24 +54,33 @@ function MiniCurveChart({ template, active }: { template: any; active: boolean }
   const gradId = `mini-grad-${template.id}`;
 
   return (
-    <svg width={width} height={height} style={{ overflow: "visible", display: "block", width: "100%", margin: "8px 0" }}>
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={neon.stroke} stopOpacity={active ? "0.45" : "0.20"} />
-          <stop offset="100%" stopColor={neon.stroke} stopOpacity="0.0" />
-        </linearGradient>
-      </defs>
-      <path d={fillD} fill={`url(#${gradId})`} />
-      <path
-        d={pathD}
-        fill="none"
-        stroke={neon.stroke}
-        strokeWidth={active ? "2.5" : "2"}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ filter: active ? `drop-shadow(0 0 6px ${neon.stroke})` : `none`, transition: "all 0.25s ease" }}
-      />
-    </svg>
+      <svg width={width} height={height} style={{ overflow: "visible", display: "block", width: "100%", margin: "8px 0" }}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={neon.stroke} stopOpacity={active ? "0.45" : "0.20"} />
+            <stop offset="100%" stopColor={neon.stroke} stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+        <motion.path 
+          d={fillD} 
+          fill={`url(#${gradId})`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 0.5 }}
+        />
+        <motion.path
+          d={pathD}
+          fill="none"
+          stroke={neon.stroke}
+          strokeWidth={active ? "2.5" : "2"}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          style={{ filter: active ? `drop-shadow(0 0 6px ${neon.stroke})` : `none` }}
+        />
+      </svg>
   );
 }
 

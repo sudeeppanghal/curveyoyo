@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchLatestInstagramPost, fetchLatestTiktokPost, fetchLatestFacebookPost } from "@/lib/scraper/apify";
 import { calculateEngagementTargets } from "@/lib/delivery/curve";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { CURVE_100_LIST } from "@/lib/delivery/curve-styles-100";
 
 export const maxDuration = 300; // Allow 5 minutes for cron execution
 export const dynamic = 'force-dynamic'; // Prevent caching
@@ -64,12 +65,24 @@ export async function GET(request: NextRequest) {
           throw new Error("No template found for auto subscription");
         }
 
-        const template = await prisma.curveTemplate.findUnique({
+        let template = await prisma.curveTemplate.findUnique({
           where: { id: templateIdToUse }
-        });
+        }) as any;
 
         if (!template) {
-          throw new Error("Template not found in DB");
+          const globalT = CURVE_100_LIST.find(c => c.id === templateIdToUse);
+          if (globalT) {
+            template = {
+              id: globalT.id,
+              style: globalT.id,
+              durationHours: globalT.warmup + globalT.peak + 10,
+              warmupHours: globalT.warmup,
+              peakHours: globalT.peak,
+              decayHours: 10,
+            };
+          } else {
+            throw new Error("Template not found in DB or Global List");
+          }
         }
 
         // Randomize engagements based on Min/Max fields

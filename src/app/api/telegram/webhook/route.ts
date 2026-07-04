@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         await processProfitSplit(payment.id, "UPI", payment.amount);
         
         responseText = "✅ UPI Deposit Approved!";
-        finalMessageText += `\n\n✅ *Approved by ${adminName}*`;
+        finalMessageText += `\n\n✅ Approved by ${adminName}`;
       }
     } 
     else if (data.startsWith("reject_upi_")) {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       } else {
         await prisma.upiPayment.update({ where: { id: payment.id }, data: { status: "REJECTED", rejectedReason: "Rejected by admin via Telegram" } });
         responseText = "❌ UPI Deposit Rejected!";
-        finalMessageText += `\n\n❌ *Rejected by ${adminName}*`;
+        finalMessageText += `\n\n❌ Rejected by ${adminName}`;
       }
     }
     else if (data.startsWith("approve_crypto_")) {
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         await processProfitSplit(payment.id, "CRYPTO", amountInr);
         
         responseText = "✅ Crypto Deposit Approved!";
-        finalMessageText += `\n\n✅ *Approved by ${adminName}*`;
+        finalMessageText += `\n\n✅ Approved by ${adminName}`;
       }
     }
     else if (data.startsWith("reject_crypto_")) {
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       } else {
         await prisma.cryptoPayment.update({ where: { id: payment.id }, data: { status: "FAILED" } });
         responseText = "❌ Crypto Deposit Rejected!";
-        finalMessageText += `\n\n❌ *Rejected by ${adminName}*`;
+        finalMessageText += `\n\n❌ Rejected by ${adminName}`;
       }
     }
 
@@ -137,7 +137,6 @@ export async function POST(request: NextRequest) {
           chat_id: chatId,
           message_id: messageId,
           text: finalMessageText,
-          parse_mode: "Markdown",
           reply_markup: { inline_keyboard: [] } // Remove buttons
         }),
       });
