@@ -3,19 +3,9 @@ import { useState, useEffect, useMemo } from "react";
 import { generateRawSchedule } from "@/lib/delivery/curve";
 import { STYLE_NEON_COLORS_100 as STYLE_NEON_COLORS } from "@/lib/delivery/curve-styles-100";
 import { motion, AnimatePresence } from "framer-motion";
+import { N } from "@/lib/theme";
 
-const N = {
-  bg:        "#eef2f7",
-  surface:   "#eef2f7",
-  raised:    "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm:  "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:     "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  accent:    "#d97706",
-  accentBg:  "linear-gradient(135deg, #d97706, #ea580c)",
-  text:      "#2d3748",
-  muted:     "#718096",
-  faint:     "#a0aec0",
-};
+
 
 // ── Mini Sparkline Curve Chart ──────────────────────────────────
 function MiniCurveChart({ template, active }: { template: any; active: boolean }) {

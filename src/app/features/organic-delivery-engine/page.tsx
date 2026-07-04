@@ -1,22 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { N } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "Organic SMM Delivery — Warmup, Peak & Decay | YoyoSMM",
   description: "Master organic delivery with warmup-peak-decay curves. The logistic S-curve model for high-retention viral pacing.",
 };
 
-const N = {
-  bg:       "#eef2f7",
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  accent:   "#d97706",
-  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
-  text:     "#2d3748",
-  muted:    "#718096",
-  border:   "rgba(200, 208, 231, 0.4)",
-};
+
 
 export default function OrganicDeliveryPage() {
   return (

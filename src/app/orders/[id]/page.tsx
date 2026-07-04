@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { N } from "@/lib/theme";
 
 /* ── Types ── */
 interface ChartPoint { hour: number; planned: number; actual: number; likes?: number; saves?: number; shares?: number; comments?: number; status: string; scheduledAt?: string; responseData?: any }
@@ -24,17 +25,7 @@ interface OrderStatus {
   totalBatches: number; completedBatches: number; failedBatches: number;
 }
 
-const N = {
-  bg:       "#eef2f7",
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  accent:   "#d97706",
-  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
-  text:     "#2d3748",
-  muted:    "#718096",
-  border:   "rgba(200, 208, 231, 0.4)",
-};
+
 
 /* ── Status badge ── */
 const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string; label: string }> = {

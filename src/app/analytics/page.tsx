@@ -2,17 +2,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CURVE_DESCRIPTIONS_100, STYLE_NEON_COLORS_100 } from "@/lib/delivery/curve-styles-100";
+import { N } from "@/lib/theme";
 
-const N = {
-  bg:       "#eef2f7",
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  accent:   "#d97706",
-  text:     "#2d3748",
-  muted:    "#718096",
-  border:   "rgba(200, 208, 231, 0.4)",
-};
+
 
 interface Stats {
   totalOrders: number; completedOrders: number; deliveringOrders: number;

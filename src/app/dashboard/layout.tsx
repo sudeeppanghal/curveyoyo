@@ -3,21 +3,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { N } from "@/lib/theme";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 /* ─── Whitish Neomorphism Design Tokens ───────────────────────── */
-const N = {
-  bg:        "#eef2f7",
-  surface:   "#eef2f7",
-  raised:    "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm:  "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:     "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  accent:    "#d97706",
-  accentBg:  "linear-gradient(135deg, #d97706, #ea580c)",
-  text:      "#2d3748",
-  muted:     "#718096",
-  faint:     "#a0aec0",
-  border:    "rgba(200, 208, 231, 0.4)",
-};
+
 
 const NAV = [
   { href: "/dashboard", label: "Overview",

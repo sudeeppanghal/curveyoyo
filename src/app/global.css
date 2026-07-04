@@ -6,8 +6,8 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background: #eef2f7;
-  color: #2d3748;
+  background: var(--neo-bg);
+  color: var(--neo-text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -31,6 +31,20 @@ body {
   --neo-text:     #2d3748;
   --neo-muted:    #718096;
   --neo-faint:    #a0aec0;
+}
+
+/* ─── Dark Neomorphism CSS Variables ─────────────────────── */
+.dark {
+  --neo-bg:       #111827;
+  --neo-raised:   9px 9px 16px #0b0f19, -9px -9px 16px #172135;
+  --neo-raised-sm: 5px 5px 10px #0b0f19, -5px -5px 10px #172135;
+  --neo-raised-lg: 14px 14px 28px #0b0f19, -14px -14px 28px #172135;
+  --neo-inset:    inset 6px 6px 10px #0b0f19, inset -6px -6px 10px #172135;
+  --neo-inset-sm: inset 3px 3px 6px #0b0f19, inset -3px -3px 6px #172135;
+  --neo-accent:   #f59e0b; /* Lighter amber for dark bg */
+  --neo-text:     #f3f4f6;
+  --neo-muted:    #9ca3af;
+  --neo-faint:    #4b5563;
 }
 
 /* ─── Global Animations ──────────────────────────────────── */

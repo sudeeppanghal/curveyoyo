@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BlogsTab } from "./BlogsTab";
 import { AutoSyncTab } from "./AutoSyncTab";
+import { N } from "@/lib/theme";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface AdminSettings {
 
@@ -73,27 +75,7 @@ interface Payment {
 
 type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync";
 
-const N = {
 
-  bg:       "#eef2f7",
-
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-
-  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-
-  accent:   "#d97706",
-
-  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
-
-  text:     "#2d3748",
-
-  muted:    "#718096",
-
-  border:   "rgba(200, 208, 231, 0.4)",
-
-};
 
 const PLAN_COLORS: Record<string, string> = {
 
@@ -1223,6 +1205,7 @@ export default function AdminPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <ThemeToggle />
 
             {saved && (
 

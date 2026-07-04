@@ -1,20 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const N = {
-  bg:       "#eef2f7",
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  inset:    "inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff",
-  insetSm:  "inset 3px 3px 6px #c8d0e7, inset -3px -3px 6px #ffffff",
-  accent:   "#d97706",
-  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
-  text:     "#2d3748",
-  muted:    "#718096",
-  faint:    "#a0aec0",
-  border:   "rgba(200, 208, 231, 0.4)",
-};
+import { N } from "@/lib/theme";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function PublicNav() {
   const pathname = usePathname();
@@ -74,6 +62,7 @@ export function PublicNav() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <ThemeToggle />
           <Link href="/login" style={{ color: N.muted, textDecoration: "none", fontSize: 13, fontWeight: 700, padding: "8px 16px", borderRadius: 10 }} className="pub-nav-btn">
             Sign In
           </Link>

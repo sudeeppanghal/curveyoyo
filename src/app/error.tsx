@@ -1,14 +1,5 @@
 "use client";
-
-const N = {
-  bg:       "#eef2f7",
-  raised:   "9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff",
-  raisedSm: "5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff",
-  accentBg: "linear-gradient(135deg, #d97706, #ea580c)",
-  text:     "#2d3748",
-  muted:    "#718096",
-};
-
+import { N } from "@/lib/theme";
 export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <html lang="en">
