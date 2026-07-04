@@ -593,3 +593,16 @@ model Blog {
 
   @@map("blogs")
 }
+
+// ─────────────── PROFIT SPLIT ───────────────
+model ProfitSplit {
+  id          String   @id @default(cuid())
+  paymentId   String?  @map("payment_id")
+  source      String   // "UPI" or "CRYPTO"
+  amountInr   Float    @map("amount_inr")
+  ankitShare  Float    @map("ankit_share")
+  ramShare    Float    @map("ram_share")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("profit_splits")
+}

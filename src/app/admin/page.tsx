@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BlogsTab } from "./BlogsTab";
 import { AutoSyncTab } from "./AutoSyncTab";
+import { ProfitSplitTab } from "./ProfitSplitTab";
 
 interface AdminSettings {
 
@@ -71,7 +72,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync" | "profit_split";
 
 const N = {
 
@@ -1482,7 +1483,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs", "auto_sync"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs", "auto_sync", "profit_split"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1502,7 +1503,8 @@ export default function AdminPage() {
               tickets: "✉️ ",
               affiliates: "🤝 ",
               blogs: "📝 ",
-              auto_sync: "🔄 "
+              auto_sync: "🔄 ",
+              profit_split: "💸 "
             };
 
             return (
@@ -1772,33 +1774,61 @@ export default function AdminPage() {
                     }} />
 
                 </div>
+
                 <div>
+
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>🕷️ Apify API Keys (Comma Separated)</label>
+
                   <input type="text" value={settings.apifyKeys ?? ""} onChange={(e) => setSettings((p) => ({ ...p, apifyKeys: e.target.value }))}
+
                     placeholder="apify_api_key1, apify_api_key2"
+
                     className="neo-input"
+
                     style={{ width: "100%", padding: "14px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: N.text, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", boxSizing: "border-box" }} />
+
                 </div>
+
                 <div>
+
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>💎 USDT (TRC20) Wallet Address</label>
+
                   <input value={settings.trc20Address ?? ""} onChange={(e) => setSettings((p) => ({ ...p, trc20Address: e.target.value }))}
+
                     placeholder="T..."
+
                     className="neo-input"
+
                     style={{ width: "100%", padding: "14px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: N.text, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", boxSizing: "border-box" }} />
+
                 </div>
+
                 <div>
+
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>💎 USDT (BEP20) Wallet Address</label>
+
                   <input value={settings.bep20Address ?? ""} onChange={(e) => setSettings((p) => ({ ...p, bep20Address: e.target.value }))}
+
                     placeholder="0x..."
+
                     className="neo-input"
+
                     style={{ width: "100%", padding: "14px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: N.text, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", boxSizing: "border-box" }} />
+
                 </div>
+
                 <div>
+
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>💱 USDT Exchange Rate (in INR ₹)</label>
+
                   <input type="number" value={settings.priceUsdt ?? 90} onChange={(e) => setSettings((p) => ({ ...p, priceUsdt: parseFloat(e.target.value) || 90 }))}
+
                     placeholder="90"
+
                     className="neo-input"
+
                     style={{ width: "100%", padding: "14px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: N.text, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", boxSizing: "border-box" }} />
+
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 18, borderRadius: 12, background: N.bg, boxShadow: N.inset }}>
@@ -4051,6 +4081,10 @@ export default function AdminPage() {
           {/* ── AUTO SYNC TAB ─── */}
           {tab === "auto_sync" && (
             <AutoSyncTab />
+          )}
+
+          {tab === "profit_split" && (
+            <ProfitSplitTab adminSecret={secret} />
           )}
 
       {/* USER HISTORY MODAL */}

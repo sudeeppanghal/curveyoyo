@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { processAffiliateCommission } from "@/lib/affiliate";
+import { processProfitSplit } from "@/lib/profit-split";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "7880552291:AAGad9XL6ZeilBxFheCbZKALEzy9elpY6H4";
 const SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || process.env.ADMIN_SECRET;
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
         ]);
         
         await processAffiliateCommission(payment.userId, payment.amount);
+        await processProfitSplit(payment.id, "UPI", payment.amount);
         
         responseText = "✅ UPI Deposit Approved!";
         finalMessageText += `\n\n✅ *Approved by ${adminName}*`;
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest) {
         ]);
         
         await processAffiliateCommission(payment.userId, amountInr);
+        await processProfitSplit(payment.id, "CRYPTO", amountInr);
         
         responseText = "✅ Crypto Deposit Approved!";
         finalMessageText += `\n\n✅ *Approved by ${adminName}*`;

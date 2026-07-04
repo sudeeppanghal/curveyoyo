@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { processAffiliateCommission } from "@/lib/affiliate";
+import { processProfitSplit } from "@/lib/profit-split";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -58,30 +59,31 @@ export async function POST(request: NextRequest) {
 
   if (action === "approve") {
     const settings = await prisma.adminSettings.findUnique({ where: { id: "global" } });
-    const rate = settings?.priceUsdt && settings.priceUsdt > 50 ? settings.priceUsdt : 90;
-    const creditInr = inrAmount && !isNaN(inrAmount) ? inrAmount : Math.round((payment.amountUsdt ?? 10) * rate);
+    const exchangeRate = settings?.priceUsdt || 90;
+    const finalInrAmount = inrAmount || (payment.amountUsdt || 0) * exchangeRate;
 
     await prisma.$transaction([
       prisma.cryptoPayment.update({
         where: { id: paymentId },
-        data: { status: "CONFIRMED", verifiedAt: new Date() },
+        data: { status: "CONFIRMED" },
       }),
       prisma.user.update({
         where: { id: payment.userId },
-        data: { balance: { increment: creditInr } },
+        data: { balance: { increment: finalInrAmount } },
       }),
       prisma.auditLog.create({
         data: {
           userId: payment.userId,
           action: "CRYPTO_DEPOSIT_APPROVED",
-          metadata: { paymentId, usdt: payment.amountUsdt, creditInr, txHash: payment.txHash },
+          metadata: { paymentId, amountUsdt: payment.amountUsdt, amountInr: finalInrAmount },
         },
       }),
     ]);
 
-    await processAffiliateCommission(payment.userId, creditInr);
+    await processAffiliateCommission(payment.userId, finalInrAmount);
+    await processProfitSplit(payment.id, "CRYPTO", finalInrAmount);
 
-    return NextResponse.json({ ok: true, status: "CONFIRMED", creditedInr: creditInr });
+    return NextResponse.json({ ok: true, status: "CONFIRMED" });
   } else if (action === "reject") {
     await prisma.$transaction([
       prisma.cryptoPayment.update({
