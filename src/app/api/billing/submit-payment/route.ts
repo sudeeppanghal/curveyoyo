@@ -54,13 +54,20 @@ export async function POST(request: NextRequest) {
       });
 
       sendTelegramAlert(
-        `💰 *New Crypto Deposit Submitted!*\n\n` +
-        `👤 *User:* \`${dbUser.email}\`\n` +
-        `💵 *Amount:* \`$${usdtAmount} USDT\`\n` +
-        `🌐 *Network:* \`${network}\`\n` +
-        `🔗 *TXID:* \`${cleanTxHash}\`\n\n` +
-        `⏳ *Status:* Pending Admin Verification`
-      ).catch(console.error);
+      `🪙 *New Crypto Deposit Submitted!*\n\n` +
+      `👤 *User:* \`${dbUser.email}\`\n` +
+      `🌐 *Network:* \`${network}\`\n` +
+      `🔗 *TxHash:* \`${cleanTxHash}\`\n\n` +
+      `⏳ *Status:* Pending Admin Verification`,
+      {
+        inline_keyboard: [
+          [
+            { text: "✅ Approve", callback_data: `approve_crypto_${payment.id}` },
+            { text: "❌ Reject", callback_data: `reject_crypto_${payment.id}` }
+          ]
+        ]
+      }
+    ).catch(console.error);
 
       return NextResponse.json({
         ok: true,
@@ -105,7 +112,15 @@ export async function POST(request: NextRequest) {
       `👤 *User:* \`${dbUser.email}\`\n` +
       `₹ *Amount:* \`₹${amount.toLocaleString()}\`\n` +
       `🔢 *UTR Number:* \`${cleanUtr}\`\n\n` +
-      `⏳ *Status:* Pending Admin Verification`
+      `⏳ *Status:* Pending Admin Verification`,
+      {
+        inline_keyboard: [
+          [
+            { text: "✅ Approve", callback_data: `approve_upi_${payment.id}` },
+            { text: "❌ Reject", callback_data: `reject_upi_${payment.id}` }
+          ]
+        ]
+      }
     ).catch(console.error);
 
     return NextResponse.json({

@@ -480,7 +480,15 @@ export async function POST(request: NextRequest) {
         `👤 *User:* \`${dbUser.email}\`\n` +
         `💵 *Amount:* \`₹${amount}\`\n` +
         `🔢 *UTR:* \`${cleanUtr}\`\n` +
-        `⏳ *Status:* Pending Verification`
+        `⏳ *Status:* Pending Verification`,
+        {
+          inline_keyboard: [
+            [
+              { text: "✅ Approve", callback_data: `approve_upi_${payment.id}` },
+              { text: "❌ Reject", callback_data: `reject_upi_${payment.id}` }
+            ]
+          ]
+        }
       ).catch(console.error);
 
       return NextResponse.json({

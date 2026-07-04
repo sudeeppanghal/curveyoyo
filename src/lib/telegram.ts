@@ -5,7 +5,7 @@
 const DEFAULT_BOT_TOKEN = "7880552291:AAGad9XL6ZeilBxFheCbZKALEzy9elpY6H4";
 const DEFAULT_CHAT_ID = "-1003769347099";
 
-export async function sendTelegramAlert(text: string): Promise<boolean> {
+export async function sendTelegramAlert(text: string, reply_markup?: any): Promise<boolean> {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID || DEFAULT_CHAT_ID;
@@ -15,14 +15,20 @@ export async function sendTelegramAlert(text: string): Promise<boolean> {
       return false;
     }
 
+    const body: any = {
+      chat_id: chatId,
+      text,
+      parse_mode: "Markdown",
+    };
+
+    if (reply_markup) {
+      body.reply_markup = reply_markup;
+    }
+
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: "Markdown",
-      }),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();
