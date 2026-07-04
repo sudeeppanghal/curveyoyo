@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getPanelServices, PanelServiceItem } from "./panel-client";
+import { sendTelegramAlert } from "@/lib/telegram";
 
 // Mappings for keyword searching based on type/platform
 const SEARCH_CONFIG: Record<string, Record<string, string[]>> = {
@@ -35,7 +36,9 @@ export async function runAutoSync() {
   for (const panel of activePanels) {
     const res = await getPanelServices(panel.apiUrl, panel.apiKeyEncrypted);
     if (!res.ok || !res.services) {
-      console.error(`AutoSync: Failed to fetch live services for Panel ${panel.id}`);
+      const msg = `⚠️ *AutoSync Alert*\nFailed to fetch live services for Panel: ${panel.name || panel.id}\nError: ${res.error || "Unknown"}`;
+      console.error(msg);
+      await sendTelegramAlert(msg);
       continue;
     }
 
@@ -67,7 +70,9 @@ export async function runAutoSync() {
         });
 
         if (candidates.length === 0) {
-          console.warn(`AutoSync: No candidates found for ${configuredService.platform} ${configuredService.type} on panel ${panel.id}`);
+          const msg = `⚠️ *AutoSync Alert*\nPanel: ${panel.name || panel.id}\nService *${configuredService.platform} ${configuredService.type}* went offline.\n❌ *CRITICAL*: No matching candidates found to replace it!`;
+          console.warn(msg);
+          await sendTelegramAlert(msg);
           continue;
         }
 
@@ -112,6 +117,10 @@ export async function runAutoSync() {
           serviceIdsObj[platformKey][typeKey] = replacement.service;
           
           mappingChanged = true;
+
+          // Send Telegram Alert for successful swap
+          const msg = `🔄 *AutoSync Swap*\nPanel: ${panel.name || panel.id}\nPlatform: ${configuredService.platform}\nType: ${configuredService.type}\n\n*Old Service*: ${configuredService.serviceId} (Offline/Disabled)\n*New Service*: ${replacement.service} (${replacement.name})\n*New Rate*: ${replacement.rate}`;
+          await sendTelegramAlert(msg);
         }
       }
     }
