@@ -148,6 +148,12 @@ export default function BillingPage() {
     </div>
   );
 
+  if (!data) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:240, color:N.muted }}>
+      Failed to load deposit info. Please try refreshing.
+    </div>
+  );
+
   /* ── Wallet Mode UI (Universal for all users) ── */
   const upiId = data?.wallet?.upiId || "";
   const upiQrCode = data?.wallet?.upiQrCode || "";
