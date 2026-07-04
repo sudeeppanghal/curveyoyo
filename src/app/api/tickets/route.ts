@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   
   if (isAdminHeader) {
     const tickets = await prisma.supportTicket.findMany({
+      where: { status: { not: "CLOSED" } },
       include: {
         user: { select: { email: true, name: true } },
         messages: { orderBy: { createdAt: "asc" } }

@@ -3859,7 +3859,7 @@ export default function AdminPage() {
                                 body: JSON.stringify({ id: activeT.id, status: "CLOSED" }),
                               });
                               if (res.ok) {
-                                setTickets(prev => prev.map(pt => pt.id === activeT.id ? { ...pt, status: "CLOSED" } : pt));
+                                setTickets(prev => prev.filter(pt => pt.id !== activeT.id)); setAdminChatTicketId(null);
                               }
                             }}
                             style={{ padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 800, color: "#fff", background: "#dc2626", border: "none", cursor: "pointer" }}
@@ -3985,12 +3985,12 @@ export default function AdminPage() {
                   {tickets.length === 0 ? (
                     <div style={{ padding: 16, background: N.bg, borderRadius: 12, boxShadow: N.inset, fontSize: 12, color: N.muted, fontWeight: 600 }}>No support tickets submitted</div>
                   ) : (
-                    <div style={{ overflowX: "auto", margin: "0 -32px" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                    <div style={{ overflowX: "auto", margin: "0" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
                         <thead>
                           <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
                             {["Ticket ID", "User Email", "Subject", "Message Preview", "Status", "Actions"].map((h) => (
-                              <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                              <th key={h} style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -4000,18 +4000,18 @@ export default function AdminPage() {
                             const msgCount = t.messages?.length || 1;
                             return (
                               <tr key={t.id} style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                                <td style={{ padding: "14px 24px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text }}>{t.id}</td>
-                                <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{t.user?.email || "Unknown"}</td>
-                                <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: N.text }}>{t.subject}</td>
-                                <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <td style={{ padding: "14px 16px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text }}>{t.id}</td>
+                                <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 700, color: N.text }}>{t.user?.email || "Unknown"}</td>
+                                <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 800, color: N.text }}>{t.subject}</td>
+                                <td style={{ padding: "14px 16px", fontSize: 12, color: N.muted, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1].message : t.message}
                                 </td>
-                                <td style={{ padding: "14px 24px" }}>
+                                <td style={{ padding: "14px 16px" }}>
                                   <span style={{ fontSize: 10, fontWeight: 800, color: badgeColor, background: `${badgeColor}10`, padding: "4px 8px", borderRadius: 12, border: `1px solid ${badgeColor}20` }}>
                                     {t.status}
                                   </span>
                                 </td>
-                                <td style={{ padding: "14px 24px" }}>
+                                <td style={{ padding: "14px 16px" }}>
                                   <div style={{ display: "flex", gap: 8 }}>
                                     <button
                                       onClick={() => setAdminChatTicketId(t.id)}
@@ -4049,7 +4049,7 @@ export default function AdminPage() {
                                             body: JSON.stringify({ id: t.id, status: "CLOSED" }),
                                           });
                                           if (res.ok) {
-                                            setTickets(prev => prev.map(pt => pt.id === t.id ? { ...pt, status: "CLOSED" } : pt));
+                                            setTickets(prev => prev.filter(pt => pt.id !== t.id));
                                           }
                                         }}
                                         className="neo-btn"
