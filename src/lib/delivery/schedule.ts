@@ -154,10 +154,13 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
   };
   const batches = generateDeliverySchedule(params);
 
+  // Calculate shift so the first batch starts at t=0 and subsequent batches are relative to it
+  const firstBatchDelayMs = batches.length > 0 ? batches[0].scheduledDelayMs : 0;
+
   // Persist all delivery events to DB with randomized panel assignment
   const now = new Date();
   const data = batches.map((batch, index) => {
-    let delayMs = batch.scheduledDelayMs;
+    let delayMs = Math.max(0, batch.scheduledDelayMs - firstBatchDelayMs);
     if (index === 0) {
       delayMs = 0; // First batch starts instantly!
     } else if (index < batches.length - 1) {

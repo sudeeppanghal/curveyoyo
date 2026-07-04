@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PublicNav, PublicFooter } from "../PublicHeaderFooter";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Blog — YoyoSMM",
@@ -19,14 +20,12 @@ const N = {
   border:   "rgba(200, 208, 231, 0.4)",
 };
 
-const POSTS = [
-  { slug: "why-organic-delivery-beats-flat", title: "Why Organic S-Curve Delivery Beats Flat Delivery Every Time", excerpt: "Flat panel delivery creates artificial machine patterns that algorithms easily detect. Here's the mathematical breakdown of why organic curves produce superior algorithmic reach.", date: "July 2026", readTime: "5 min" },
-  { slug: "timing-routing-infrastructure", title: "Designing a Fail-Safe Timing Delivery Routing Infrastructure", excerpt: "How our multi-path routing nodes guarantee 99.98% delivery success rates with instant backup path switching across major social platforms.", date: "July 2026", readTime: "7 min" },
-  { slug: "why-organic-pacing-wins", title: "Why Organic Pacing Wins the Algorithm Game in 2026", excerpt: "A comprehensive analysis comparing legacy reseller flat delivery to proprietary wholesale S-curve pacing.", date: "July 2026", readTime: "8 min" },
-  { slug: "peak-hour-delivery-guide", title: "Peak-Hour Delivery: When to Dispatch Engagement for Maximum Viral Reach", excerpt: "Delivery timing matters just as much as delivery volume. A data-driven guide to peak-hour audience clustering across TikTok, IG, and YouTube.", date: "July 2026", readTime: "6 min" },
-];
+export default async function BlogPage() {
+  const blogs = await prisma.blog.findMany({
+    where: { published: true },
+    orderBy: { createdAt: "desc" },
+  });
 
-export default function BlogPage() {
   return (
     <div style={{ background: N.bg, color: N.text, minHeight: "100vh", fontFamily: "'Inter', -apple-system, sans-serif" }}>
       <style>{`
@@ -57,10 +56,12 @@ export default function BlogPage() {
 
         {/* Posts List */}
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {POSTS.map((post) => (
+          {blogs.map((post) => (
             <Link key={post.slug} href={`/blog/${post.slug}`} className="blog-card" style={{ padding: 36, borderRadius: 24, background: N.bg, boxShadow: N.raised }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: N.accent, textTransform: "uppercase", letterSpacing: "0.05em" }}>{post.date}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: N.accent, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {post.createdAt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: N.muted, display: "inline-block" }} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: N.muted }}>{post.readTime} read</span>
               </div>
@@ -71,6 +72,9 @@ export default function BlogPage() {
               </div>
             </Link>
           ))}
+          {blogs.length === 0 && (
+            <p style={{ color: N.muted, fontStyle: "italic", textAlign: "center", padding: 40 }}>No blogs published yet.</p>
+          )}
         </div>
 
         {/* Navigation Buttons */}

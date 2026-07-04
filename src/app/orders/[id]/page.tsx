@@ -232,15 +232,19 @@ export default function OrderDetailPage() {
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
-  const handleAction = async (action: "pause" | "cancel") => {
-    if (!confirm(`${action === "cancel" ? "Cancel" : "Pause"} this order?`)) return;
+  const handleAction = async (action: "pause" | "cancel" | "resume") => {
+    if (!confirm(`${action === "cancel" ? "Cancel" : action === "resume" ? "Resume" : "Pause"} this order?`)) return;
     setActioning(true);
     try {
-      await fetch(`/api/delivery/status/${id}`, {
+      const res = await fetch(`/api/delivery/status/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Action failed");
+      }
       fetchStatus();
     } finally { setActioning(false); }
   };
@@ -295,6 +299,12 @@ export default function OrderDetailPage() {
               style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:800, border:"none", cursor:"pointer", background:N.bg, color:N.accent, boxShadow:N.raisedSm }}>⏸ Pause</button>
             <button onClick={() => handleAction("cancel")} disabled={actioning} className="neo-btn"
               style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:800, border:"none", cursor:"pointer", background:N.bg, color:"#dc2626", boxShadow:N.raisedSm }}>✕ Cancel</button>
+          </div>
+        )}
+        {(order.status === "PAUSED" || order.status === "FAILED") && (
+          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+            <button onClick={() => handleAction("resume")} disabled={actioning} className="neo-btn"
+              style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:800, border:"none", cursor:"pointer", background:N.bg, color:"#16a34a", boxShadow:N.raisedSm }}>▶ Resume</button>
           </div>
         )}
       </div>

@@ -217,6 +217,8 @@ export async function POST(request: NextRequest) {
       }
       return a.hour - b.hour;
     });
+
+    const firstBatchDelayMs = sortedSchedule.length > 0 ? (sortedSchedule[0].hour * 60 * 60 * 1000) : 0;
     
     const deliveryEventsData = sortedSchedule.map((batch, index) => {
       let scheduledAt: Date;
@@ -226,7 +228,7 @@ export async function POST(request: NextRequest) {
           scheduledAt = new Date(now);
         }
       } else {
-        let delayMs = batch.hour * 60 * 60 * 1000;
+        let delayMs = Math.max(0, (batch.hour * 60 * 60 * 1000) - firstBatchDelayMs);
         if (index === 0) {
           delayMs = 0; // First batch starts instantly
         } else if (index < sortedSchedule.length - 1) {

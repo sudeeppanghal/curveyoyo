@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-
 import Link from "next/link";
+import { BlogsTab } from "./BlogsTab";
 
 interface AdminSettings {
 
@@ -71,7 +70,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs";
 
 const N = {
 
@@ -1482,7 +1481,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1500,7 +1499,8 @@ export default function AdminPage() {
 
               system: "⚡ ",
               tickets: "✉️ ",
-              affiliates: "🤝 "
+              affiliates: "🤝 ",
+              blogs: "📝 "
             };
 
             return (
@@ -4040,6 +4040,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {tab === "blogs" && (
+            <BlogsTab />
           )}
 
       {/* USER HISTORY MODAL */}

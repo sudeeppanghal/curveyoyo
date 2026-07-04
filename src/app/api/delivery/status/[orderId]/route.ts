@@ -108,12 +108,75 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { orderId } = await params;
-  const { action } = await request.json() as { action: "pause" | "cancel" };
+  const { action } = await request.json() as { action: "pause" | "cancel" | "resume" };
 
   const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order || order.userId !== dbUser?.id) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  if (action === "resume") {
+    // Calculate net refunds for this order
+    const refunds = await prisma.auditLog.findMany({
+      where: { userId: dbUser.id, action: "ORDER_MIDWAY_REFUND" }
+    });
+    const charges = await prisma.auditLog.findMany({
+      where: { userId: dbUser.id, action: "ORDER_RESUME_CHARGE" }
+    });
+    
+    let totalRefunded = 0;
+    refunds.forEach(r => {
+      const meta = r.metadata as any;
+      if (meta && meta.orderId === orderId && meta.refundAmount) {
+        totalRefunded += meta.refundAmount;
+      }
+    });
+    
+    let totalCharged = 0;
+    charges.forEach(c => {
+      const meta = c.metadata as any;
+      if (meta && meta.orderId === orderId && meta.chargeAmount) {
+        totalCharged += meta.chargeAmount;
+      }
+    });
+
+    const netRefund = totalRefunded - totalCharged;
+
+    if (netRefund > 0) {
+      if (dbUser.balance < netRefund) {
+        return NextResponse.json({ error: `Insufficient balance. Need ₹${netRefund.toFixed(2)} to resume.` }, { status: 400 });
+      }
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: dbUser.id },
+          data: { balance: { decrement: netRefund } }
+        }),
+        prisma.auditLog.create({
+          data: {
+            userId: dbUser.id,
+            action: "ORDER_RESUME_CHARGE",
+            metadata: {
+              orderId,
+              chargeAmount: netRefund,
+              reason: "Resumed previously refunded order"
+            }
+          }
+        }),
+        prisma.order.update({
+          where: { id: orderId },
+          data: { status: "QUEUED" } // Set back to QUEUED so tick processes it
+        })
+      ]);
+    } else {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "QUEUED" }
+      });
+    }
+
+    return NextResponse.json({ ok: true, status: "QUEUED" });
   }
 
   const newStatus = action === "cancel" ? "CANCELLED" : "PAUSED";

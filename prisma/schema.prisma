@@ -1,6 +1,6 @@
-// ─────────────────────────────────────────────────────────────
-// Prisma Schema — YoyoSMM Full Database
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Prisma Schema â€” YoyoSMM Full Database
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 generator client {
   provider = "prisma-client-js"
@@ -12,7 +12,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ─────────────── USER ────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ USER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model User {
   id              String   @id @default(cuid())
   supabaseId      String   @unique @map("supabase_id")
@@ -56,7 +56,7 @@ enum Plan {
   SUSPENDED
 }
 
-// ─────────────── SMM PANEL ───────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SMM PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model Panel {
   id              String   @id @default(cuid())
   userId          String?  @map("user_id")
@@ -97,7 +97,7 @@ enum PanelStatus {
   UNKNOWN
 }
 
-// ─────────────── REEL ────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ REEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model Reel {
   id              String   @id @default(cuid())
   userId          String   @map("user_id")
@@ -132,7 +132,7 @@ enum ReelStatus {
   ARCHIVED
 }
 
-// ─────────────── ORDER ───────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ ORDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model Order {
   id              String   @id @default(cuid())
   userId          String   @map("user_id")
@@ -310,7 +310,7 @@ enum OrderStatus {
   PAUSED
 }
 
-// ─────────────── DELIVERY EVENT ─────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ DELIVERY EVENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model DeliveryEvent {
   id              String   @id @default(cuid())
   orderId         String   @map("order_id")
@@ -338,7 +338,7 @@ enum EventStatus {
   RETRYING
 }
 
-// ─────────────── SUBSCRIPTION ────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SUBSCRIPTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model Subscription {
   id                String   @id @default(cuid())
   userId            String   @unique @map("user_id")
@@ -362,7 +362,7 @@ enum SubStatus {
   REFUNDED
 }
 
-// ─────────────── AUDIT LOG ───────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ AUDIT LOG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
@@ -375,7 +375,7 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ─────────────── ADMIN SETTINGS ──────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ ADMIN SETTINGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model AdminSettings {
   id              String   @id @default("global")
   trc20Address    String?  @map("trc20_address")
@@ -394,7 +394,7 @@ model AdminSettings {
   @@map("admin_settings")
 }
 
-// ─────────────── CRYPTO PAYMENT ──────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CRYPTO PAYMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model CryptoPayment {
   id              String        @id @default(cuid())
   userId          String        @map("user_id")
@@ -426,7 +426,7 @@ enum PaymentStatus {
   REJECTED
 }
 
-// ─────────────── SERVICE CONFIG ──────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SERVICE CONFIG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model ServiceConfig {
   id          String   @id @default(cuid())
   userId      String   @map("user_id")
@@ -442,7 +442,7 @@ model ServiceConfig {
   @@map("service_configs")
 }
 
-// ─────────────── CURVE TEMPLATE ──────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CURVE TEMPLATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model CurveTemplate {
   id              String      @id @default(cuid())
   userId          String      @map("user_id")
@@ -467,7 +467,7 @@ model CurveTemplate {
   @@map("curve_templates")
 }
 
-// ─────────────── UPI PAYMENT ─────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ UPI PAYMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model UpiPayment {
   id             String        @id @default(cuid())
   userId         String        @map("user_id")
@@ -482,7 +482,7 @@ model UpiPayment {
   @@map("upi_payments")
 }
 
-// ─────────────── ADMIN SERVICE ───────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ ADMIN SERVICE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model AdminService {
   id           String   @id @default(cuid())
   panelId      String   @map("panel_id")
@@ -501,7 +501,7 @@ model AdminService {
   @@map("admin_services")
 }
 
-// ─────────────── SUPPORT TICKET ───────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SUPPORT TICKET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model SupportTicket {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
@@ -527,7 +527,7 @@ model TicketMessage {
   @@map("ticket_messages")
 }
 
-// ─────────────── AFFILIATE TRANSACTION ──────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ AFFILIATE TRANSACTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model AffiliateTransaction {
   id               String   @id @default(cuid())
   affiliateId      String   @map("affiliate_id")
@@ -542,7 +542,7 @@ model AffiliateTransaction {
   @@map("affiliate_transactions")
 }
 
-// ─────────────── AUTO SUBSCRIPTION ───────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ AUTO SUBSCRIPTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 model AutoSubscription {
   id          String   @id @default(cuid())
   userId      String   @map("user_id")
@@ -561,4 +561,18 @@ model AutoSubscription {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("auto_subscriptions")
+}
+
+model Blog {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  excerpt   String
+  content   String
+  readTime  String
+  published Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("blogs")
 }
