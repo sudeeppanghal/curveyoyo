@@ -87,7 +87,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           style={{ 
             background: N.bg, 
             padding: "48px 0", 
-            borderTop: `1px solid ${N.border}`
+            borderTop: `1px solid ${N.border}`,
+            whiteSpace: "pre-wrap"
           }}
           dangerouslySetInnerHTML={{ __html: blog.content }} 
         />

@@ -285,12 +285,12 @@ export async function POST(request: NextRequest) {
         orderBy: { priority: "asc" },
       });
 
-      const defaultServices = { views: 3.0, reach_impressions_views: 4.5, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 };
+      const defaultServices = { views: 3.0, reach_impressions_views: 4.5, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, reposts: 12.0 };
       const rates: Record<string, Record<string, number>> = {
         INSTAGRAM: { ...defaultServices },
-        TIKTOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
-        FACEBOOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
-        YOUTUBE: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
+        TIKTOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, reposts: 12.0 },
+        FACEBOOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, reposts: 12.0 },
+        YOUTUBE: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0, reposts: 12.0 },
       };
 
       for (const p of activeAdminPanels) {
@@ -338,7 +338,7 @@ export async function POST(request: NextRequest) {
         reelUrl, platform = "INSTAGRAM", viewsTarget = 1000,
         curveStyle = "SLOW_START", durationHours = 24,
         engagementEnabled = true, likesRatioPct = 4.0,
-        savesRatioPct = 2.0, sharesRatioPct = 0.5, commentsRatioPct = 0.2,
+        savesRatioPct = 2.0, sharesRatioPct = 0.5, commentsRatioPct = 0.2, repostsRatioPct = 0.0,
       } = payload;
 
       if (!reelUrl || !viewsTarget) {
@@ -380,8 +380,9 @@ export async function POST(request: NextRequest) {
       const savesCost = engagementEnabled ? ((views * (savesRatioPct / 100)) / 1000) * getRate("saves", 5.0) : 0;
       const sharesCost = engagementEnabled ? ((views * (sharesRatioPct / 100)) / 1000) * getRate("shares", 8.0) : 0;
       const commentsCost = engagementEnabled ? ((views * (commentsRatioPct / 100)) / 1000) * getRate("comments", 15.0) : 0;
+      const repostsCost = engagementEnabled ? ((views * (repostsRatioPct / 100)) / 1000) * getRate("reposts", 12.0) : 0;
 
-      const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost).toFixed(2));
+      const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
       if (dbUser.balance < totalPrice) {
         return NextResponse.json({
@@ -418,10 +419,12 @@ export async function POST(request: NextRequest) {
             savesRatioPct: engagementEnabled ? Number(savesRatioPct) : 0,
             sharesRatioPct: engagementEnabled ? Number(sharesRatioPct) : 0,
             commentsRatioPct: engagementEnabled ? Number(commentsRatioPct) : 0,
+            repostsRatioPct: engagementEnabled ? Number(repostsRatioPct) : 0,
             likesTarget: engagementEnabled ? Math.round(views * (Number(likesRatioPct) / 100)) : 0,
             savesTarget: engagementEnabled ? Math.round(views * (Number(savesRatioPct) / 100)) : 0,
             sharesTarget: engagementEnabled ? Math.round(views * (Number(sharesRatioPct) / 100)) : 0,
             commentsTarget: engagementEnabled ? Math.round(views * (Number(commentsRatioPct) / 100)) : 0,
+            repostsTarget: engagementEnabled ? Math.round(views * (Number(repostsRatioPct) / 100)) : 0,
             status: "QUEUED",
             priceCharged: totalPrice,
           },
@@ -436,6 +439,18 @@ export async function POST(request: NextRequest) {
         `💵 *Cost:* \`₹${totalPrice.toFixed(2)}\`\n` +
         `🔗 *URL:* \`${reelUrl}\``
       ).catch(console.error);
+
+      // Trigger delivery scheduling (fire-and-forget)
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+      const internalKey = process.env.NEXTAUTH_SECRET || "default_internal_key";
+      fetch(`${appUrl}/api/delivery/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-key": internalKey,
+        },
+        body: JSON.stringify({ orderId: order.id }),
+      }).catch((e) => console.error("Failed to trigger delivery/start:", e));
 
       return NextResponse.json({
         ok: true,

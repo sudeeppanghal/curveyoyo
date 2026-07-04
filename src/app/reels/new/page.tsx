@@ -85,13 +85,13 @@ const PRESET_SHAPES: { label: string; icon: string; pts: CtrlPoint[] }[] = [
 
 function CustomGraphDesigner({
   views, durationHours, engEnabled,
-  likesRatio, savesRatio, sharesRatio, commentsRatio,
-  likesOn, savesOn, sharesOn, commentsOn,
+  likesRatio, savesRatio, sharesRatio, commentsRatio, repostsRatio,
+  likesOn, savesOn, sharesOn, commentsOn, repostsOn,
   onScheduleChange,
 }: {
   views: number; durationHours: number; engEnabled: boolean;
-  likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number;
-  likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean;
+  likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number; repostsRatio: number;
+  likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean; repostsOn: boolean;
   onScheduleChange: (s: DeliveryBatch[]) => void;
 }) {
   const W = 560, H = 260;
@@ -142,13 +142,14 @@ function CustomGraphDesigner({
         saves:    engEnabled && savesOn    ? Math.round(bViews * savesRatio    / 100) : 0,
         shares:   engEnabled && sharesOn   ? Math.round(bViews * sharesRatio   / 100) : 0,
         comments: engEnabled && commentsOn ? Math.round(bViews * commentsRatio / 100) : 0,
+        reposts:  engEnabled && repostsOn  ? Math.round(bViews * repostsRatio  / 100) : 0,
         scheduledTime: new Date(Date.now() + hr*3600000).toISOString(),
         scheduledDelayMs: hr * 3600000,
       });
       prevCum = cumViews;
     }
     return batches;
-  }, [views, durationHours, engEnabled, likesOn, savesOn, sharesOn, commentsOn, likesRatio, savesRatio, sharesRatio, commentsRatio]);
+  }, [views, durationHours, engEnabled, likesOn, savesOn, sharesOn, commentsOn, repostsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, repostsRatio]);
 
   useEffect(() => {
     const id = setTimeout(() => onScheduleChange(buildSchedule(ctrlPts)), 0);
@@ -275,8 +276,8 @@ function CustomGraphDesigner({
 // ── Premium Neon Animated Chart ──────────────────────────────────
 function CurvePreview({
   views, durationHours, style, warmup, peak,
-  likesRatio, savesRatio, sharesRatio, commentsRatio,
-  likesOn, savesOn, sharesOn, commentsOn, engEnabled,
+  likesRatio, savesRatio, sharesRatio, commentsRatio, repostsRatio,
+  likesOn, savesOn, sharesOn, commentsOn, repostsOn, engEnabled,
   schedule,
   isCustomMode = false,
   selectedBatchIndex = null,
@@ -284,8 +285,8 @@ function CurvePreview({
   onChangeSchedule = null,
 }: {
   views: number; durationHours: number; style: CurveStyle; warmup: number; peak: number;
-  likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number;
-  likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean; engEnabled: boolean;
+  likesRatio: number; savesRatio: number; sharesRatio: number; commentsRatio: number; repostsRatio: number;
+  likesOn: boolean; savesOn: boolean; sharesOn: boolean; commentsOn: boolean; repostsOn: boolean; engEnabled: boolean;
   schedule: any[];
   isCustomMode?: boolean;
   selectedBatchIndex?: number | null;
@@ -924,16 +925,19 @@ export default function NewReelPage() {
     const targetSaves = engEnabled && savesOn ? eng.savesTarget : 0;
     const targetShares = engEnabled && sharesOn ? eng.sharesTarget : 0;
     const targetComments = engEnabled && commentsOn ? eng.commentsTarget : 0;
+    const targetReposts = engEnabled && repostsOn ? eng.repostsTarget : 0;
     
     const sumLikes = customSchedule.reduce((a, b) => a + b.likes, 0);
     const sumSaves = customSchedule.reduce((a, b) => a + b.saves, 0);
     const sumShares = customSchedule.reduce((a, b) => a + b.shares, 0);
     const sumComments = customSchedule.reduce((a, b) => a + b.comments, 0);
+    const sumReposts = customSchedule.reduce((a, b) => a + (b.reposts||0), 0);
     
     const scaleLikes = sumLikes > 0 ? (targetLikes / sumLikes) : 0;
     const scaleSaves = sumSaves > 0 ? (targetSaves / sumSaves) : 0;
     const scaleShares = sumShares > 0 ? (targetShares / sumShares) : 0;
     const scaleComments = sumComments > 0 ? (targetComments / sumComments) : 0;
+    const scaleReposts = sumReposts > 0 ? (targetReposts / sumReposts) : 0;
     
     let newSchedule = customSchedule.map((batch) => {
       return {
@@ -943,6 +947,7 @@ export default function NewReelPage() {
         saves: Math.max(0, Math.round(batch.saves * scaleSaves)),
         shares: Math.max(0, Math.round(batch.shares * scaleShares)),
         comments: Math.max(0, Math.round(batch.comments * scaleComments)),
+        reposts: Math.max(0, Math.round((batch.reposts||0) * scaleReposts)),
       };
     });
     
@@ -976,6 +981,12 @@ export default function NewReelPage() {
     if (diffComments !== 0 && newSchedule.length > 0) {
       newSchedule[newSchedule.length - 1].comments = Math.max(0, newSchedule[newSchedule.length - 1].comments + diffComments);
     }
+
+    const finalSumReposts = newSchedule.reduce((a, b) => a + (b.reposts||0), 0);
+    const diffReposts = targetReposts - finalSumReposts;
+    if (diffReposts !== 0 && newSchedule.length > 0) {
+      newSchedule[newSchedule.length - 1].reposts = Math.max(0, (newSchedule[newSchedule.length - 1].reposts||0) + diffReposts);
+    }
     
     setCustomSchedule(newSchedule);
   };
@@ -1005,10 +1016,12 @@ export default function NewReelPage() {
   const [savesOn, setSavesOn] = useState(true);
   const [sharesOn, setSharesOn] = useState(false);
   const [commentsOn, setCommentsOn] = useState(false);
+  const [repostsOn, setRepostsOn] = useState(false);
   const [likesRatio, setLikesRatio] = useState(4.0);
   const [savesRatio, setSavesRatio] = useState(2.0);
   const [sharesRatio, setSharesRatio] = useState(0.5);
   const [commentsRatio, setCommentsRatio] = useState(0.2);
+  const [repostsRatio, setRepostsRatio] = useState(0.0);
   const [hasCustomizedEng, setHasCustomizedEng] = useState(false);
 
   useEffect(() => {
@@ -1067,11 +1080,12 @@ export default function NewReelPage() {
         savesRatioPct: savesOn ? savesRatio : 0,
         sharesRatioPct: sharesOn ? sharesRatio : 0,
         commentsRatioPct: commentsOn ? commentsRatio : 0,
+        repostsRatioPct: repostsOn ? repostsRatio : 0,
       });
       setSchedule(s);
     }, 0);
     return () => clearTimeout(timer);
-  }, [views, durationDays, style, engEnabled, likesOn, likesRatio, savesOn, savesRatio, sharesOn, sharesRatio, commentsOn, commentsRatio]);
+  }, [views, durationDays, style, engEnabled, likesOn, likesRatio, savesOn, savesRatio, sharesOn, sharesRatio, commentsOn, commentsRatio, repostsOn, repostsRatio]);
 
   const applyTemplate = (templateId: string) => {
     const t = templates.find((tmp) => tmp.id === templateId);
@@ -1083,13 +1097,15 @@ export default function NewReelPage() {
     setSavesRatio(t.savesRatioPct);
     setSharesRatio(t.sharesRatioPct);
     setCommentsRatio(t.commentsRatioPct);
+    setRepostsRatio(t.repostsRatioPct || 0);
 
-    const anyEng = t.likesRatioPct > 0 || t.savesRatioPct > 0 || t.sharesRatioPct > 0 || t.commentsRatioPct > 0;
+    const anyEng = t.likesRatioPct > 0 || t.savesRatioPct > 0 || t.sharesRatioPct > 0 || t.commentsRatioPct > 0 || (t.repostsRatioPct > 0);
     setEngEnabled(anyEng);
     setLikesOn(t.likesRatioPct > 0);
     setSavesOn(t.savesRatioPct > 0);
     setSharesOn(t.sharesRatioPct > 0);
     setCommentsOn(t.commentsRatioPct > 0);
+    setRepostsOn(t.repostsRatioPct > 0);
     setHasCustomizedEng(true);
   };
 
@@ -1145,13 +1161,15 @@ export default function NewReelPage() {
         const savesPct = parseFloat(row.saves_pct) || 0;
         const sharesPct = parseFloat(row.shares_pct) || 0;
         const commentsPct = parseFloat(row.comments_pct) || 0;
+        const repostsPct = parseFloat(row.reposts_pct) || 0;
 
         const viewsTarget = row.viewsVal;
         const likesTarget = Math.round((likesPct / 100) * viewsTarget);
         const savesTarget = Math.round((savesPct / 100) * viewsTarget);
         const sharesTarget = Math.round((sharesPct / 100) * viewsTarget);
         const commentsTarget = Math.round((commentsPct / 100) * viewsTarget);
-        const engagementEnabled = likesTarget > 0 || savesTarget > 0 || sharesTarget > 0 || commentsTarget > 0;
+        const repostsTarget = Math.round((repostsPct / 100) * viewsTarget);
+        const engagementEnabled = likesTarget > 0 || savesTarget > 0 || sharesTarget > 0 || commentsTarget > 0 || repostsTarget > 0;
 
         let warmup = 4, peak = 8;
         if (row.styleVal === "FAST") { warmup = 2; peak = 4; }
@@ -1162,8 +1180,8 @@ export default function NewReelPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             reelUrl: row.url, platform: platformUpper, viewsTarget, durationHours: row.durDays * 24, curveStyle: row.styleVal,
-            warmupHours: warmup, peakHours: peak, engagementEnabled, likesTarget, savesTarget, sharesTarget, commentsTarget,
-            likesRatioPct: likesPct, savesRatioPct: savesPct, sharesRatioPct: sharesPct, commentsRatioPct: commentsPct,
+            warmupHours: warmup, peakHours: peak, engagementEnabled, likesTarget, savesTarget, sharesTarget, commentsTarget, repostsTarget,
+            likesRatioPct: likesPct, savesRatioPct: savesPct, sharesRatioPct: sharesPct, commentsRatioPct: commentsPct, repostsRatioPct: repostsPct,
           }),
         });
       } catch (e) {
@@ -1179,9 +1197,9 @@ export default function NewReelPage() {
 
   const downloadSampleCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8,"
-      + "url,platform,views,duration_days,curve_style,likes_pct,saves_pct,shares_pct,comments_pct\n"
-      + "https://www.instagram.com/reel/CtK89s_gH9k,INSTAGRAM,10000,7,ORGANIC,4.0,2.0,0.5,0.2\n"
-      + "https://www.tiktok.com/@user/video/712345678,TIKTOK,25000,14,FAST,3.0,1.5,0.2,0.1\n";
+      + "url,platform,views,duration_days,curve_style,likes_pct,saves_pct,shares_pct,comments_pct,reposts_pct\n"
+      + "https://www.instagram.com/reel/CtK89s_gH9k,INSTAGRAM,10000,7,ORGANIC,4.0,2.0,0.5,0.2,0.0\n"
+      + "https://www.tiktok.com/@user/video/712345678,TIKTOK,25000,14,FAST,3.0,1.5,0.2,0.1,0.5\n";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -1199,6 +1217,7 @@ export default function NewReelPage() {
     engEnabled && savesOn ? savesRatio : 0,
     engEnabled && sharesOn ? sharesRatio : 0,
     engEnabled && commentsOn ? commentsRatio : 0,
+    engEnabled && repostsOn ? repostsRatio : 0,
   );
 
   const totalViews = isCustomMode ? customSchedule.reduce((a, b) => a + b.views, 0) : views;
@@ -1206,6 +1225,7 @@ export default function NewReelPage() {
   const totalSaves = engEnabled && savesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget) : 0;
   const totalShares = engEnabled && sharesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) : 0;
   const totalComments = engEnabled && commentsOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) : 0;
+  const totalReposts = engEnabled && repostsOn ? (isCustomMode ? customSchedule.reduce((a, b) => (a + (b.reposts||0)), 0) : eng.repostsTarget) : 0;
 
   const calculateTotalCost = () => {
     if (!pricingInfo || !pricingInfo.walletMode) return 0;
@@ -1217,8 +1237,9 @@ export default function NewReelPage() {
     const savesCost = (totalSaves / 1000) * (rates.saves ?? 5.0);
     const sharesCost = (totalShares / 1000) * (rates.shares ?? 8.0);
     const commentsCost = (totalComments / 1000) * (rates.comments ?? 15.0);
+    const repostsCost = (totalReposts / 1000) * (rates.reposts ?? 12.0);
 
-    return viewsCost + likesCost + savesCost + sharesCost + commentsCost;
+    return viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost;
   };
 
   const totalCost = calculateTotalCost();
@@ -1242,6 +1263,7 @@ export default function NewReelPage() {
             savesRatioPct: engEnabled && savesOn ? savesRatio : 0,
             sharesRatioPct: engEnabled && sharesOn ? sharesRatio : 0,
             commentsRatioPct: engEnabled && commentsOn ? commentsRatio : 0,
+            repostsRatioPct: engEnabled && repostsOn ? repostsRatio : 0,
           }),
         });
       }
@@ -1250,9 +1272,9 @@ export default function NewReelPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reelUrl: reelUrl.trim(), platform, viewsTarget: views, durationHours, curveStyle: style, warmupHours: curveInfo.warmup, peakHours: curveInfo.peak,
-          engagementEnabled: engEnabled, likesTarget: eng.likesTarget, savesTarget: eng.savesTarget, sharesTarget: eng.sharesTarget, commentsTarget: eng.commentsTarget,
+          engagementEnabled: engEnabled, likesTarget: eng.likesTarget, savesTarget: eng.savesTarget, sharesTarget: eng.sharesTarget, commentsTarget: eng.commentsTarget, repostsTarget: eng.repostsTarget,
           likesRatioPct: engEnabled && likesOn ? likesRatio : 0, savesRatioPct: engEnabled && savesOn ? savesRatio : 0,
-          sharesRatioPct: engEnabled && sharesOn ? sharesRatio : 0, commentsRatioPct: engEnabled && commentsOn ? commentsRatio : 0,
+          sharesRatioPct: engEnabled && sharesOn ? sharesRatio : 0, commentsRatioPct: engEnabled && commentsOn ? commentsRatio : 0, repostsRatioPct: engEnabled && repostsOn ? repostsRatio : 0,
           customSchedule: isCustomMode ? customSchedule : null,
           viewsType: platform === "INSTAGRAM" ? selectedViewsService : "views",
         }),
@@ -1263,8 +1285,7 @@ export default function NewReelPage() {
     } catch (e) {
       setError(String(e)); setSubmitting(false);
     }
-  }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, eng, router, saveAsTemplate, templateName, isCustomMode, customSchedule]);
-
+  }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, repostsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, repostsRatio, eng, router, saveAsTemplate, templateName, isCustomMode, customSchedule, selectedViewsService]);
   return (
     <div style={{ maxWidth: step === 2 ? 1100 : 640, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 24, transition: "max-width 0.3s ease-in-out" }}>
       <style>{`
@@ -1471,8 +1492,8 @@ export default function NewReelPage() {
             <div style={{marginTop:8}}>
               <CustomGraphDesigner
                 views={views} durationHours={durationHours} engEnabled={engEnabled}
-                likesRatio={likesRatio} savesRatio={savesRatio} sharesRatio={sharesRatio} commentsRatio={commentsRatio}
-                likesOn={likesOn} savesOn={savesOn} sharesOn={sharesOn} commentsOn={commentsOn}
+                likesRatio={likesRatio} savesRatio={savesRatio} sharesRatio={sharesRatio} commentsRatio={commentsRatio} repostsRatio={repostsRatio}
+                likesOn={likesOn} savesOn={savesOn} sharesOn={sharesOn} commentsOn={commentsOn} repostsOn={repostsOn}
                 onScheduleChange={setCustomSchedule}
               />
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:16}}>
@@ -1487,6 +1508,7 @@ export default function NewReelPage() {
                     {savesOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Saves:</span><span style={{color:'#c084fc'}}>{customSumSaves.toLocaleString()}</span></div>}
                     {sharesOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Shares:</span><span style={{color:'#c084fc'}}>{customSumShares.toLocaleString()}</span></div>}
                     {commentsOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Comments:</span><span style={{color:'#c084fc'}}>{customSumComments.toLocaleString()}</span></div>}
+                    {repostsOn&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'#a78bfa'}}>Reposts:</span><span style={{color:'#c084fc'}}>(computed automatically or edit below)</span></div>}
                   </div>
                   <div style={{display:'flex',gap:8,marginTop:4}}>
                     <button onClick={scaleScheduleToTargets} style={{flex:1,padding:'6px',borderRadius:8,border:'1px solid rgba(168,85,247,0.4)',background:'rgba(168,85,247,0.15)',color:'#a855f7',fontSize:11,fontWeight:800,cursor:'pointer'}}>Scale to Targets</button>
@@ -1674,6 +1696,35 @@ export default function NewReelPage() {
                               newSchedule[activeIdx] = {
                                 ...newSchedule[activeIdx],
                                 comments: val,
+                              };
+                              setCustomSchedule(newSchedule);
+                            }}
+                            style={{
+                              padding: "8px",
+                              borderRadius: 8,
+                              background: "#120324",
+                              border: "1px solid #2d0a52",
+                              color: "#f3e8ff",
+                              fontSize: 12,
+                              fontWeight: 750,
+                              outline: "none"
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {repostsOn && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>Reposts</label>
+                          <input
+                            type="number"
+                            value={batch.reposts || 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, Number(e.target.value));
+                              const newSchedule = [...customSchedule];
+                              newSchedule[activeIdx] = {
+                                ...newSchedule[activeIdx],
+                                reposts: val,
                               };
                               setCustomSchedule(newSchedule);
                             }}
@@ -1888,10 +1939,12 @@ export default function NewReelPage() {
                 savesRatio={savesRatio}
                 sharesRatio={sharesRatio}
                 commentsRatio={commentsRatio}
+                repostsRatio={repostsRatio}
                 likesOn={likesOn}
                 savesOn={savesOn}
                 sharesOn={sharesOn}
                 commentsOn={commentsOn}
+                repostsOn={repostsOn}
                 engEnabled={engEnabled}
                 schedule={schedule}
                 isCustomMode={false}
@@ -1946,6 +1999,7 @@ export default function NewReelPage() {
                 <EngRow icon="🔖" label="Saves" enabled={savesOn} ratio={savesRatio} maxRatio={8} count={eng.savesTarget} minLimit={10} views={views} onToggle={() => { setSavesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSavesRatio(v); setHasCustomizedEng(true); }} />
                 <EngRow icon="📤" label="Shares" enabled={sharesOn} ratio={sharesRatio} maxRatio={5} count={eng.sharesTarget} minLimit={10} views={views} onToggle={() => { setSharesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSharesRatio(v); setHasCustomizedEng(true); }} />
                 <EngRow icon="💬" label="Comments" enabled={commentsOn} ratio={commentsRatio} maxRatio={3} count={eng.commentsTarget} minLimit={5} views={views} onToggle={() => { setCommentsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setCommentsRatio(v); setHasCustomizedEng(true); }} />
+                <EngRow icon="🔁" label="Reposts" enabled={repostsOn} ratio={repostsRatio} maxRatio={2} count={eng.repostsTarget} minLimit={5} views={views} onToggle={() => { setRepostsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setRepostsRatio(v); setHasCustomizedEng(true); }} />
               </div>
 
               <div style={{ borderRadius:16, padding:18, background:N.bg, boxShadow:N.inset }}>
@@ -1956,6 +2010,7 @@ export default function NewReelPage() {
                   {savesOn && eng.savesTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>🔖 Saves</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.savesTarget.toLocaleString()}</span></div>}
                   {sharesOn && eng.sharesTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>📤 Shares</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.sharesTarget.toLocaleString()}</span></div>}
                   {commentsOn && eng.commentsTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>💬 Comments</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.commentsTarget.toLocaleString()}</span></div>}
+                  {repostsOn && eng.repostsTarget > 0 && <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:N.muted, fontWeight:600 }}>🔁 Reposts</span><span style={{ fontWeight:800, color:"#16a34a" }}>{eng.repostsTarget.toLocaleString()}</span></div>}
                 </div>
               </div>
             </>
@@ -1991,10 +2046,12 @@ export default function NewReelPage() {
             savesRatio={savesRatio}
             sharesRatio={sharesRatio}
             commentsRatio={commentsRatio}
+            repostsRatio={repostsRatio}
             likesOn={likesOn}
             savesOn={savesOn}
             sharesOn={sharesOn}
             commentsOn={commentsOn}
+            repostsOn={repostsOn}
             engEnabled={engEnabled}
             schedule={isCustomMode ? customSchedule : schedule}
             isCustomMode={isCustomMode}
@@ -2059,6 +2116,7 @@ export default function NewReelPage() {
                   if (batch.saves > 0) engTexts.push(`🔖 ${batch.saves}`);
                   if (batch.shares > 0) engTexts.push(`📤 ${batch.shares}`);
                   if (batch.comments > 0) engTexts.push(`💬 ${batch.comments}`);
+                  if (batch.reposts && batch.reposts > 0) engTexts.push(`🔁 ${batch.reposts}`);
                   const engStr = engTexts.length > 0 ? engTexts.join(" · ") : "None";
 
                   return (
@@ -2096,6 +2154,7 @@ export default function NewReelPage() {
                 ...(savesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget) > 0 ? [["🔖 Saves Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget).toLocaleString()}`]] : []),
                 ...(sharesOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) > 0 ? [["📤 Shares Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget).toLocaleString()}`]] : []),
                 ...(commentsOn && (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) > 0 ? [["💬 Comments Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget).toLocaleString()}`]] : []),
+                ...(repostsOn && (isCustomMode ? customSchedule.reduce((a, b) => a + (b.reposts||0), 0) : eng.repostsTarget) > 0 ? [["🔁 Reposts Target", `${(isCustomMode ? customSchedule.reduce((a, b) => a + (b.reposts||0), 0) : eng.repostsTarget).toLocaleString()}`]] : []),
               ] : [["Engagement Mode", "⬜ Views only"]]),
               ...(pricingInfo?.walletMode ? [
                 ["Campaign Cost", `₹ ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],

@@ -12,7 +12,9 @@ export function BlogsTab() {
   const fetchBlogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/blogs");
+      const res = await fetch("/api/admin/blogs", {
+        headers: { "x-admin-secret": localStorage.getItem("yoyo_admin_secret") || "" }
+      });
       if (res.ok) {
         const data = await res.json();
         setBlogs(data.blogs);
@@ -32,7 +34,10 @@ export function BlogsTab() {
       const method = editingBlog ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-secret": localStorage.getItem("yoyo_admin_secret") || ""
+        },
         body: JSON.stringify(form)
       });
       if (!res.ok) {
@@ -50,7 +55,10 @@ export function BlogsTab() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this blog?")) return;
-    await fetch(`/api/admin/blogs/${id}`, { method: "DELETE" });
+    await fetch(`/api/admin/blogs/${id}`, { 
+      method: "DELETE",
+      headers: { "x-admin-secret": localStorage.getItem("yoyo_admin_secret") || "" }
+    });
     fetchBlogs();
   };
 

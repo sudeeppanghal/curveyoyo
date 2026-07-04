@@ -10,22 +10,6 @@ import { prisma } from "@/lib/prisma";
  * @param amountInr The total deposit amount in INR
  */
 export async function processProfitSplit(paymentId: string, source: "UPI" | "CRYPTO", amountInr: number) {
-  try {
-    const ankitShare = amountInr * 0.40;
-    const ramShare = amountInr * 0.40;
-
-    await prisma.profitSplit.create({
-      data: {
-        paymentId,
-        source,
-        amountInr,
-        ankitShare,
-        ramShare,
-      },
-    });
-
-    console.log(`[Profit Split] Recorded for ${source} payment ${paymentId}: Ankit ₹${ankitShare}, Ram ₹${ramShare}`);
-  } catch (err) {
-    console.error("[Profit Split Error] Failed to record profit split:", err);
-  }
+  // Feature disabled per user request
+  return;
 }

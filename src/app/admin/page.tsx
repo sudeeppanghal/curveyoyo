@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BlogsTab } from "./BlogsTab";
 import { AutoSyncTab } from "./AutoSyncTab";
-import { ProfitSplitTab } from "./ProfitSplitTab";
 
 interface AdminSettings {
 
@@ -72,7 +71,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync" | "profit_split";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync";
 
 const N = {
 
@@ -307,55 +306,50 @@ export default function AdminPage() {
     }
 
   };
+  useEffect(() => {
+    const savedSecret = localStorage.getItem("yoyo_admin_secret");
+    if (savedSecret) {
+      setSecret(savedSecret);
+      loadAll(savedSecret);
+    }
+  }, []);
 
   const headers = { "Content-Type": "application/json", "x-admin-secret": secret };
 
-  const loadAll = async () => {
+  const loadAll = async (overrideSecret?: string) => {
 
     setLoading(true);
 
     setError("");
 
     try {
-
-      const sRes = await fetch("/api/admin/settings", { headers });
-
+      const activeSecret = overrideSecret || secret;
+      const sRes = await fetch("/api/admin/settings", { headers: { "Content-Type": "application/json", "x-admin-secret": activeSecret } });
       if (sRes.status === 403) {
-
         setError("Wrong admin secret");
-
         setAuthed(false);
-
         setLoading(false);
-
         return;
-
       }
-
       if (!sRes.ok) {
-
         setError(`Server error ${sRes.status} — check DATABASE_URL in Vercel env vars`);
-
+        setAuthed(false);
         setLoading(false);
-
         return;
-
       }
-
       const s = await sRes.json();
-
       if (s.settings) setSettings(s.settings);
-
       setAuthed(true);
-
+      localStorage.setItem("yoyo_admin_secret", activeSecret);
+      const activeHeaders = { "Content-Type": "application/json", "x-admin-secret": activeSecret };
       const [uRes, pRes, oRes, sysRes, upiRes, apRes, tRes] = await Promise.all([
-        fetch("/api/admin/users",    { headers }),
-        fetch("/api/admin/payments", { headers }),
-        fetch("/api/admin/orders",   { headers }),
-        fetch("/api/admin/system",   { headers }),
-        fetch("/api/admin/upi-payments", { headers }),
-        fetch("/api/admin/panels?action=health",   { headers }),
-        fetch("/api/tickets",        { headers }),
+        fetch("/api/admin/users",    { headers: activeHeaders }),
+        fetch("/api/admin/payments", { headers: activeHeaders }),
+        fetch("/api/admin/orders",   { headers: activeHeaders }),
+        fetch("/api/admin/system",   { headers: activeHeaders }),
+        fetch("/api/admin/upi-payments", { headers: activeHeaders }),
+        fetch("/api/admin/panels?action=health",   { headers: activeHeaders }),
+        fetch("/api/tickets",        { headers: activeHeaders }),
       ]);
 
       if (uRes.ok)   { const u = await uRes.json();   setUsers(u.users ?? []); }
@@ -1069,7 +1063,7 @@ export default function AdminPage() {
 
         {error && <p style={{ color: "#dc2626", fontSize: 12, fontWeight: 700, margin: 0 }}>⚠️ {error}</p>}
 
-        <button onClick={loadAll} className="neo-btn"
+        <button onClick={() => loadAll()} className="neo-btn"
 
           style={{
 
@@ -1483,7 +1477,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs", "auto_sync", "profit_split"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs", "auto_sync"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1503,8 +1497,7 @@ export default function AdminPage() {
               tickets: "✉️ ",
               affiliates: "🤝 ",
               blogs: "📝 ",
-              auto_sync: "🔄 ",
-              profit_split: "💸 "
+              auto_sync: "🔄 "
             };
 
             return (
@@ -3326,7 +3319,12 @@ export default function AdminPage() {
                                     <span>💬</span> <span>{(o.commentsDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.commentsTarget.toLocaleString()}</span></span>
                                   </div>
                                 )}
-                                {!(o.likesTarget > 0 || o.savesTarget > 0 || o.sharesTarget > 0 || o.commentsTarget > 0) && (
+                                {o.repostsTarget > 0 && (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.repostsDelivered || 0) >= o.repostsTarget ? "#16a34a" : N.text }}>
+                                    <span>🔁</span> <span>{(o.repostsDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.repostsTarget.toLocaleString()}</span></span>
+                                  </div>
+                                )}
+                                {!(o.likesTarget > 0 || o.savesTarget > 0 || o.sharesTarget > 0 || o.commentsTarget > 0 || o.repostsTarget > 0) && (
                                   <span style={{ color: N.muted, fontStyle: "italic" }}>No extra engagement</span>
                                 )}
                               </div>
@@ -4081,10 +4079,6 @@ export default function AdminPage() {
           {/* ── AUTO SYNC TAB ─── */}
           {tab === "auto_sync" && (
             <AutoSyncTab />
-          )}
-
-          {tab === "profit_split" && (
-            <ProfitSplitTab adminSecret={secret} />
           )}
 
       {/* USER HISTORY MODAL */}

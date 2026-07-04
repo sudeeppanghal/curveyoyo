@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
     // Engagement
     engagementEnabled = true,
     likesRatioPct = 4.0, savesRatioPct = 2.0,
-    sharesRatioPct = 0.5, commentsRatioPct = 0.2,
+    sharesRatioPct = 0.5, commentsRatioPct = 0.2, repostsRatioPct = 0.0,
     likesTarget: bodyLikes, savesTarget: bodySaves,
-    sharesTarget: bodyShares, commentsTarget: bodyComments,
+    sharesTarget: bodyShares, commentsTarget: bodyComments, repostsTarget: bodyReposts,
     customSchedule, // <--- custom schedule parameter
     viewsType = "views",
   } = body;
@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
   // Calculate engagement targets from ratios (or use submitted values)
   const engTargets = engagementEnabled
     ? (bodyLikes !== undefined
-        ? { likesTarget: bodyLikes, savesTarget: bodySaves, sharesTarget: bodyShares, commentsTarget: bodyComments }
-        : calculateEngagementTargets(views, likesRatioPct, savesRatioPct, sharesRatioPct, commentsRatioPct)
+        ? { likesTarget: bodyLikes, savesTarget: bodySaves, sharesTarget: bodyShares, commentsTarget: bodyComments, repostsTarget: bodyReposts }
+        : calculateEngagementTargets(views, likesRatioPct, savesRatioPct, sharesRatioPct, commentsRatioPct, repostsRatioPct)
       )
-    : { likesTarget: 0, savesTarget: 0, sharesTarget: 0, commentsTarget: 0 };
+    : { likesTarget: 0, savesTarget: 0, sharesTarget: 0, commentsTarget: 0, repostsTarget: 0 };
 
   // 1. Fetch active admin panels in priority order
   const activeAdminPanels = await prisma.panel.findMany({
@@ -127,8 +127,9 @@ export async function POST(request: NextRequest) {
   const savesCost = (engTargets.savesTarget / 1000) * getRate("saves", 5.0);
   const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
   const commentsCost = (engTargets.commentsTarget / 1000) * getRate("comments", 15.0);
+  const repostsCost = (engTargets.repostsTarget / 1000) * getRate("reposts", 12.0);
 
-  totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost).toFixed(2));
+  totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
   if (dbUser.balance < totalPrice) {
     return NextResponse.json({
@@ -200,6 +201,7 @@ export async function POST(request: NextRequest) {
         savesRatioPct: engagementEnabled ? savesRatioPct : 0,
         sharesRatioPct: engagementEnabled ? sharesRatioPct : 0,
         commentsRatioPct: engagementEnabled ? commentsRatioPct : 0,
+        repostsRatioPct: engagementEnabled ? repostsRatioPct : 0,
         ...engTargets,
         status: "PENDING",
         priceCharged: totalPrice,
@@ -256,6 +258,7 @@ export async function POST(request: NextRequest) {
             saves: batch.saves ?? 0,
             shares: batch.shares ?? 0,
             comments: batch.comments ?? 0,
+            reposts: batch.reposts ?? 0,
           }
         }
       };

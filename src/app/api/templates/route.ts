@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     name, style, durationHours, warmupHours, peakHours, decayHours,
-    likesRatioPct, savesRatioPct, sharesRatioPct, commentsRatioPct
+    likesRatioPct, savesRatioPct, sharesRatioPct, commentsRatioPct, repostsRatioPct
   } = body;
 
   if (!name) {
@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       savesRatioPct: parseFloat(savesRatioPct) || 0,
       sharesRatioPct: parseFloat(sharesRatioPct) || 0,
       commentsRatioPct: parseFloat(commentsRatioPct) || 0,
+      repostsRatioPct: parseFloat(repostsRatioPct) || 0,
     },
   });
 

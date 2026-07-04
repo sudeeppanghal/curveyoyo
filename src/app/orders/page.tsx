@@ -14,6 +14,7 @@ interface Order {
   savesTarget: number; savesDelivered: number;
   sharesTarget: number; sharesDelivered: number;
   commentsTarget: number; commentsDelivered: number;
+  repostsTarget: number; repostsDelivered: number;
   failReason?: string | null;
 }
 
@@ -239,6 +240,7 @@ export default function OrdersPage() {
                       { icon: "🔖", label: "Saves", cur: o.savesDelivered, tgt: o.savesTarget },
                       { icon: "📤", label: "Shares", cur: o.sharesDelivered, tgt: o.sharesTarget },
                       { icon: "💬", label: "Comments", cur: o.commentsDelivered, tgt: o.commentsTarget },
+                      { icon: "🔁", label: "Reposts", cur: o.repostsDelivered, tgt: o.repostsTarget },
                     ].filter(e => e.tgt > 0).map(e => (
                       <div key={e.label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <div style={{ fontSize: 11, color: N.muted, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>

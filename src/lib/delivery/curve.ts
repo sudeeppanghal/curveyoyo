@@ -17,6 +17,7 @@ export interface CurveParams {
   savesRatioPct?: number;
   sharesRatioPct?: number;
   commentsRatioPct?: number;
+  repostsRatioPct?: number;
   // Timezone offset from UTC in hours (e.g. +5.5 for IST)
   tzOffsetHours?: number;
   intervalMinutes?: number;
@@ -31,6 +32,7 @@ export interface DeliveryBatch {
   saves: number;
   shares: number;
   comments: number;
+  reposts: number;
   scheduledTime?: string;
 }
 
@@ -96,7 +98,7 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     totalViews, durationHours, warmupHours, peakHours, style,
     engagementEnabled = true,
     likesRatioPct = 4.0, savesRatioPct = 2.0,
-    sharesRatioPct = 0.5, commentsRatioPct = 0.2,
+    sharesRatioPct = 0.5, commentsRatioPct = 0.2, repostsRatioPct = 0.0,
     tzOffsetHours = 5.5,
     intervalMinutes,
   } = params;
@@ -151,12 +153,14 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
   let savesAccumulated = 0;
   let sharesAccumulated = 0;
   let commentsAccumulated = 0;
+  let repostsAccumulated = 0;
 
   const distributedViews: number[] = [];
   const distributedLikes: number[] = [];
   const distributedSaves: number[] = [];
   const distributedShares: number[] = [];
   const distributedComments: number[] = [];
+  const distributedReposts: number[] = [];
 
   for (let t = 0; t < totalSteps; t++) {
     // 1. Calculate theoretical views for this step
@@ -184,60 +188,65 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     viewsAccumulated += roundedViews;
     distributedViews.push(roundedViews);
 
-    // 2. Calculate engagement targets for this step with separate random jitter
-    const ratio = totalViews > 0 ? roundedViews / totalViews : 0;
+    // 2. Calculate engagement targets for this step using fraction-based accumulation
+    const fraction = totalViews > 0 ? viewsAccumulated / totalViews : 0;
 
-    // Likes (±15% jitter)
-    const likesTarget = engagementEnabled ? (likesRatioPct / 100) * totalViews * ratio : 0;
-    let jitteredLikes = likesTarget;
-    if (likesTarget > 0 && t < totalSteps - 1) {
-      jitteredLikes = likesTarget * (1 + (Math.random() * 2 - 1) * 0.15);
-    }
-    let roundedLikes = Math.round(jitteredLikes);
+    // Overall targets
     const overallLikesTarget = engagementEnabled ? Math.round((likesRatioPct / 100) * totalViews) : 0;
-    const remainingLikes = overallLikesTarget - likesAccumulated;
-    roundedLikes = t === totalSteps - 1 ? remainingLikes : Math.max(0, Math.min(remainingLikes, roundedLikes));
+    const overallSavesTarget = engagementEnabled ? Math.round((savesRatioPct / 100) * totalViews) : 0;
+    const overallSharesTarget = engagementEnabled ? Math.round((sharesRatioPct / 100) * totalViews) : 0;
+    const overallCommentsTarget = engagementEnabled ? Math.round((commentsRatioPct / 100) * totalViews) : 0;
+    const overallRepostsTarget = engagementEnabled ? Math.round((repostsRatioPct / 100) * totalViews) : 0;
+
+    // Owed (theoretical perfect amount by this point)
+    const owedLikes = Math.round(overallLikesTarget * fraction);
+    const owedSaves = Math.round(overallSavesTarget * fraction);
+    const owedShares = Math.round(overallSharesTarget * fraction);
+    const owedComments = Math.round(overallCommentsTarget * fraction);
+    const owedReposts = Math.round(overallRepostsTarget * fraction);
+
+    // Due (what we need to send to catch up)
+    const dueLikes = Math.max(0, owedLikes - likesAccumulated);
+    const dueSaves = Math.max(0, owedSaves - savesAccumulated);
+    const dueShares = Math.max(0, owedShares - sharesAccumulated);
+    const dueComments = Math.max(0, owedComments - commentsAccumulated);
+    const dueReposts = Math.max(0, owedReposts - repostsAccumulated);
+
+    // Apply jitter and round, then add to accumulated
+    // Likes
+    let roundedLikes = Math.round(dueLikes * (1 + (Math.random() * 2 - 1) * 0.15));
+    if (t === totalSteps - 1) roundedLikes = overallLikesTarget - likesAccumulated;
+    roundedLikes = Math.max(0, roundedLikes);
     likesAccumulated += roundedLikes;
     distributedLikes.push(roundedLikes);
 
-    // Saves (±15% jitter)
-    const savesTarget = engagementEnabled ? (savesRatioPct / 100) * totalViews * ratio : 0;
-    let jitteredSaves = savesTarget;
-    if (savesTarget > 0 && t < totalSteps - 1) {
-      jitteredSaves = savesTarget * (1 + (Math.random() * 2 - 1) * 0.15);
-    }
-    let roundedSaves = Math.round(jitteredSaves);
-    const overallSavesTarget = engagementEnabled ? Math.round((savesRatioPct / 100) * totalViews) : 0;
-    const remainingSaves = overallSavesTarget - savesAccumulated;
-    roundedSaves = t === totalSteps - 1 ? remainingSaves : Math.max(0, Math.min(remainingSaves, roundedSaves));
+    // Saves
+    let roundedSaves = Math.round(dueSaves * (1 + (Math.random() * 2 - 1) * 0.15));
+    if (t === totalSteps - 1) roundedSaves = overallSavesTarget - savesAccumulated;
+    roundedSaves = Math.max(0, roundedSaves);
     savesAccumulated += roundedSaves;
     distributedSaves.push(roundedSaves);
 
-    // Shares (±15% jitter)
-    const sharesTarget = engagementEnabled ? (sharesRatioPct / 100) * totalViews * ratio : 0;
-    let jitteredShares = sharesTarget;
-    if (sharesTarget > 0 && t < totalSteps - 1) {
-      jitteredShares = sharesTarget * (1 + (Math.random() * 2 - 1) * 0.15);
-    }
-    let roundedShares = Math.round(jitteredShares);
-    const overallSharesTarget = engagementEnabled ? Math.round((sharesRatioPct / 100) * totalViews) : 0;
-    const remainingShares = overallSharesTarget - sharesAccumulated;
-    roundedShares = t === totalSteps - 1 ? remainingShares : Math.max(0, Math.min(remainingShares, roundedShares));
+    // Shares
+    let roundedShares = Math.round(dueShares * (1 + (Math.random() * 2 - 1) * 0.15));
+    if (t === totalSteps - 1) roundedShares = overallSharesTarget - sharesAccumulated;
+    roundedShares = Math.max(0, roundedShares);
     sharesAccumulated += roundedShares;
     distributedShares.push(roundedShares);
 
-    // Comments (±15% jitter)
-    const commentsTarget = engagementEnabled ? (commentsRatioPct / 100) * totalViews * ratio : 0;
-    let jitteredComments = commentsTarget;
-    if (commentsTarget > 0 && t < totalSteps - 1) {
-      jitteredComments = commentsTarget * (1 + (Math.random() * 2 - 1) * 0.15);
-    }
-    let roundedComments = Math.round(jitteredComments);
-    const overallCommentsTarget = engagementEnabled ? Math.round((commentsRatioPct / 100) * totalViews) : 0;
-    const remainingComments = overallCommentsTarget - commentsAccumulated;
-    roundedComments = t === totalSteps - 1 ? remainingComments : Math.max(0, Math.min(remainingComments, roundedComments));
+    // Comments
+    let roundedComments = Math.round(dueComments * (1 + (Math.random() * 2 - 1) * 0.15));
+    if (t === totalSteps - 1) roundedComments = overallCommentsTarget - commentsAccumulated;
+    roundedComments = Math.max(0, roundedComments);
     commentsAccumulated += roundedComments;
     distributedComments.push(roundedComments);
+
+    // Reposts
+    let roundedReposts = Math.round(dueReposts * (1 + (Math.random() * 2 - 1) * 0.15));
+    if (t === totalSteps - 1) roundedReposts = overallRepostsTarget - repostsAccumulated;
+    roundedReposts = Math.max(0, roundedReposts);
+    repostsAccumulated += roundedReposts;
+    distributedReposts.push(roundedReposts);
   }
 
   // Enforce SMM minimum limit (from AdminService or default 100) by merging smaller batches
@@ -284,11 +293,13 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
         distributedSaves[targetIdx] += distributedSaves[underMinIdx];
         distributedShares[targetIdx] += distributedShares[underMinIdx];
         distributedComments[targetIdx] += distributedComments[underMinIdx];
+        distributedReposts[targetIdx] += distributedReposts[underMinIdx];
 
         distributedLikes[underMinIdx] = 0;
         distributedSaves[underMinIdx] = 0;
         distributedShares[underMinIdx] = 0;
         distributedComments[underMinIdx] = 0;
+        distributedReposts[underMinIdx] = 0;
       } else {
         distributedViews[underMinIdx] = val;
         break;
@@ -314,6 +325,7 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
       saves: distributedSaves[stepIdx],
       shares: distributedShares[stepIdx],
       comments: distributedComments[stepIdx],
+      reposts: distributedReposts[stepIdx],
     };
   });
 }
@@ -323,13 +335,13 @@ export function generateDeliverySchedule(params: CurveParams): DeliveryBatch[] {
 }
 
 /**
- * Chart-only data: {hour, views, likes, saves, shares}[] per hour.
+ * Chart-only data: {hour, views, likes, saves, shares, reposts}[] per hour.
  */
 export function curveForChart(params: CurveParams): {
-  hour: number; views: number; likes: number; saves: number; shares: number;
+  hour: number; views: number; likes: number; saves: number; shares: number; reposts: number;
 }[] {
-  return generateDeliverySchedule(params).map(({ hour, views, likes, saves, shares }) => ({
-    hour, views, likes, saves, shares,
+  return generateDeliverySchedule(params).map(({ hour, views, likes, saves, shares, reposts }) => ({
+    hour, views, likes, saves, shares, reposts,
   }));
 }
 
@@ -342,17 +354,20 @@ export function calculateEngagementTargets(
   savesRatioPct: number,
   sharesRatioPct: number,
   commentsRatioPct: number,
+  repostsRatioPct: number = 0.0,
 ) {
   const likesRaw = Math.round((likesRatioPct / 100) * totalViews);
   const savesRaw = Math.round((savesRatioPct / 100) * totalViews);
   const sharesRaw = Math.round((sharesRatioPct / 100) * totalViews);
   const commentsRaw = Math.round((commentsRatioPct / 100) * totalViews);
+  const repostsRaw = Math.round((repostsRatioPct / 100) * totalViews);
 
   return {
     likesTarget:    likesRaw > 0 ? Math.max(10, likesRaw) : 0,
     savesTarget:    savesRaw > 0 ? Math.max(10, savesRaw) : 0,
     sharesTarget:   sharesRaw > 0 ? Math.max(10, sharesRaw) : 0,
     commentsTarget: commentsRaw > 0 ? Math.max(5, commentsRaw) : 0,
+    repostsTarget:  repostsRaw > 0 ? Math.max(10, repostsRaw) : 0,
   };
 }
 
@@ -387,6 +402,7 @@ export interface EngagementDue {
   saves: number;
   shares: number;
   comments: number;
+  reposts: number;
 }
 
 /**
@@ -403,11 +419,11 @@ export interface EngagementDue {
 export function calculateEngagementDue(
   viewsTarget: number,
   viewsDeliveredNow: number,
-  targets: { likes: number; saves: number; shares: number; comments: number },
-  alreadyDelivered: { likes: number; saves: number; shares: number; comments: number },
-  minBatchSizes: { likes: number; saves: number; shares: number; comments: number } = { likes: 10, saves: 10, shares: 10, comments: 5 },
+  targets: { likes: number; saves: number; shares: number; comments: number; reposts: number; },
+  alreadyDelivered: { likes: number; saves: number; shares: number; comments: number; reposts: number; },
+  minBatchSizes: { likes: number; saves: number; shares: number; comments: number; reposts: number; } = { likes: 10, saves: 10, shares: 10, comments: 5, reposts: 10 },
 ): EngagementDue {
-  if (viewsTarget <= 0) return { likes: 0, saves: 0, shares: 0, comments: 0 };
+  if (viewsTarget <= 0) return { likes: 0, saves: 0, shares: 0, comments: 0, reposts: 0 };
 
   // Fraction of campaign complete after this views tick
   const fraction = Math.min(1, viewsDeliveredNow / viewsTarget);
@@ -418,6 +434,7 @@ export function calculateEngagementDue(
     saves:    Math.round(targets.saves    * fraction),
     shares:   Math.round(targets.shares   * fraction),
     comments: Math.round(targets.comments * fraction),
+    reposts:  Math.round(targets.reposts  * fraction),
   };
 
   // How much is still due (owed minus already sent)
@@ -426,6 +443,7 @@ export function calculateEngagementDue(
     saves:    Math.max(0, owed.saves    - alreadyDelivered.saves),
     shares:   Math.max(0, owed.shares   - alreadyDelivered.shares),
     comments: Math.max(0, owed.comments - alreadyDelivered.comments),
+    reposts:  Math.max(0, owed.reposts  - alreadyDelivered.reposts),
   };
 
   // Only fire if due amount meets the specific SMM service minimum threshold
@@ -436,11 +454,13 @@ export function calculateEngagementDue(
   const minSaves = minBatchSizes.saves;
   const minShares = minBatchSizes.shares;
   const minComments = minBatchSizes.comments;
+  const minReposts = minBatchSizes.reposts;
 
   return {
     likes:    targets.likes    > 0 ? Math.max(0, due.likes    >= minLikes    || (isLastBatch && due.likes    > 0) ? due.likes    : 0) : 0,
     saves:    targets.saves    > 0 ? Math.max(0, due.saves    >= minSaves    || (isLastBatch && due.saves    > 0) ? due.saves    : 0) : 0,
     shares:   targets.shares   > 0 ? Math.max(0, due.shares   >= minShares   || (isLastBatch && due.shares   > 0) ? due.shares   : 0) : 0,
     comments: targets.comments > 0 ? Math.max(0, due.comments >= minComments || (isLastBatch && due.comments > 0) ? due.comments : 0) : 0,
+    reposts:  targets.reposts  > 0 ? Math.max(0, due.reposts  >= minReposts  || (isLastBatch && due.reposts  > 0) ? due.reposts  : 0) : 0,
   };
 }

@@ -25,6 +25,7 @@ interface TickPayload {
   savesBatch?: number;
   sharesBatch?: number;
   commentsBatch?: number;
+  repostsBatch?: number;
 }
 
 type ServiceIds = Record<string, Record<string, string>>;
@@ -194,18 +195,19 @@ async function handler(request: NextRequest) {
   // ── 2. ENGAGEMENT ACCUMULATION ALGORITHM ─────────────────────
   // Views succeeded. Compute engagement due based on ACTUAL jittered views delivered.
   const actualViewsDelivered = jitteredViewsBatch;
-  const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0 };
+  const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0, reposts: 0 };
 
   if (order.engagementEnabled) {
     const resData = event.responseData as any;
     let due;
-    let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5 };
+    let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5, reposts: 10 };
     if (resData && resData.customEngagement) {
       due = {
         likes: resData.customEngagement.likes ?? 0,
         saves: resData.customEngagement.saves ?? 0,
         shares: resData.customEngagement.shares ?? 0,
         comments: resData.customEngagement.comments ?? 0,
+        reposts: resData.customEngagement.reposts ?? 0,
       };
     } else {
       // viewsDeliveredNow = current delivered + this batch (use actual jittered amount)
@@ -221,6 +223,7 @@ async function handler(request: NextRequest) {
           if (s.type === "saves" && s.minQuantity > 0) minBatchSizes.saves = s.minQuantity;
           if (s.type === "shares" && s.minQuantity > 0) minBatchSizes.shares = s.minQuantity;
           if (s.type === "comments" && s.minQuantity > 0) minBatchSizes.comments = s.minQuantity;
+          if (s.type === "reposts" && s.minQuantity > 0) minBatchSizes.reposts = s.minQuantity;
         });
       } catch { /* fallback */ }
 
@@ -232,12 +235,14 @@ async function handler(request: NextRequest) {
           saves:    order.savesTarget,
           shares:   order.sharesTarget,
           comments: order.commentsTarget,
+          reposts:  order.repostsTarget ?? 0,
         },
         {
           likes:    order.likesDelivered,
           saves:    order.savesDelivered,
           shares:   order.sharesDelivered,
           comments: order.commentsDelivered,
+          reposts:  order.repostsDelivered ?? 0,
         },
         minBatchSizes,
       );
@@ -253,6 +258,7 @@ async function handler(request: NextRequest) {
         { type: "saves",    qty: due.saves,    svcId: getServiceId(engSvcIds, platform, "saves") },
         { type: "shares",   qty: due.shares,   svcId: getServiceId(engSvcIds, platform, "shares") },
         { type: "comments", qty: due.comments, svcId: getServiceId(engSvcIds, platform, "comments") },
+        { type: "reposts",  qty: due.reposts,  svcId: getServiceId(engSvcIds, platform, "reposts") },
       ] as { type: keyof typeof engagementDelivered; qty: number; svcId: string | null }[]
     ).filter(({ qty, svcId }) => qty > 0 && svcId !== null);
 
@@ -291,6 +297,7 @@ async function handler(request: NextRequest) {
     saves: engagementDelivered.saves,
     shares: engagementDelivered.shares,
     comments: engagementDelivered.comments,
+    reposts: engagementDelivered.reposts,
   };
 
   const resData = event.responseData as any;
@@ -319,6 +326,7 @@ async function handler(request: NextRequest) {
       ...(cleanedEngagementFired.saves    > 0 ? { savesDelivered:    { increment: cleanedEngagementFired.saves    } } : {}),
       ...(cleanedEngagementFired.shares   > 0 ? { sharesDelivered:   { increment: cleanedEngagementFired.shares   } } : {}),
       ...(cleanedEngagementFired.comments > 0 ? { commentsDelivered: { increment: cleanedEngagementFired.comments } } : {}),
+      ...(cleanedEngagementFired.reposts  > 0 ? { repostsDelivered:  { increment: cleanedEngagementFired.reposts  } } : {}),
     },
   });
 

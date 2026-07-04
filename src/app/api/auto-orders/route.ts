@@ -44,7 +44,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { platform, username, templateIds, viewsMin, viewsMax } = await request.json();
+    const { 
+      platform, username, templateIds, viewsMin, viewsMax,
+      likesMin, likesMax, commentsMin, commentsMax,
+      sharesMin, sharesMax, savesMin, savesMax,
+      repostsMin, repostsMax
+    } = await request.json();
 
     if (!platform || !username || !templateIds || !Array.isArray(templateIds) || templateIds.length === 0) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -68,6 +73,16 @@ export async function POST(request: NextRequest) {
         templateId: templateIds[0], // fallback for legacy safety
         viewsMin: Number(viewsMin) || 1000,
         viewsMax: Number(viewsMax) || 5000,
+        likesMin: Number(likesMin) || 0,
+        likesMax: Number(likesMax) || 0,
+        commentsMin: Number(commentsMin) || 0,
+        commentsMax: Number(commentsMax) || 0,
+        sharesMin: Number(sharesMin) || 0,
+        sharesMax: Number(sharesMax) || 0,
+        savesMin: Number(savesMin) || 0,
+        savesMax: Number(savesMax) || 0,
+        repostsMin: Number(repostsMin) || 0,
+        repostsMax: Number(repostsMax) || 0,
       }
     });
 

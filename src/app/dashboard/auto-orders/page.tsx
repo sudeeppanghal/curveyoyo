@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { generateRawSchedule } from "@/lib/delivery/curve";
 import { STYLE_NEON_COLORS_100 as STYLE_NEON_COLORS } from "@/lib/delivery/curve-styles-100";
+import { motion, AnimatePresence } from "framer-motion";
 
 const N = {
   bg:        "#eef2f7",
@@ -20,7 +21,6 @@ const N = {
 function MiniCurveChart({ template, active }: { template: any; active: boolean }) {
   const points = useMemo(() => {
     if (template.customSchedule && Array.isArray(template.customSchedule) && template.customSchedule.length > 0) {
-      // Sort and plot custom dots
       const sorted = [...template.customSchedule].sort((a, b) => (a.hour || 0) - (b.hour || 0));
       return sorted.map((b) => b.views);
     }
@@ -50,7 +50,6 @@ function MiniCurveChart({ template, active }: { template: any; active: boolean }
     .join(" ");
 
   const fillD = `${pathD} L ${width - padding} ${height} L ${padding} ${height} Z`;
-
   const neon = STYLE_NEON_COLORS[template.style as keyof typeof STYLE_NEON_COLORS] || STYLE_NEON_COLORS.ORGANIC || { stroke: "#d946ef" };
   const gradId = `mini-grad-${template.id}`;
 
@@ -77,6 +76,7 @@ function MiniCurveChart({ template, active }: { template: any; active: boolean }
 }
 
 export default function AutoOrdersPage() {
+  const [step, setStep] = useState(1);
   const [subs, setSubs] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +87,11 @@ export default function AutoOrdersPage() {
     templateIds: [] as string[],
     viewsMin: 1000,
     viewsMax: 5000,
+    likesMin: 100, likesMax: 500,
+    commentsMin: 5, commentsMax: 20,
+    sharesMin: 10, sharesMax: 50,
+    savesMin: 20, savesMax: 100,
+    repostsMin: 0, repostsMax: 0,
   });
 
   useEffect(() => {
@@ -120,6 +125,11 @@ export default function AutoOrdersPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (step < 5) {
+      setStep(step + 1);
+      return;
+    }
+
     if (!form.username || form.templateIds.length === 0) return alert("Username and at least one Template are required.");
     if (form.viewsMin >= form.viewsMax) return alert("Maximum views must be greater than Minimum views.");
     
@@ -132,6 +142,7 @@ export default function AutoOrdersPage() {
       if (res.ok) {
         alert("Auto-Order Tracker Created! We will now automatically send organic engagement to your new posts.");
         setForm({ ...form, username: "" });
+        setStep(1);
         fetchData();
       } else {
         const data = await res.json();
@@ -196,6 +207,12 @@ export default function AutoOrdersPage() {
     });
   };
 
+  const slideVariants = {
+    enter: { x: 50, opacity: 0 },
+    center: { x: 0, opacity: 1 },
+    exit: { x: -50, opacity: 0 }
+  };
+
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
       <h1 style={{ fontSize: 26, fontWeight: 900, color: N.text, marginBottom: 8 }}>AI Organic Automation 🚀</h1>
@@ -203,163 +220,236 @@ export default function AutoOrdersPage() {
         Automatically track your social media profiles and deliver completely organic-looking, randomized engagement every time you post a new Reel or Video.
       </p>
 
-      {/* WARNING BANNER */}
-      <div style={{ background: "#fff5f5", borderLeft: "5px solid #fc8181", padding: "16px 20px", borderRadius: "0 12px 12px 0", marginBottom: 32, boxShadow: "0 4px 10px rgba(229, 62, 62, 0.1)" }}>
-        <h4 style={{ color: "#c53030", margin: "0 0 6px 0", fontSize: 15, fontWeight: 800 }}>⚠️ Important Balance Warning</h4>
-        <p style={{ color: "#c53030", margin: 0, fontSize: 13, fontWeight: 600 }}>
-          Make sure you maintain sufficient wallet balance at all times. If your balance drops below the required amount when you post a new video, the auto-order will fail and will not be retried.
-        </p>
-      </div>
-
-      {/* CREATE FORM */}
-      <div style={{ background: N.surface, boxShadow: N.raised, borderRadius: 24, padding: 36, marginBottom: 40 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: N.text, marginBottom: 24 }}>Add Profile Tracker</h2>
+      {/* CREATE FORM WIZARD */}
+      <div style={{ background: N.surface, boxShadow: N.raised, borderRadius: 24, padding: 36, marginBottom: 40, minHeight: 450, display: 'flex', flexDirection: 'column' }}>
         
-        {templates.length === 0 && (
-          <div style={{ padding: 20, background: "rgba(217, 119, 6, 0.1)", borderRadius: 12, marginBottom: 24 }}>
-            <p style={{ color: N.accent, fontWeight: 800, margin: "0 0 12px 0" }}>
-              Our AI requires a pacing curve template to define how fast engagements arrive. Let's create one!
-            </p>
-            <button
-              type="button"
-              onClick={handleQuickTemplate}
-              style={{ padding: "12px 20px", background: N.accentBg, color: "#fff", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 15px rgba(217, 119, 6, 0.3)" }}
+        {/* Progress Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 32, position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 14, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, zIndex: 0 }}>
+            <motion.div 
+              initial={false}
+              animate={{ width: `${((step - 1) / 4) * 100}%` }}
+              style={{ height: '100%', background: N.accentBg, borderRadius: 2 }}
+            />
+          </div>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} onClick={() => i < step && setStep(i)} style={{ zIndex: 1, width: 32, height: 32, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: step >= i ? N.accent : N.bg, boxShadow: step >= i ? '0 4px 10px rgba(217, 119, 6, 0.3)' : N.raisedSm, color: step >= i ? '#fff' : N.muted, fontWeight: 800, fontSize: 14, cursor: i < step ? 'pointer' : 'default', transition: 'all 0.3s' }}>
+              {i}
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 24, flex: 1 }}>
+          <AnimatePresence mode="wait">
+            
+            {step === 1 && (
+              <motion.div key="step1" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, marginBottom: 8 }}>Step 1: Profile Details</h2>
+                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Select the platform and enter the exact username/handle you want to automate.</p>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Platform</label>
+                    <select 
+                      value={form.platform}
+                      onChange={e => setForm({...form, platform: e.target.value})}
+                      style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 700, fontSize: 15 }}
+                    >
+                      <option value="INSTAGRAM">Instagram</option>
+                      <option value="TIKTOK">TikTok</option>
+                      <option value="FACEBOOK">Facebook</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Username / Handle</label>
+                    <input 
+                      type="text" 
+                      value={form.username}
+                      onChange={e => setForm({...form, username: e.target.value})}
+                      placeholder="e.g. zuck"
+                      required
+                      style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 700, fontSize: 15 }}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (
+              <motion.div key="step2" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, marginBottom: 8 }}>Step 2: Randomized Views</h2>
+                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Set a minimum and maximum limit. Every time you post, we will send a random number of views within this range so it looks 100% natural.</p>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Minimum Views</label>
+                    <input 
+                      type="number" 
+                      value={form.viewsMin}
+                      onChange={e => setForm({...form, viewsMin: parseInt(e.target.value) || 0})}
+                      min="1000"
+                      required
+                      style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 15 }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Maximum Views</label>
+                    <input 
+                      type="number" 
+                      value={form.viewsMax}
+                      onChange={e => setForm({...form, viewsMax: parseInt(e.target.value) || 0})}
+                      min="1000"
+                      max="1000000"
+                      required
+                      style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 15 }}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 3 && (
+              <motion.div key="step3" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, marginBottom: 8 }}>Step 3: Engagement Metrics</h2>
+                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Set exact Min/Max limits for Likes, Comments, Shares, and Saves.</p>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  {/* Likes */}
+                  <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 12 }}>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.text, marginBottom: 12 }}>❤️ Likes</label>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <input type="number" placeholder="Min" value={form.likesMin} onChange={e => setForm({...form, likesMin: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                      <input type="number" placeholder="Max" value={form.likesMax} onChange={e => setForm({...form, likesMax: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                    </div>
+                  </div>
+                  {/* Comments */}
+                  <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 12 }}>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.text, marginBottom: 12 }}>💬 Comments</label>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <input type="number" placeholder="Min" value={form.commentsMin} onChange={e => setForm({...form, commentsMin: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                      <input type="number" placeholder="Max" value={form.commentsMax} onChange={e => setForm({...form, commentsMax: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                    </div>
+                  </div>
+                  {/* Shares */}
+                  <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 12 }}>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.text, marginBottom: 12 }}>🚀 Shares</label>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <input type="number" placeholder="Min" value={form.sharesMin} onChange={e => setForm({...form, sharesMin: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                      <input type="number" placeholder="Max" value={form.sharesMax} onChange={e => setForm({...form, sharesMax: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                    </div>
+                  </div>
+                  {/* Saves */}
+                  <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 12 }}>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.text, marginBottom: 12 }}>🔖 Saves</label>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <input type="number" placeholder="Min" value={form.savesMin} onChange={e => setForm({...form, savesMin: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                      <input type="number" placeholder="Max" value={form.savesMax} onChange={e => setForm({...form, savesMax: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div key="step4" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, margin: 0 }}>Step 4: AI Pacing Graphs</h2>
+                  <button type="button" onClick={handleQuickTemplate} style={{ fontSize: 12, fontWeight: 800, color: N.accent, background: "none", border: "none", cursor: "pointer", padding: "6px 12px", borderRadius: 8, backgroundColor: "rgba(217, 119, 6, 0.1)" }}>+ Add Graph</button>
+                </div>
+                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Select multiple graphs. The AI will randomly select one for each new post so no two posts look exactly the same.</p>
+                
+                {templates.length === 0 && (
+                  <div style={{ padding: 20, background: "rgba(217, 119, 6, 0.1)", borderRadius: 12, marginBottom: 24, textAlign: 'center' }}>
+                    <p style={{ color: N.accent, fontWeight: 800, margin: "0 0 12px 0" }}>You don't have any AI templates yet.</p>
+                    <button type="button" onClick={handleQuickTemplate} style={{ padding: "12px 20px", background: N.accentBg, color: "#fff", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer" }}>Create Default AI Template</button>
+                  </div>
+                )}
+
+                {templates.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                    {templates.map(t => {
+                      const isSelected = form.templateIds.includes(t.id);
+                      return (
+                        <div 
+                          key={t.id} 
+                          onClick={() => toggleTemplate(t.id)}
+                          style={{ 
+                            padding: "16px 20px", borderRadius: 16, 
+                            background: isSelected ? "#3b0764" : N.surface, 
+                            boxShadow: isSelected ? "0 8px 25px rgba(107, 33, 168, 0.4)" : N.raisedSm,
+                            color: isSelected ? "#f3e8ff" : N.text,
+                            fontWeight: 700, fontSize: 14, cursor: "pointer",
+                            border: isSelected ? "2px solid #a855f7" : `2px solid transparent`,
+                            transition: "all 0.2s", width: "180px", display: "flex", flexDirection: "column", gap: 8
+                          }}
+                        >
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span>{t.name}</span>
+                            <span style={{ opacity: isSelected ? 0.9 : 0.6, fontSize: 11, fontWeight: 800 }}>{t.style}</span>
+                          </div>
+                          <div style={{ background: isSelected ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.5)", borderRadius: 8, padding: 8, marginTop: 4 }}>
+                            <MiniCurveChart template={t} active={isSelected} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {step === 5 && (
+              <motion.div key="step5" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, marginBottom: 8 }}>Step 5: Review & Start</h2>
+                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Review your automation settings before starting.</p>
+                
+                <div style={{ background: "rgba(0,0,0,0.02)", padding: 24, borderRadius: 16, marginBottom: 24 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ color: N.muted, fontWeight: 700 }}>Platform / Account:</span>
+                    <span style={{ color: N.text, fontWeight: 800 }}>{form.platform} - @{form.username}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ color: N.muted, fontWeight: 700 }}>Random Views:</span>
+                    <span style={{ color: N.text, fontWeight: 800 }}>{form.viewsMin.toLocaleString()} to {form.viewsMax.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ color: N.muted, fontWeight: 700 }}>Total Graphs Selected:</span>
+                    <span style={{ color: N.text, fontWeight: 800 }}>{form.templateIds.length} Graphs</span>
+                  </div>
+                </div>
+
+                <div style={{ background: "#fff5f5", borderLeft: "5px solid #fc8181", padding: "16px 20px", borderRadius: "0 12px 12px 0", marginBottom: 32, boxShadow: "0 4px 10px rgba(229, 62, 62, 0.1)" }}>
+                  <h4 style={{ color: "#c53030", margin: "0 0 6px 0", fontSize: 15, fontWeight: 800 }}>⚠️ Important: Keep Balance Available</h4>
+                  <p style={{ color: "#c53030", margin: 0, fontSize: 13, fontWeight: 600 }}>
+                    Please deposit balance if your balance is low for flawless automation. When you post a new video, the system will auto-deduct the balance based on the randomized views/engagement. If balance is insufficient, the system will skip your post.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+
+          <div style={{ marginTop: 'auto', paddingTop: 24, display: 'flex', gap: 16 }}>
+            {step > 1 && (
+              <button 
+                type="button"
+                onClick={() => setStep(step - 1)}
+                style={{ padding: "18px 24px", borderRadius: 16, border: "none", background: N.bg, boxShadow: N.raisedSm, color: N.text, fontWeight: 800, fontSize: 16, cursor: "pointer", transition: "all 0.2s" }}
+              >
+                Back
+              </button>
+            )}
+            <button 
+              type="submit"
+              style={{
+                flex: 1, padding: "18px", borderRadius: 16, border: "none",
+                background: N.accentBg, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer",
+                boxShadow: "0 8px 25px rgba(217, 119, 6, 0.4)", transition: "transform 0.2s, box-shadow 0.2s"
+              }}
             >
-              Create Default AI Template
+              {step === 5 ? "Start Now 🔥" : "Next Step ➔"}
             </button>
           </div>
-        )}
-
-        <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* PROFILE SELECTION */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Platform</label>
-              <select 
-                value={form.platform}
-                onChange={e => setForm({...form, platform: e.target.value})}
-                style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 700, fontSize: 15 }}
-              >
-                <option value="INSTAGRAM">Instagram</option>
-                <option value="TIKTOK">TikTok</option>
-                <option value="FACEBOOK">Facebook</option>
-              </select>
-            </div>
-            
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Username / Handle</label>
-              <input 
-                type="text" 
-                value={form.username}
-                onChange={e => setForm({...form, username: e.target.value})}
-                placeholder="e.g. zuck"
-                required
-                style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 700, fontSize: 15 }}
-              />
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: `linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent)` }} />
-
-          {/* VIEWS RANDOMIZATION */}
-          <div>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 800, color: N.text, marginBottom: 8 }}>Randomized Engagement Range (Looks Organic)</label>
-            <p style={{ color: N.muted, fontSize: 12, marginBottom: 16, fontWeight: 600 }}>Set a lower and upper limit. Every new reel will receive a randomized number of views and engagements within this range.</p>
-            
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Minimum Views</label>
-                <input 
-                  type="number" 
-                  value={form.viewsMin}
-                  onChange={e => setForm({...form, viewsMin: parseInt(e.target.value) || 0})}
-                  min="500"
-                  required
-                  style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 15 }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8, textTransform: "uppercase" }}>Maximum Views</label>
-                <input 
-                  type="number" 
-                  value={form.viewsMax}
-                  onChange={e => setForm({...form, viewsMax: parseInt(e.target.value) || 0})}
-                  min="500"
-                  required
-                  style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 15 }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ height: 1, background: `linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent)` }} />
-
-          {/* TEMPLATE MULTI-SELECT */}
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <label style={{ fontSize: 14, fontWeight: 800, color: N.text }}>AI Pacing Graphs</label>
-              <button type="button" onClick={handleQuickTemplate} style={{ fontSize: 12, fontWeight: 800, color: N.accent, background: "none", border: "none", cursor: "pointer", padding: "6px 12px", borderRadius: 8, backgroundColor: "rgba(217, 119, 6, 0.1)" }}>+ Add New Graph</button>
-            </div>
-            <p style={{ color: N.muted, fontSize: 12, marginBottom: 16, fontWeight: 600 }}>Select multiple graphs! The AI will randomly pick one of your selected graphs for every new post to ensure no two posts look exactly the same.</p>
-            
-            {templates.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                {templates.map(t => {
-                  const isSelected = form.templateIds.includes(t.id);
-                  return (
-                    <div 
-                      key={t.id} 
-                      onClick={() => toggleTemplate(t.id)}
-                      style={{ 
-                        padding: "16px 20px", 
-                        borderRadius: 16, 
-                        background: isSelected ? "#3b0764" : N.surface, 
-                        boxShadow: isSelected ? "0 8px 25px rgba(107, 33, 168, 0.4)" : N.raisedSm,
-                        color: isSelected ? "#f3e8ff" : N.text,
-                        fontWeight: 700,
-                        fontSize: 14,
-                        cursor: "pointer",
-                        border: isSelected ? "2px solid #a855f7" : `2px solid transparent`,
-                        transition: "all 0.2s",
-                        width: "180px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8
-                      }}
-                    >
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        <span>{t.name}</span>
-                        <span style={{ opacity: isSelected ? 0.9 : 0.6, fontSize: 11, fontWeight: 800 }}>{t.style}</span>
-                      </div>
-                      <div style={{ background: isSelected ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.5)", borderRadius: 8, padding: 8, marginTop: 4 }}>
-                        <MiniCurveChart template={t} active={isSelected} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <button 
-            type="submit"
-            disabled={templates.length === 0}
-            style={{
-              marginTop: 16,
-              padding: "18px",
-              borderRadius: 16,
-              border: "none",
-              background: templates.length === 0 ? N.faint : N.accentBg,
-              color: "#fff",
-              fontWeight: 800,
-              fontSize: 16,
-              cursor: templates.length === 0 ? "not-allowed" : "pointer",
-              boxShadow: templates.length === 0 ? "none" : "0 8px 25px rgba(217, 119, 6, 0.4)",
-              transition: "transform 0.2s, box-shadow 0.2s"
-            }}
-          >
-            Start Tracking & Automating 🔥
-          </button>
         </form>
       </div>
 
@@ -411,18 +501,7 @@ export default function AutoOrdersPage() {
 
               <button 
                 onClick={() => handleDelete(sub.id)}
-                style={{
-                  padding: "12px 20px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: N.bg,
-                  boxShadow: N.raisedSm,
-                  color: "#dc2626",
-                  fontWeight: 800,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  transition: "background 0.2s"
-                }}
+                style={{ padding: "12px 20px", borderRadius: 12, border: "none", background: N.bg, boxShadow: N.raisedSm, color: "#dc2626", fontWeight: 800, fontSize: 13, cursor: "pointer", transition: "background 0.2s" }}
                 onMouseOver={e => e.currentTarget.style.background = "#fee2e2"}
                 onMouseOut={e => e.currentTarget.style.background = N.bg}
               >

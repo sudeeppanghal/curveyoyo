@@ -72,20 +72,27 @@ export async function GET(request: NextRequest) {
           throw new Error("Template not found in DB");
         }
 
-        const engTargets = calculateEngagementTargets(
-          targetViews,
-          template.likesRatioPct,
-          template.savesRatioPct,
-          template.sharesRatioPct,
-          template.commentsRatioPct
-        );
+        // Randomize engagements based on Min/Max fields
+        const getRandom = (min: number, max: number) => {
+          if (max <= min) return min;
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+        };
+
+        const engTargets = {
+          likesTarget: getRandom(sub.likesMin, sub.likesMax),
+          commentsTarget: getRandom(sub.commentsMin, sub.commentsMax),
+          sharesTarget: getRandom(sub.sharesMin, sub.sharesMax),
+          savesTarget: getRandom(sub.savesMin, sub.savesMax),
+          repostsTarget: getRandom(sub.repostsMin, sub.repostsMax),
+        };
 
         const viewsCost = (targetViews / 1000) * getRate("views", 3.0);
         const likesCost = (engTargets.likesTarget / 1000) * getRate("likes", 5.0);
         const savesCost = (engTargets.savesTarget / 1000) * getRate("saves", 5.0);
         const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
         const commentsCost = (engTargets.commentsTarget / 1000) * getRate("comments", 15.0);
-        const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost).toFixed(2));
+        const repostsCost = (engTargets.repostsTarget / 1000) * getRate("reposts", 12.0);
+        const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
         if (sub.user.balance < totalPrice) {
           // Pause subscription
@@ -100,7 +107,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Deduct balance and create order
-        await prisma.$transaction(async (tx) => {
+        const txOrder = await prisma.$transaction(async (tx) => {
           await tx.user.update({
             where: { id: sub.user.id },
             data: { balance: { decrement: totalPrice } }
@@ -113,7 +120,7 @@ export async function GET(request: NextRequest) {
             });
           }
 
-          await tx.order.create({
+          const createdOrder = await tx.order.create({
             data: {
               userId: sub.user.id,
               reelId: reel.id,
@@ -125,6 +132,7 @@ export async function GET(request: NextRequest) {
               savesTarget: engTargets.savesTarget,
               sharesTarget: engTargets.sharesTarget,
               commentsTarget: engTargets.commentsTarget,
+              repostsTarget: engTargets.repostsTarget,
               curveStyle: template.style,
               durationHours: template.durationHours,
               warmupHours: template.warmupHours,
@@ -138,9 +146,24 @@ export async function GET(request: NextRequest) {
             where: { id: sub.id },
             data: { lastPostId: post.id }
           });
+          
+          return createdOrder;
         });
 
         sendTelegramAlert(`🚀 *Auto-Order Placed!*\nUser: \`${sub.user.email}\`\nReel: ${url}\nTarget: ${targetViews} views (Template: ${template.name})`).catch(console.error);
+
+        // Trigger delivery scheduling (fire-and-forget)
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+        const internalKey = process.env.NEXTAUTH_SECRET || "default_internal_key";
+        fetch(`${appUrl}/api/delivery/start`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-key": internalKey,
+          },
+          body: JSON.stringify({ orderId: txOrder.id }),
+        }).catch((e) => console.error("Failed to trigger delivery/start:", e));
+
         results.push({ username: sub.username, status: "ORDER_PLACED", url });
 
       } catch (err) {

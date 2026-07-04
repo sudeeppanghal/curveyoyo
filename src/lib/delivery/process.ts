@@ -127,10 +127,10 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   }
 
   // ── Engagement accumulation ────────────────────────────────
-  const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0 };
+  const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0, reposts: 0 };
 
   if (order.engagementEnabled) {
-    let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5 };
+    let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5, reposts: 10 };
     let due;
     if (resData && resData.customEngagement) {
       due = {
@@ -138,6 +138,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
         saves: resData.customEngagement.saves ?? 0,
         shares: resData.customEngagement.shares ?? 0,
         comments: resData.customEngagement.comments ?? 0,
+        reposts: resData.customEngagement.reposts ?? 0,
       };
     } else {
       const viewsDeliveredNow = order.viewsDelivered + jitteredViews;
@@ -151,13 +152,14 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
           if (s.type === "saves" && s.minQuantity > 0) minBatchSizes.saves = s.minQuantity;
           if (s.type === "shares" && s.minQuantity > 0) minBatchSizes.shares = s.minQuantity;
           if (s.type === "comments" && s.minQuantity > 0) minBatchSizes.comments = s.minQuantity;
+          if (s.type === "reposts" && s.minQuantity > 0) minBatchSizes.reposts = s.minQuantity;
         });
       } catch { /* fallback */ }
       due = calculateEngagementDue(
         order.viewsTarget,
         viewsDeliveredNow,
-        { likes: order.likesTarget, saves: order.savesTarget, shares: order.sharesTarget, comments: order.commentsTarget },
-        { likes: order.likesDelivered, saves: order.savesDelivered, shares: order.sharesDelivered, comments: order.commentsDelivered },
+        { likes: order.likesTarget, saves: order.savesTarget, shares: order.sharesTarget, comments: order.commentsTarget, reposts: order.repostsTarget },
+        { likes: order.likesDelivered, saves: order.savesDelivered, shares: order.sharesDelivered, comments: order.commentsDelivered, reposts: order.repostsDelivered },
         minBatchSizes,
       );
     }

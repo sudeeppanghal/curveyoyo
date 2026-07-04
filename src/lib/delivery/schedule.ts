@@ -175,14 +175,7 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
       viewsBatch: batch.views,
       scheduledAt: new Date(now.getTime() + delayMs),
       status: "SCHEDULED" as const,
-      responseData: {
-        customEngagement: {
-          likes: batch.likes ?? 0,
-          saves: batch.saves ?? 0,
-          shares: batch.shares ?? 0,
-          comments: batch.comments ?? 0,
-        }
-      }
+      responseData: {}
     };
   });
 

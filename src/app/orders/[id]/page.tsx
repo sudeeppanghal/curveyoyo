@@ -18,6 +18,7 @@ interface OrderStatus {
     savesTarget: number; savesDelivered: number;
     sharesTarget: number; sharesDelivered: number;
     commentsTarget: number; commentsDelivered: number;
+    repostsTarget: number; repostsDelivered: number;
   };
   chartData: ChartPoint[];
   totalBatches: number; completedBatches: number; failedBatches: number;
@@ -339,6 +340,7 @@ export default function OrderDetailPage() {
               { icon: "🔖", label: "Saves",    delivered: order.savesDelivered,    target: order.savesTarget },
               { icon: "📤", label: "Shares",   delivered: order.sharesDelivered,   target: order.sharesTarget },
               { icon: "💬", label: "Comments", delivered: order.commentsDelivered, target: order.commentsTarget },
+              { icon: "🔁", label: "Reposts",  delivered: order.repostsDelivered,  target: order.repostsTarget },
             ].filter((e) => e.target > 0).map(({ icon, label, delivered, target }) => {
               const pct = target > 0 ? Math.min(100, Math.round((delivered / target) * 100)) : 0;
               return (
@@ -425,6 +427,7 @@ export default function OrderDetailPage() {
                     <th style={{ padding:"12px 16px", textAlign:"right" }}>Saves</th>
                     <th style={{ padding:"12px 16px", textAlign:"right" }}>Shares</th>
                     <th style={{ padding:"12px 16px", textAlign:"right" }}>Comments</th>
+                    <th style={{ padding:"12px 16px", textAlign:"right" }}>Reposts</th>
                   </>
                 )}
                 <th style={{ padding:"12px 16px", textAlign:"center" }}>Status</th>
@@ -454,6 +457,7 @@ export default function OrderDetailPage() {
                 let bSaves = 0;
                 let bShares = 0;
                 let bComments = 0;
+                let bReposts = 0;
 
                 const resData = row.responseData as any;
                 const isCustomOrder = !!(resData && (resData.customEngagement || resData.engagementFired));
@@ -463,11 +467,13 @@ export default function OrderDetailPage() {
                   bSaves = resData.engagementFired.saves ?? 0;
                   bShares = resData.engagementFired.shares ?? 0;
                   bComments = resData.engagementFired.comments ?? 0;
+                  bReposts = resData.engagementFired.reposts ?? 0;
                 } else if (row.likes !== undefined || (resData && resData.customEngagement)) {
                   bLikes = row.likes ?? resData?.customEngagement?.likes ?? 0;
                   bSaves = row.saves ?? resData?.customEngagement?.saves ?? 0;
                   bShares = row.shares ?? resData?.customEngagement?.shares ?? 0;
                   bComments = row.comments ?? resData?.customEngagement?.comments ?? 0;
+                  bReposts = resData?.customEngagement?.reposts ?? 0; // Using responseData since row.reposts isn't tracked in ChartPoint interface
                 } else if (!isCustomOrder) {
                   // Fallback for scheduled standard orders (not fired yet)
                   const scale = order.viewsTarget > 0 ? row.planned / order.viewsTarget : 0;
@@ -475,6 +481,7 @@ export default function OrderDetailPage() {
                   bSaves = order.savesTarget > 0 ? Math.round(order.savesTarget * scale) : 0;
                   bShares = order.sharesTarget > 0 ? Math.round(order.sharesTarget * scale) : 0;
                   bComments = order.commentsTarget > 0 ? Math.round(order.commentsTarget * scale) : 0;
+                  bReposts = order.repostsTarget > 0 ? Math.round(order.repostsTarget * scale) : 0;
                 }
 
                 return (
@@ -497,6 +504,9 @@ export default function OrderDetailPage() {
                         </td>
                         <td style={{ padding:"12px 16px", textAlign:"right", color: bComments > 0 ? "#16a34a" : N.muted, fontWeight: bComments > 0 ? 800 : 500 }}>
                           {bComments > 0 ? bComments.toLocaleString() : "—"}
+                        </td>
+                        <td style={{ padding:"12px 16px", textAlign:"right", color: bReposts > 0 ? "#16a34a" : N.muted, fontWeight: bReposts > 0 ? 800 : 500 }}>
+                          {bReposts > 0 ? bReposts.toLocaleString() : "—"}
                         </td>
                       </>
                     )}
