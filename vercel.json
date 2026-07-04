@@ -20,15 +20,5 @@
         { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron?secret=yoyomedia@321",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/auto-sync?secret=yoyomedia@321",
-      "schedule": "*/5 * * * *"
-    }
   ]
 }
