@@ -438,9 +438,9 @@ export function calculateEngagementDue(
   const minComments = minBatchSizes.comments;
 
   return {
-    likes:    targets.likes    < minLikes    ? 0 : ((due.likes    >= minLikes    || (isLastBatch && due.likes    > 0)) ? due.likes    : 0),
-    saves:    targets.saves    < minSaves    ? 0 : ((due.saves    >= minSaves    || (isLastBatch && due.saves    > 0)) ? due.saves    : 0),
-    shares:   targets.shares   < minShares   ? 0 : ((due.shares   >= minShares   || (isLastBatch && due.shares   > 0)) ? due.shares   : 0),
-    comments: targets.comments < minComments ? 0 : ((due.comments >= minComments || (isLastBatch && due.comments > 0)) ? due.comments : 0),
+    likes:    targets.likes    > 0 ? Math.max(0, due.likes    >= minLikes    || (isLastBatch && due.likes    > 0) ? due.likes    : 0) : 0,
+    saves:    targets.saves    > 0 ? Math.max(0, due.saves    >= minSaves    || (isLastBatch && due.saves    > 0) ? due.saves    : 0) : 0,
+    shares:   targets.shares   > 0 ? Math.max(0, due.shares   >= minShares   || (isLastBatch && due.shares   > 0) ? due.shares   : 0) : 0,
+    comments: targets.comments > 0 ? Math.max(0, due.comments >= minComments || (isLastBatch && due.comments > 0) ? due.comments : 0) : 0,
   };
 }

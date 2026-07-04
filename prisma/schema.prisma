@@ -86,6 +86,7 @@ model Panel {
   deliveryEvents  DeliveryEvent[]
   serviceConfigs  ServiceConfig[]
   adminServices   AdminService[]
+  serviceChangeLogs ServiceChangeLog[]
 
   @@map("panels")
 }
@@ -499,6 +500,22 @@ model AdminService {
 
   @@unique([panelId, platform, type])
   @@map("admin_services")
+}
+
+model ServiceChangeLog {
+  id              String   @id @default(cuid())
+  panelId         String   @map("panel_id")
+  panel           Panel    @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  platform        Platform
+  type            String   // "views", "likes", etc.
+  oldServiceId    String   @map("old_service_id")
+  newServiceId    String   @map("new_service_id")
+  oldServiceName  String?  @map("old_service_name")
+  newServiceName  String?  @map("new_service_name")
+  reason          String
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("service_change_logs")
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SUPPORT TICKET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

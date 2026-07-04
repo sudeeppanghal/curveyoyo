@@ -199,6 +199,7 @@ async function handler(request: NextRequest) {
   if (order.engagementEnabled) {
     const resData = event.responseData as any;
     let due;
+    let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5 };
     if (resData && resData.customEngagement) {
       due = {
         likes: resData.customEngagement.likes ?? 0,
@@ -210,7 +211,6 @@ async function handler(request: NextRequest) {
       // viewsDeliveredNow = current delivered + this batch (use actual jittered amount)
       const viewsDeliveredNow = order.viewsDelivered + actualViewsDelivered;
 
-      let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5 };
       try {
         const uppercasePlatform = String(order.reel.platform || "INSTAGRAM").toUpperCase() as any;
         const mappedServices = await prisma.adminService.findMany({
@@ -260,15 +260,16 @@ async function handler(request: NextRequest) {
     await Promise.allSettled(
       engTasks.map(async ({ type, qty, svcId }) => {
         try {
+          const actualQty = Math.max((minBatchSizes as any)[type] || 0, qty);
           const r = await placePanelOrder({
             apiUrl: activePanel.apiUrl,
             apiKeyEncrypted: activePanel.apiKeyEncrypted,
             serviceId: svcId!,
             link: reelUrl,
-            quantity: qty,
+            quantity: actualQty,
           });
           if (r.ok) {
-            engagementDelivered[type] = qty;
+            engagementDelivered[type] = actualQty;
             if (r.orderId) engagementPanelOrderIds[type] = r.orderId;
           }
         } catch {

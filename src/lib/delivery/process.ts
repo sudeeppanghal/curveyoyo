@@ -23,7 +23,29 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
     },
   });
 
-  if (!event || !event.order || !event.panel) return { ok: false, error: "Event not found" };
+  if (!event || !event.order) return { ok: false, error: "Event not found" };
+
+  let activePanel = event.panel;
+  if (!activePanel) {
+    const isWallet = event.order.user?.walletMode;
+    activePanel = await prisma.panel.findFirst({
+      where: {
+        userId: isWallet ? null : event.order.userId,
+        isActive: true,
+        status: { not: "OFFLINE" }
+      },
+      orderBy: { priority: "asc" }
+    }) as any;
+
+    if (!activePanel) {
+      // Mark as FAILED to remove from the cron queue so it doesn't block other events
+      await prisma.deliveryEvent.updateMany({
+        where: { id: eventId, status: "SCHEDULED" },
+        data: { status: "FAILED", errorMessage: "No active panel available" }
+      });
+      return { ok: false, error: "No active panel available" };
+    }
+  }
 
   // Guard: skip if already processed (race condition between parallel workers)
   if (event.status !== "SCHEDULED") return { ok: false, error: `Skipped: status=${event.status}` };
@@ -31,34 +53,33 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   // Atomic status update — prevents double-processing if two cron calls overlap
   const claimed = await prisma.deliveryEvent.updateMany({
     where: { id: eventId, status: "SCHEDULED" },
-    data: { status: "EXECUTING", executedAt: new Date() },
+    data: { status: "EXECUTING", executedAt: new Date(), panelId: activePanel.id },
   });
   if (claimed.count === 0) return { ok: false, error: "Already claimed by another worker" };
 
-  const { order, panel } = event;
+  const { order } = event;
   const resData = event.responseData as any;
   const platform = order.reel.platform?.toLowerCase() ?? "instagram";
-  const svcIds = panel.serviceIds as ServiceIds | null;
+  const svcIds = activePanel.serviceIds as ServiceIds | null;
   const viewsServiceId = getSvcId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
   const jitteredViews = Math.max(100, applyJitter(event.viewsBatch, 0.15));
   const startMs = Date.now();
 
   // ── Place views order ──────────────────────────────────────
   let result = await placePanelOrder({
-    apiUrl: panel.apiUrl,
-    apiKeyEncrypted: panel.apiKeyEncrypted,
+    apiUrl: activePanel.apiUrl,
+    apiKeyEncrypted: activePanel.apiKeyEncrypted,
     serviceId: viewsServiceId,
     link: order.reel.url,
     quantity: jitteredViews,
   });
 
   const responseMs = Date.now() - startMs;
-  let activePanel = panel;
 
   // ── Failover if primary panel offline ─────────────────────
   if (!result.ok) {
     await prisma.panel.update({
-      where: { id: panel.id },
+      where: { id: activePanel.id },
       data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
     });
 
@@ -67,7 +88,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       where: {
         userId: isWallet ? null : order.userId,
         isActive: true,
-        id: { not: panel.id },
+        id: { not: activePanel.id },
         status: { not: "OFFLINE" }
       },
       orderBy: { priority: "asc" },
@@ -109,6 +130,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0 };
 
   if (order.engagementEnabled) {
+    let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5 };
     let due;
     if (resData && resData.customEngagement) {
       due = {
@@ -119,7 +141,6 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       };
     } else {
       const viewsDeliveredNow = order.viewsDelivered + jitteredViews;
-      let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5 };
       try {
         const uppercasePlatform = String(order.reel.platform || "INSTAGRAM").toUpperCase() as any;
         const mappedServices = await prisma.adminService.findMany({
@@ -154,14 +175,15 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
     await Promise.allSettled(
       tasks.map(async ({ type, qty, svcId }) => {
         try {
+          const actualQty = Math.max((minBatchSizes as any)[type] || 0, qty);
           const r = await placePanelOrder({
             apiUrl: activePanel.apiUrl,
             apiKeyEncrypted: activePanel.apiKeyEncrypted,
             serviceId: svcId!,
             link: order.reel.url,
-            quantity: qty,
+            quantity: actualQty,
           });
-          if (r.ok) engagementDelivered[type] = qty;
+          if (r.ok) engagementDelivered[type] = actualQty;
         } catch { /* non-fatal */ }
       })
     );
@@ -194,7 +216,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   });
 
   await prisma.panel.update({
-    where: { id: panel.id },
+    where: { id: activePanel.id },
     data: { status: responseMs > 5000 ? "SLOW" : "ONLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
   });
 

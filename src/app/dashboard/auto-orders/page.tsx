@@ -1,5 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { generateRawSchedule } from "@/lib/delivery/curve";
+import { STYLE_NEON_COLORS_100 as STYLE_NEON_COLORS } from "@/lib/delivery/curve-styles-100";
 
 const N = {
   bg:        "#eef2f7",
@@ -13,6 +15,66 @@ const N = {
   muted:     "#718096",
   faint:     "#a0aec0",
 };
+
+// ── Mini Sparkline Curve Chart ──────────────────────────────────
+function MiniCurveChart({ template, active }: { template: any; active: boolean }) {
+  const points = useMemo(() => {
+    if (template.customSchedule && Array.isArray(template.customSchedule) && template.customSchedule.length > 0) {
+      // Sort and plot custom dots
+      const sorted = [...template.customSchedule].sort((a, b) => (a.hour || 0) - (b.hour || 0));
+      return sorted.map((b) => b.views);
+    }
+    const batches = generateRawSchedule({
+      totalViews: 10000,
+      durationHours: template.durationHours || 24,
+      warmupHours: template.warmupHours || 4,
+      peakHours: template.peakHours || 8,
+      style: template.style as any,
+      engagementEnabled: false,
+      tzOffsetHours: 0,
+    });
+    return batches.map((b) => b.views);
+  }, [template]);
+
+  const maxVal = Math.max(...points, 1);
+  const width = 100;
+  const height = 40;
+  const padding = 2;
+
+  const pathD = points
+    .map((v: number, i: number) => {
+      const x = padding + (i / Math.max(1, points.length - 1)) * (width - 2 * padding);
+      const y = height - padding - (v / maxVal) * (height - 2 * padding);
+      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  const fillD = `${pathD} L ${width - padding} ${height} L ${padding} ${height} Z`;
+
+  const neon = STYLE_NEON_COLORS[template.style as keyof typeof STYLE_NEON_COLORS] || STYLE_NEON_COLORS.ORGANIC || { stroke: "#d946ef" };
+  const gradId = `mini-grad-${template.id}`;
+
+  return (
+    <svg width={width} height={height} style={{ overflow: "visible", display: "block", width: "100%", margin: "8px 0" }}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={neon.stroke} stopOpacity={active ? "0.45" : "0.20"} />
+          <stop offset="100%" stopColor={neon.stroke} stopOpacity="0.0" />
+        </linearGradient>
+      </defs>
+      <path d={fillD} fill={`url(#${gradId})`} />
+      <path
+        d={pathD}
+        fill="none"
+        stroke={neon.stroke}
+        strokeWidth={active ? "2.5" : "2"}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ filter: active ? `drop-shadow(0 0 6px ${neon.stroke})` : `none`, transition: "all 0.25s ease" }}
+      />
+    </svg>
+  );
+}
 
 export default function AutoOrdersPage() {
   const [subs, setSubs] = useState<any[]>([]);
@@ -249,19 +311,29 @@ export default function AutoOrdersPage() {
                       key={t.id} 
                       onClick={() => toggleTemplate(t.id)}
                       style={{ 
-                        padding: "12px 16px", 
-                        borderRadius: 12, 
-                        background: isSelected ? N.accentBg : N.bg, 
-                        boxShadow: isSelected ? "0 4px 15px rgba(217, 119, 6, 0.3)" : N.raisedSm,
-                        color: isSelected ? "#fff" : N.text,
+                        padding: "16px 20px", 
+                        borderRadius: 16, 
+                        background: isSelected ? "#3b0764" : N.surface, 
+                        boxShadow: isSelected ? "0 8px 25px rgba(107, 33, 168, 0.4)" : N.raisedSm,
+                        color: isSelected ? "#f3e8ff" : N.text,
                         fontWeight: 700,
-                        fontSize: 13,
+                        fontSize: 14,
                         cursor: "pointer",
-                        border: isSelected ? "none" : `1px solid rgba(0,0,0,0.02)`,
-                        transition: "all 0.2s"
+                        border: isSelected ? "2px solid #a855f7" : `2px solid transparent`,
+                        transition: "all 0.2s",
+                        width: "180px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8
                       }}
                     >
-                      {t.name} <span style={{ opacity: 0.8, fontSize: 11, marginLeft: 4 }}>({t.style})</span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span>{t.name}</span>
+                        <span style={{ opacity: isSelected ? 0.9 : 0.6, fontSize: 11, fontWeight: 800 }}>{t.style}</span>
+                      </div>
+                      <div style={{ background: isSelected ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.5)", borderRadius: 8, padding: 8, marginTop: 4 }}>
+                        <MiniCurveChart template={t} active={isSelected} />
+                      </div>
                     </div>
                   );
                 })}

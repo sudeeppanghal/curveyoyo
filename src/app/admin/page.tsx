@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BlogsTab } from "./BlogsTab";
+import { AutoSyncTab } from "./AutoSyncTab";
 
 interface AdminSettings {
 
@@ -70,7 +71,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync";
 
 const N = {
 
@@ -1481,7 +1482,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs", "auto_sync"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1500,7 +1501,8 @@ export default function AdminPage() {
               system: "⚡ ",
               tickets: "✉️ ",
               affiliates: "🤝 ",
-              blogs: "📝 "
+              blogs: "📝 ",
+              auto_sync: "🔄 "
             };
 
             return (
@@ -4044,6 +4046,11 @@ export default function AdminPage() {
 
           {tab === "blogs" && (
             <BlogsTab />
+          )}
+
+          {/* ── AUTO SYNC TAB ─── */}
+          {tab === "auto_sync" && (
+            <AutoSyncTab />
           )}
 
       {/* USER HISTORY MODAL */}
