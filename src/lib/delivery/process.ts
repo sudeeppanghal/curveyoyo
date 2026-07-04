@@ -25,27 +25,50 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
 
   if (!event || !event.order) return { ok: false, error: "Event not found" };
 
-  let activePanel = event.panel;
-  if (!activePanel) {
-    const isWallet = event.order.user?.walletMode;
-    activePanel = await prisma.panel.findFirst({
-      where: {
-        userId: isWallet ? null : event.order.userId,
-        isActive: true,
-        status: { not: "OFFLINE" }
-      },
-      orderBy: { priority: "asc" }
-    }) as any;
+  const isWallet = event.order.user?.walletMode;
+  
+  // 1. Fetch all available panels to allow true load balancing and failover
+  const availablePanels = await prisma.panel.findMany({
+    where: {
+      userId: isWallet ? null : event.order.userId,
+      isActive: true,
+      status: { not: "OFFLINE" }
+    },
+    orderBy: { priority: "asc" }
+  });
 
-    if (!activePanel) {
-      // Mark as FAILED to remove from the cron queue so it doesn't block other events
-      await prisma.deliveryEvent.updateMany({
-        where: { id: eventId, status: "SCHEDULED" },
-        data: { status: "FAILED", errorMessage: "No active panel available" }
-      });
-      return { ok: false, error: "No active panel available" };
+  if (availablePanels.length === 0) {
+    // Mark as FAILED to remove from the cron queue so it doesn't block other events
+    await prisma.deliveryEvent.updateMany({
+      where: { id: eventId, status: "SCHEDULED" },
+      data: { status: "FAILED", errorMessage: "No active panel available" }
+    });
+    return { ok: false, error: "No active panel available" };
+  }
+
+  // 2. Identify the target API URL (usually from the event's panel, or fallback to top priority)
+  let targetApiUrl = event.panel?.apiUrl;
+  if (!targetApiUrl) {
+    targetApiUrl = availablePanels[0].apiUrl;
+  }
+
+  // 3. Find all sibling panels that share this exact API URL (Yoyo Media 1, Yoyo Media 2, etc.)
+  const siblingPanels = availablePanels.filter(p => p.apiUrl === targetApiUrl);
+
+  // 4. Determine Service IDs by finding the first sibling that actually has them mapped
+  const platform = event.order.reel.platform?.toLowerCase() ?? "instagram";
+  let inheritedServiceIds: ServiceIds | null = null;
+  for (const p of siblingPanels) {
+    if (p.serviceIds && (p.serviceIds as any)[platform]) {
+      inheritedServiceIds = p.serviceIds as ServiceIds;
+      break;
     }
   }
+
+  const viewsServiceId = getSvcId(inheritedServiceIds, platform, "views") ?? event.order.panelServiceId ?? "1";
+
+  // 5. Shuffle the sibling panels for perfect round-robin load distribution on every tick
+  const shuffledPanels = [...siblingPanels].sort(() => Math.random() - 0.5);
 
   // Guard: skip if already processed (race condition between parallel workers)
   if (event.status !== "SCHEDULED") return { ok: false, error: `Skipped: status=${event.status}` };
@@ -53,61 +76,45 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   // Atomic status update — prevents double-processing if two cron calls overlap
   const claimed = await prisma.deliveryEvent.updateMany({
     where: { id: eventId, status: "SCHEDULED" },
-    data: { status: "EXECUTING", executedAt: new Date(), panelId: activePanel.id },
+    data: { status: "EXECUTING", executedAt: new Date(), panelId: shuffledPanels[0].id },
   });
   if (claimed.count === 0) return { ok: false, error: "Already claimed by another worker" };
 
   const { order } = event;
   const resData = event.responseData as any;
-  const platform = order.reel.platform?.toLowerCase() ?? "instagram";
-  const svcIds = activePanel.serviceIds as ServiceIds | null;
-  const viewsServiceId = getSvcId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
   const jitteredViews = Math.max(100, applyJitter(event.viewsBatch, 0.15));
   const startMs = Date.now();
 
-  // ── Place views order ──────────────────────────────────────
-  let result = await placePanelOrder({
-    apiUrl: activePanel.apiUrl,
-    apiKeyEncrypted: activePanel.apiKeyEncrypted,
-    serviceId: viewsServiceId,
-    link: order.reel.url,
-    quantity: jitteredViews,
-  });
-
-  const responseMs = Date.now() - startMs;
-
-  // ── Failover if primary panel offline ─────────────────────
-  if (!result.ok) {
-    await prisma.panel.update({
-      where: { id: activePanel.id },
-      data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: responseMs },
+  // ── Place views order (Multi-Key Fallback Loop) ──────────
+  let result = { ok: false, error: "No panels available" } as any;
+  let activePanel = shuffledPanels[0];
+  
+  for (const panel of shuffledPanels) {
+    result = await placePanelOrder({
+      apiUrl: panel.apiUrl,
+      apiKeyEncrypted: panel.apiKeyEncrypted,
+      serviceId: viewsServiceId,
+      link: order.reel.url,
+      quantity: jitteredViews,
     });
 
-    const isWallet = order.user.walletMode;
-    const failover = await prisma.panel.findFirst({
-      where: {
-        userId: isWallet ? null : order.userId,
-        isActive: true,
-        id: { not: activePanel.id },
-        status: { not: "OFFLINE" }
-      },
-      orderBy: { priority: "asc" },
-    });
-
-    if (failover) {
-      const foIds = failover.serviceIds as ServiceIds | null;
-      const foSvcId = getSvcId(foIds, platform, "views") ?? order.panelServiceId ?? "1";
-      result = await placePanelOrder({
-        apiUrl: failover.apiUrl,
-        apiKeyEncrypted: failover.apiKeyEncrypted,
-        serviceId: foSvcId,
-        link: order.reel.url,
-        quantity: Math.max(100, event.viewsBatch),
-      });
-      activePanel = failover;
-      await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: failover.id } });
+    if (result.ok) {
+      activePanel = panel;
+      if (panel.id !== shuffledPanels[0].id) {
+         // Update the event to reflect which panel ACTUALLY succeeded during failover
+         await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: panel.id } }).catch(()=>{});
+      }
+      break;
+    } else {
+      // Mark failed panel as OFFLINE in background so we don't hit it constantly
+      prisma.panel.update({
+        where: { id: panel.id },
+        data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: Date.now() - startMs },
+      }).catch(() => {});
     }
   }
+
+  const responseMs = Date.now() - startMs;
 
   if (!result.ok) {
     await prisma.deliveryEvent.update({
@@ -164,13 +171,12 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       );
     }
 
-    const engIds = activePanel.serviceIds as ServiceIds | null;
     const tasks = (
       [
-        { type: "likes"    as const, qty: due.likes,    svcId: getSvcId(engIds, platform, "likes") },
-        { type: "saves"    as const, qty: due.saves,    svcId: getSvcId(engIds, platform, "saves") },
-        { type: "shares"   as const, qty: due.shares,   svcId: getSvcId(engIds, platform, "shares") },
-        { type: "comments" as const, qty: due.comments, svcId: getSvcId(engIds, platform, "comments") },
+        { type: "likes"    as const, qty: due.likes,    svcId: getSvcId(inheritedServiceIds, platform, "likes") },
+        { type: "saves"    as const, qty: due.saves,    svcId: getSvcId(inheritedServiceIds, platform, "saves") },
+        { type: "shares"   as const, qty: due.shares,   svcId: getSvcId(inheritedServiceIds, platform, "shares") },
+        { type: "comments" as const, qty: due.comments, svcId: getSvcId(inheritedServiceIds, platform, "comments") },
       ]
     ).filter(t => t.qty > 0 && t.svcId !== null);
 
@@ -178,14 +184,27 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       tasks.map(async ({ type, qty, svcId }) => {
         try {
           const actualQty = Math.max((minBatchSizes as any)[type] || 0, qty);
-          const r = await placePanelOrder({
-            apiUrl: activePanel.apiUrl,
-            apiKeyEncrypted: activePanel.apiKeyEncrypted,
-            serviceId: svcId!,
-            link: order.reel.url,
-            quantity: actualQty,
-          });
-          if (r.ok) engagementDelivered[type] = actualQty;
+          
+          // Re-shuffle for perfect distribution on every specific engagement request
+          const engPanels = [...siblingPanels].sort(() => Math.random() - 0.5);
+          
+          for (const p of engPanels) {
+            const r = await placePanelOrder({
+              apiUrl: p.apiUrl,
+              apiKeyEncrypted: p.apiKeyEncrypted,
+              serviceId: svcId!,
+              link: order.reel.url,
+              quantity: actualQty,
+            });
+            
+            if (r.ok) {
+              engagementDelivered[type] = actualQty;
+              break;
+            } else {
+              // Mark offline in background to avoid hitting exhausted keys continuously
+              prisma.panel.update({ where: { id: p.id }, data: { status: "OFFLINE", lastCheckedAt: new Date() } }).catch(()=>{});
+            }
+          }
         } catch { /* non-fatal */ }
       })
     );
