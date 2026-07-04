@@ -343,11 +343,16 @@ export function calculateEngagementTargets(
   sharesRatioPct: number,
   commentsRatioPct: number,
 ) {
+  const likesRaw = Math.round((likesRatioPct / 100) * totalViews);
+  const savesRaw = Math.round((savesRatioPct / 100) * totalViews);
+  const sharesRaw = Math.round((sharesRatioPct / 100) * totalViews);
+  const commentsRaw = Math.round((commentsRatioPct / 100) * totalViews);
+
   return {
-    likesTarget:    Math.round((likesRatioPct    / 100) * totalViews),
-    savesTarget:    Math.round((savesRatioPct    / 100) * totalViews),
-    sharesTarget:   Math.round((sharesRatioPct   / 100) * totalViews),
-    commentsTarget: Math.round((commentsRatioPct / 100) * totalViews),
+    likesTarget:    likesRaw > 0 ? Math.max(10, likesRaw) : 0,
+    savesTarget:    savesRaw > 0 ? Math.max(10, savesRaw) : 0,
+    sharesTarget:   sharesRaw > 0 ? Math.max(10, sharesRaw) : 0,
+    commentsTarget: commentsRaw > 0 ? Math.max(5, commentsRaw) : 0,
   };
 }
 

@@ -782,18 +782,20 @@ function Slider({ label, value, min, max, step = 1, onChange, format }: {
 }
 
 // ── Engagement toggle row ─────────────────────────────────────────
-function EngRow({ icon, label, enabled, ratio, maxRatio, count, minLimit, onToggle, onRatio }: {
+function EngRow({ icon, label, enabled, ratio, maxRatio, count, minLimit, views, onToggle, onRatio }: {
   icon: string; label: string; enabled: boolean; ratio: number;
-  maxRatio: number; count: number; minLimit?: number; onToggle: () => void; onRatio: (v: number) => void;
+  maxRatio: number; count: number; minLimit?: number; views: number; onToggle: () => void; onRatio: (v: number) => void;
 }) {
-  const isBelowMin = enabled && count > 0 && minLimit !== undefined && count < minLimit;
+  const rawCount = Math.round((ratio / 100) * views);
+  const isEnforcedMin = enabled && rawCount > 0 && minLimit !== undefined && rawCount < minLimit;
+  
   return (
-    <div style={{ borderRadius:16, padding:16, background:N.bg, boxShadow: enabled ? N.raisedSm : N.inset, transition:"all 0.2s", border: isBelowMin ? "1px solid #ef4444" : "none" }}>
+    <div style={{ borderRadius:16, padding:16, background:N.bg, boxShadow: enabled ? N.raisedSm : N.inset, transition:"all 0.2s", border: isEnforcedMin ? "1px solid #f59e0b" : "none" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: enabled ? 16 : 0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <span style={{ fontSize:16 }}>{icon}</span>
           <span style={{ fontSize:13, fontWeight:800, color:N.text }}>{label}</span>
-          {enabled && <span style={{ fontSize:12, color: isBelowMin ? "#ef4444" : N.accent, fontWeight:800 }}>→ {count.toLocaleString()}</span>}
+          {enabled && <span style={{ fontSize:12, color: isEnforcedMin ? "#d97706" : N.accent, fontWeight:800 }}>→ {count.toLocaleString()}</span>}
         </div>
         <button onClick={onToggle} className="neo-btn"
           style={{ width:40, height:22, borderRadius:12, border:"none", cursor:"pointer", position:"relative", transition:"all 0.2s", background: enabled ? N.accent : "#cbd5e1", boxShadow:N.raisedSm }}>
@@ -804,9 +806,9 @@ function EngRow({ icon, label, enabled, ratio, maxRatio, count, minLimit, onTogg
         <>
           <Slider label={`${ratio.toFixed(1)}% of views`} value={ratio} min={0.1} max={maxRatio} step={0.1}
             onChange={onRatio} format={(v) => `${v.toFixed(1)}%`} />
-          {isBelowMin && (
-            <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 10, background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-              <span>⚠️ Minimum order requirement is {minLimit} {label.toLowerCase()}. Orders below {minLimit} will not be delivered.</span>
+          {isEnforcedMin && (
+            <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 10, background: "rgba(217, 119, 6, 0.1)", color: "#d97706", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>⚠️ Automatically adjusted to the minimum requirement of {minLimit} {label.toLowerCase()}.</span>
             </div>
           )}
         </>
@@ -1940,10 +1942,10 @@ export default function NewReelPage() {
                 💡 Balanced engagement ratios improve reach. Benchmarks have been pre-set for your views target.
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <EngRow icon="👍" label="Likes" enabled={likesOn} ratio={likesRatio} maxRatio={15} count={eng.likesTarget} minLimit={10} onToggle={() => { setLikesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setLikesRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="🔖" label="Saves" enabled={savesOn} ratio={savesRatio} maxRatio={8} count={eng.savesTarget} minLimit={10} onToggle={() => { setSavesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSavesRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="📤" label="Shares" enabled={sharesOn} ratio={sharesRatio} maxRatio={5} count={eng.sharesTarget} minLimit={10} onToggle={() => { setSharesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSharesRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="💬" label="Comments" enabled={commentsOn} ratio={commentsRatio} maxRatio={3} count={eng.commentsTarget} minLimit={5} onToggle={() => { setCommentsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setCommentsRatio(v); setHasCustomizedEng(true); }} />
+                <EngRow icon="👍" label="Likes" enabled={likesOn} ratio={likesRatio} maxRatio={15} count={eng.likesTarget} minLimit={10} views={views} onToggle={() => { setLikesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setLikesRatio(v); setHasCustomizedEng(true); }} />
+                <EngRow icon="🔖" label="Saves" enabled={savesOn} ratio={savesRatio} maxRatio={8} count={eng.savesTarget} minLimit={10} views={views} onToggle={() => { setSavesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSavesRatio(v); setHasCustomizedEng(true); }} />
+                <EngRow icon="📤" label="Shares" enabled={sharesOn} ratio={sharesRatio} maxRatio={5} count={eng.sharesTarget} minLimit={10} views={views} onToggle={() => { setSharesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSharesRatio(v); setHasCustomizedEng(true); }} />
+                <EngRow icon="💬" label="Comments" enabled={commentsOn} ratio={commentsRatio} maxRatio={3} count={eng.commentsTarget} minLimit={5} views={views} onToggle={() => { setCommentsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setCommentsRatio(v); setHasCustomizedEng(true); }} />
               </div>
 
               <div style={{ borderRadius:16, padding:18, background:N.bg, boxShadow:N.inset }}>
