@@ -1939,7 +1939,7 @@ export default function AdminPage() {
                           <td style={{ padding: "12px 8px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
 
                           {/* Wallet Mode Toggle */}
-                          <td style={{ padding: "12px 8px" }}>
+                          <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
                             <button
                               onClick={() => userAction(u.id, "toggleWalletMode")}
                               className="neo-btn"
@@ -1953,7 +1953,7 @@ export default function AdminPage() {
                                 fontWeight: 800,
                                 boxShadow: N.raisedSm,
                                 cursor: "pointer",
-                                wordBreak: "break-word"
+                                whiteSpace: "nowrap"
                               }}
                             >
                               {u.walletMode ? "✓ Wallet ON" : "Wallet OFF"}
@@ -1961,9 +1961,9 @@ export default function AdminPage() {
                           </td>
 
                           {/* Wallet Balance Edit */}
-                          <td style={{ padding: "12px 8px", wordBreak: "break-word" }}>
+                          <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
                             {u.walletMode ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
                                 <span style={{ fontSize: 12, fontWeight: 800, color: "#16a34a" }}>
                                   ₹ {(u.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </span>
@@ -1994,11 +1994,11 @@ export default function AdminPage() {
                               <span style={{ fontSize: 12, color: N.muted, fontWeight: 600 }}>—</span>
                             )}
                           </td>
-                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: "#16a34a", wordBreak: "break-word" }}>
+                          <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}>
                             ₹ {((u as any).totalDepositedInr || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}<br/>
                             {((u as any).totalDepositedUsdt > 0) && <span style={{ fontSize: 10, color: N.muted }}>$ {((u as any).totalDepositedUsdt).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>}
                           </td>
-                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.accent, wordBreak: "break-word" }}>
+                          <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 700, color: N.accent, whiteSpace: "nowrap" }}>
                             ₹ {((u as any).totalSpent || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </td>
                           <td style={{ padding: "12px 8px" }}>

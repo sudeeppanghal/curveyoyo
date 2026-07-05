@@ -30,7 +30,7 @@ export async function fetchLatestInstagramPost(username: string): Promise<{ id: 
 
   
   const input = {
-    "usernames": [username],
+    "directUrls": [`https://www.instagram.com/${username}/`],
     "resultsType": "posts",
     "resultsLimit": 1
   };
@@ -64,7 +64,7 @@ export async function fetchLatestTiktokPost(username: string): Promise<{ id: str
   };
 
   try {
-    const run = await client.actor("clockwork/tiktok-scraper").call(input);
+    const run = await client.actor("clockworks/tiktok-scraper").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     if (items && items.length > 0) {
       const post = items[0] as any;
