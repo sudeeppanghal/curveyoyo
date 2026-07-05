@@ -124,7 +124,12 @@ async function handler(request: NextRequest) {
   // CurvePioneer: "Real human traffic has variance. We add small random jitter
   // to each batch to prevent machine-flat delivery patterns."
   // The accumulation algorithm corrects for drift — totals always match target.
-  const jitteredViewsBatch = Math.max(viewsMinQty, applyJitter(viewsBatch, 0.15));
+  // Round to nearest 100 because many SMM panels (like GCC for TikTok)
+  // strictly require views to be in multiples of 100.
+  let jitteredViewsBatch = Math.max(viewsMinQty, applyJitter(viewsBatch, 0.15));
+  jitteredViewsBatch = Math.round(jitteredViewsBatch / 100) * 100;
+  // Ensure it doesn't drop to 0 if minQty was 100
+  if (jitteredViewsBatch < viewsMinQty) jitteredViewsBatch = viewsMinQty;
 
   let result = await placePanelOrder({
     apiUrl: panel.apiUrl,
