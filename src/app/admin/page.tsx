@@ -3399,7 +3399,7 @@ export default function AdminPage() {
 
                             <td style={{ padding: "10px 8px" }}>
 
-                              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: 130 }}>
+                              <div style={{ display: "flex", gap: 6, alignItems: "center", whiteSpace: "nowrap" }}>
 
                                 {o.status === "DELIVERING" && (
 
