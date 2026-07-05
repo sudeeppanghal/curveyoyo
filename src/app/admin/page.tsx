@@ -2006,16 +2006,16 @@ export default function AdminPage() {
                           </td>
                           <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, textAlign: "center" }}>{u._count?.panels ?? 0}</td>
                           <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.text, textAlign: "center" }}>{u._count?.orders ?? 0}</td>
-                          <td style={{ padding: "12px 8px" }}>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, minWidth: 220 }}>
+                          <td style={{ padding: "10px 12px" }}>
+                            <div style={{ display: "flex", gap: 6, alignItems: "center", whiteSpace: "nowrap" }}>
 
                               {u.plan !== "LIFETIME" && (
 
                                 <button onClick={() => userAction(u.id, "upgrade")} className="neo-btn"
 
-                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}>
+                                  style={{ border: "none", background: N.bg, padding: "5px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer" }}>
 
-                                  Upgrade Lifetime
+                                  Upgrade
 
                                 </button>
 
@@ -2025,7 +2025,7 @@ export default function AdminPage() {
 
                                 <button onClick={() => userAction(u.id, "suspend")} className="neo-btn"
 
-                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm }}>
+                                  style={{ border: "none", background: N.bg, padding: "5px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, color: "#dc2626", boxShadow: N.raisedSm, cursor: "pointer" }}>
 
                                   Suspend
 
@@ -2035,7 +2035,7 @@ export default function AdminPage() {
 
                                 <button onClick={() => userAction(u.id, "unsuspend")} className="neo-btn"
 
-                                  style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm }}>
+                                  style={{ border: "none", background: N.bg, padding: "5px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, color: N.accent, boxShadow: N.raisedSm, cursor: "pointer" }}>
 
                                   Unsuspend
 
@@ -2043,13 +2043,14 @@ export default function AdminPage() {
 
                               )}
 
-                                                            <button onClick={() => openUserHistory(u)} className="neo-btn"
-                                style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm }}>
+                              <button onClick={() => openUserHistory(u)} className="neo-btn"
+                                style={{ border: "none", background: N.bg, padding: "5px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, color: "#16a34a", boxShadow: N.raisedSm, cursor: "pointer" }}>
                                 History
                               </button>
-<button onClick={() => impersonateUser(u.id)} className="neo-btn"
 
-                                style={{ border: "none", background: N.bg, padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#2563eb", boxShadow: N.raisedSm }}>
+                              <button onClick={() => impersonateUser(u.id)} className="neo-btn"
+
+                                style={{ border: "none", background: N.bg, padding: "5px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800, color: "#2563eb", boxShadow: N.raisedSm, cursor: "pointer" }}>
 
                                 Login As
 
