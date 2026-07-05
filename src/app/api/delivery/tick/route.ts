@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { placePanelOrder } from "@/lib/delivery/panel-client";
+import { placeOrderWithFallback } from "@/lib/delivery/panel-client";
 import { cachePanelStatus } from "@/lib/redis";
 import { calculateEngagementDue, applyJitter } from "@/lib/delivery/curve";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
 import { triggerMidwayRefund } from "@/lib/delivery/refund";
+import { sendTelegramAlert } from "@/lib/telegram";
 
 // Force dynamic so Next.js never tries to statically analyse this route
-// (prevents build-time crash when QSTASH env vars are not present during build)
 export const dynamic = "force-dynamic";
 
 interface TickPayload {
@@ -16,10 +16,7 @@ interface TickPayload {
   panelId: string | null;
   viewsBatch: number;
   reelUrl: string;
-  platform?: string; // "instagram" | "tiktok" | "youtube"
-  // Engagement quantities are NO LONGER passed in the payload.
-  // Instead we compute them fresh from the order state using the
-  // "owed vs delivered" accumulation algorithm.
+  platform?: string;
   // Legacy fields kept for backward compat:
   likesBatch?: number;
   savesBatch?: number;
@@ -37,31 +34,28 @@ function getServiceId(serviceIds: ServiceIds | null, platform: string, type: str
 
 /**
  * POST /api/delivery/tick
- * Called by QStash for each delivery batch.
+ *
+ * Hybrid Self-Healing Delivery System:
+ * ─────────────────────────────────────────────────────────────
+ * For every delivery tick this system:
+ *   1. Loads the primary service ID + fallback list from AdminService
+ *   2. Tries primary. On failure, classifies the error:
+ *      - "Amount doesn't match" → rounds qty to minQty multiple, retries
+ *      - "Incorrect service ID" → auto-tries fallback IDs in order
+ *      - Panel down → shifts to a different panel entirely
+ *      - User error → pauses order, surfaces error
+ *   3. Running orders NEVER stop due to a single service ID changing.
  *
  * Engagement Accumulation System:
  * ─────────────────────────────────────────────────────────────
- * Instead of pre-calculating engagement per-batch (which fails for small
- * campaigns because 0.55 likes/tick is below panel minimums), we use the
- * "owed vs delivered" algorithm:
- *
- *   1. After views are delivered, calculate fraction of campaign complete
- *   2. Compute how many likes/saves/shares/comments are NOW owed (fraction × target)
- *   3. Subtract already-delivered counts → get "due" amount
- *   4. Only place an engagement order if due ≥ MIN_ENGAGEMENT_BATCH (default 10)
- *   5. On final tick (99%+ views delivered), flush all remaining engagement
- *
- * This means:
- *   - 10K views / 30 days / 4% likes = 400 likes → fires every ~2 hours (not every hour)
- *   - 1L views / 30 days / 4% likes = 4,000 likes → fires every tick naturally
- *   - All remaining engagement is always flushed on the last batch
+ * Uses "owed vs delivered" accumulation:
+ *   1. After views delivered, compute fraction of campaign complete
+ *   2. Calculate how many likes/saves/shares/comments are NOW owed
+ *   3. Subtract already-delivered → get "due" amount
+ *   4. Only place engagement order if due ≥ minQuantity for that type
+ *   5. On final tick (99%+), flush all remaining engagement
  * ─────────────────────────────────────────────────────────────
  */
-
-// Minimum engagement quantity before placing a panel order.
-// Most SMM panels have minimum order quantities of 10–50.
-// Set to 10 as a safe default; operators can tune via admin panel (future).
-const MIN_ENGAGEMENT_BATCH = 10;
 
 async function handler(request: NextRequest) {
   const body = await request.json() as TickPayload;
@@ -84,61 +78,62 @@ async function handler(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 });
   }
 
-  // Load panel or find failover immediately if panelId is missing
+  // ── Load panel (or find failover if panel missing) ────────────────────
   let panel = panelId ? await prisma.panel.findUnique({ where: { id: panelId } }) : null;
   if (!panel) {
-    // Jump straight to failover if panel was deleted or missing
     const isWallet = order.user.walletMode;
     panel = await prisma.panel.findFirst({
-      where: {
-        userId: isWallet ? null : order.userId,
-        isActive: true,
-        status: { not: "OFFLINE" }
-      },
+      where: { userId: isWallet ? null : order.userId, isActive: true, status: { not: "OFFLINE" } },
       orderBy: { priority: "asc" },
     });
-    
     if (!panel) {
       await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: "No active panel available" } });
       return NextResponse.json({ ok: false, error: "No active panel available" }, { status: 404 });
     }
-    
-    // Update the event to point to the failover panel
     await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: panel.id } });
   }
 
+  // ── Load views service config (primary + fallbacks) ───────────────────
   const svcIds = panel.serviceIds as ServiceIds | null;
-  const viewsServiceId = getServiceId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
+  const viewsServiceIdFromJson = getServiceId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
 
   let viewsMinQty = 100;
+  let viewsFallbackIds: string[] = [];
   try {
     const activeSvc = await prisma.adminService.findFirst({
-      where: { panelId: panel.id, platform: platform as any, type: "views" }
+      where: { panelId: panel.id, platform: platform.toUpperCase() as any, type: "views" }
     });
-    if (activeSvc && activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
-  } catch {}
+    if (activeSvc) {
+      if (activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
+      // Load fallback service IDs stored in DB
+      if (activeSvc.fallbackServiceIds && Array.isArray(activeSvc.fallbackServiceIds)) {
+        viewsFallbackIds = (activeSvc.fallbackServiceIds as string[]).filter(Boolean);
+      }
+    }
+  } catch { /* use defaults */ }
 
   const startMs = Date.now();
 
-  // ── 1. Place VIEWS order (with ±15% jitter for human-like variance) ────
-  // CurvePioneer: "Real human traffic has variance. We add small random jitter
-  // to each batch to prevent machine-flat delivery patterns."
+  // ── 1. Place VIEWS order — hybrid fallback system ─────────────────────
+  // Apply ±15% jitter for organic-looking delivery.
   // The accumulation algorithm corrects for drift — totals always match target.
   const jitteredViewsBatch = Math.max(viewsMinQty, applyJitter(viewsBatch, 0.15));
 
-  let result = await placePanelOrder({
+  let result = await placeOrderWithFallback({
     apiUrl: panel.apiUrl,
     apiKeyEncrypted: panel.apiKeyEncrypted,
-    serviceId: viewsServiceId,
+    primaryServiceId: viewsServiceIdFromJson,
+    fallbackServiceIds: viewsFallbackIds,
     link: reelUrl,
     quantity: jitteredViewsBatch,
+    minQuantity: viewsMinQty,
   });
 
   const responseMs = Date.now() - startMs;
 
-  // ── Failover if primary panel fails ──────────────────────────
+  // ── Panel-level failover: if entire panel is down, try another ────────
   let activePanel = panel;
-  if (!result.ok) {
+  if (!result.ok && result.errorClass === "panel_down") {
     await cachePanelStatus(panel.id, "OFFLINE");
     await prisma.panel.update({
       where: { id: panel.id },
@@ -157,43 +152,58 @@ async function handler(request: NextRequest) {
     });
 
     if (failoverPanel) {
+      // Load failover panel's service config
       const foSvcIds = failoverPanel.serviceIds as ServiceIds | null;
       const foViewsSvcId = getServiceId(foSvcIds, platform, "views") ?? order.panelServiceId ?? "1";
       let foViewsMinQty = viewsMinQty;
+      let foViewsFallbacks: string[] = [];
       try {
         const foSvc = await prisma.adminService.findFirst({
-          where: { panelId: failoverPanel.id, platform: platform as any, type: "views" }
+          where: { panelId: failoverPanel.id, platform: platform.toUpperCase() as any, type: "views" }
         });
-        if (foSvc && foSvc.minQuantity > 0) foViewsMinQty = foSvc.minQuantity;
-      } catch {}
-      result = await placePanelOrder({
+        if (foSvc) {
+          if (foSvc.minQuantity > 0) foViewsMinQty = foSvc.minQuantity;
+          if (foSvc.fallbackServiceIds && Array.isArray(foSvc.fallbackServiceIds)) {
+            foViewsFallbacks = (foSvc.fallbackServiceIds as string[]).filter(Boolean);
+          }
+        }
+      } catch { /* use defaults */ }
+
+      result = await placeOrderWithFallback({
         apiUrl: failoverPanel.apiUrl,
         apiKeyEncrypted: failoverPanel.apiKeyEncrypted,
-        serviceId: foViewsSvcId,
+        primaryServiceId: foViewsSvcId,
+        fallbackServiceIds: foViewsFallbacks,
         link: reelUrl,
         quantity: Math.max(foViewsMinQty, viewsBatch),
+        minQuantity: foViewsMinQty,
       });
       activePanel = failoverPanel;
       await prisma.deliveryEvent.update({ where: { id: eventId }, data: { panelId: failoverPanel.id } });
     }
   }
 
+  // ── Handle permanent failure ───────────────────────────────────────────
   if (!result.ok) {
-    await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: result.error } });
+    const failReason = result.error ?? "Unknown delivery failure";
+    await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: failReason } });
     await prisma.deliveryEvent.updateMany({
       where: { orderId, status: "SCHEDULED" },
       data: { status: "FAILED", errorMessage: "Order failed midway" }
     });
     await prisma.order.update({
       where: { id: orderId },
-      data: { status: "FAILED", failReason: result.error },
+      data: { status: "FAILED", failReason },
     });
     await triggerMidwayRefund(orderId);
-    return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
+    // Telegram alert so admin knows immediately
+    await sendTelegramAlert(
+      `❌ *Order Failed*\nOrder ID: \`${orderId}\`\nPlatform: ${platform.toUpperCase()}\nError: ${failReason}\nAll fallbacks exhausted.`
+    ).catch(() => {}); // non-fatal
+    return NextResponse.json({ ok: false, error: failReason }, { status: 500 });
   }
 
-  // ── 2. ENGAGEMENT ACCUMULATION ALGORITHM ─────────────────────
-  // Views succeeded. Compute engagement due based on ACTUAL jittered views delivered.
+  // ── 2. ENGAGEMENT ACCUMULATION ALGORITHM ─────────────────────────────
   const actualViewsDelivered = jitteredViewsBatch;
   const engagementDelivered = { likes: 0, saves: 0, shares: 0, comments: 0, reposts: 0 };
 
@@ -201,6 +211,34 @@ async function handler(request: NextRequest) {
     const resData = event.responseData as any;
     let due;
     let minBatchSizes = { likes: 10, saves: 10, shares: 10, comments: 5, reposts: 10 };
+
+    // Load all engagement service configs for this panel+platform (with fallbacks)
+    type EngSvcMap = {
+      svcId: string;
+      fallbacks: string[];
+      minQty: number;
+    };
+    const engServiceMap: Record<string, EngSvcMap> = {};
+    try {
+      const uppercasePlatform = String(order.reel.platform || "INSTAGRAM").toUpperCase() as any;
+      const mappedServices = await prisma.adminService.findMany({
+        where: { panelId: activePanel.id, platform: uppercasePlatform }
+      });
+      mappedServices.forEach(s => {
+        const engSvcIds = activePanel.serviceIds as ServiceIds | null;
+        const svcId = getServiceId(engSvcIds, platform, s.type) ?? s.serviceId;
+        const fallbacks = (s.fallbackServiceIds && Array.isArray(s.fallbackServiceIds))
+          ? (s.fallbackServiceIds as string[]).filter(Boolean)
+          : [];
+        engServiceMap[s.type] = { svcId, fallbacks, minQty: s.minQuantity || 10 };
+        if (s.type === "likes" && s.minQuantity > 0) minBatchSizes.likes = s.minQuantity;
+        if (s.type === "saves" && s.minQuantity > 0) minBatchSizes.saves = s.minQuantity;
+        if (s.type === "shares" && s.minQuantity > 0) minBatchSizes.shares = s.minQuantity;
+        if (s.type === "comments" && s.minQuantity > 0) minBatchSizes.comments = s.minQuantity;
+        if (s.type === "reposts" && s.minQuantity > 0) minBatchSizes.reposts = s.minQuantity;
+      });
+    } catch { /* fallback to defaults */ }
+
     if (resData && resData.customEngagement) {
       due = {
         likes: resData.customEngagement.likes ?? 0,
@@ -210,23 +248,7 @@ async function handler(request: NextRequest) {
         reposts: resData.customEngagement.reposts ?? 0,
       };
     } else {
-      // viewsDeliveredNow = current delivered + this batch (use actual jittered amount)
       const viewsDeliveredNow = order.viewsDelivered + actualViewsDelivered;
-
-      try {
-        const uppercasePlatform = String(order.reel.platform || "INSTAGRAM").toUpperCase() as any;
-        const mappedServices = await prisma.adminService.findMany({
-          where: { panelId: activePanel.id, platform: uppercasePlatform }
-        });
-        mappedServices.forEach(s => {
-          if (s.type === "likes" && s.minQuantity > 0) minBatchSizes.likes = s.minQuantity;
-          if (s.type === "saves" && s.minQuantity > 0) minBatchSizes.saves = s.minQuantity;
-          if (s.type === "shares" && s.minQuantity > 0) minBatchSizes.shares = s.minQuantity;
-          if (s.type === "comments" && s.minQuantity > 0) minBatchSizes.comments = s.minQuantity;
-          if (s.type === "reposts" && s.minQuantity > 0) minBatchSizes.reposts = s.minQuantity;
-        });
-      } catch { /* fallback */ }
-
       due = calculateEngagementDue(
         order.viewsTarget,
         viewsDeliveredNow,
@@ -248,56 +270,60 @@ async function handler(request: NextRequest) {
       );
     }
 
-    const engSvcIds = activePanel.serviceIds as ServiceIds | null;
     const engagementPanelOrderIds: Record<string, string> = {};
 
-    // Build parallel tasks only for types with due > 0 AND service ID configured
+    // Build engagement tasks — each type uses its own primary + fallback service IDs
     const engTasks = (
       [
-        { type: "likes",    qty: due.likes,    svcId: getServiceId(engSvcIds, platform, "likes") },
-        { type: "saves",    qty: due.saves,    svcId: getServiceId(engSvcIds, platform, "saves") },
-        { type: "shares",   qty: due.shares,   svcId: getServiceId(engSvcIds, platform, "shares") },
-        { type: "comments", qty: due.comments, svcId: getServiceId(engSvcIds, platform, "comments") },
-        { type: "reposts",  qty: due.reposts,  svcId: getServiceId(engSvcIds, platform, "reposts") },
-      ] as { type: keyof typeof engagementDelivered; qty: number; svcId: string | null }[]
-    ).filter(({ qty, svcId }) => qty > 0 && svcId !== null);
+        { type: "likes",    qty: due.likes },
+        { type: "saves",    qty: due.saves },
+        { type: "shares",   qty: due.shares },
+        { type: "comments", qty: due.comments },
+        { type: "reposts",  qty: due.reposts },
+      ] as { type: keyof typeof engagementDelivered; qty: number }[]
+    ).filter(({ qty, type }) => qty > 0 && engServiceMap[type]);
 
     // Fire all in parallel — zero impact on views delivery timing
     await Promise.allSettled(
-      engTasks.map(async ({ type, qty, svcId }) => {
+      engTasks.map(async ({ type, qty }) => {
+        const cfg = engServiceMap[type];
+        if (!cfg) return;
         try {
-          const actualQty = Math.max((minBatchSizes as any)[type] || 0, qty);
-          const r = await placePanelOrder({
+          const actualQty = Math.max(cfg.minQty, qty);
+          const r = await placeOrderWithFallback({
             apiUrl: activePanel.apiUrl,
             apiKeyEncrypted: activePanel.apiKeyEncrypted,
-            serviceId: svcId!,
+            primaryServiceId: cfg.svcId,
+            fallbackServiceIds: cfg.fallbacks,
             link: reelUrl,
             quantity: actualQty,
+            minQuantity: cfg.minQty,
           });
           if (r.ok) {
             engagementDelivered[type] = actualQty;
             if (r.orderId) engagementPanelOrderIds[type] = r.orderId;
           }
+          // Engagement failures are non-fatal — views already succeeded,
+          // engagement will catch up on next tick via accumulation algorithm
         } catch {
-          // Non-fatal — views already succeeded, engagement will catch up next tick
+          // silently skip — never let engagement kill a views delivery
         }
       })
     );
 
-    // Record engagement panel order IDs if any fired
     Object.assign(engagementDelivered, { engagementPanelOrderIds });
   }
 
-  // ── 3. Record success in DB ───────────────────────────────────
+  // ── 3. Record success in DB ───────────────────────────────────────────
   await cachePanelStatus(panel.id, responseMs > 5000 ? "SLOW" : "ONLINE");
 
   const engPanelOrderIds = (engagementDelivered as any).engagementPanelOrderIds || {};
   const cleanedEngagementFired = {
-    likes: engagementDelivered.likes,
-    saves: engagementDelivered.saves,
-    shares: engagementDelivered.shares,
+    likes:    engagementDelivered.likes,
+    saves:    engagementDelivered.saves,
+    shares:   engagementDelivered.shares,
     comments: engagementDelivered.comments,
-    reposts: engagementDelivered.reposts,
+    reposts:  engagementDelivered.reposts,
   };
 
   const resData = event.responseData as any;
@@ -308,6 +334,7 @@ async function handler(request: NextRequest) {
       responseData: {
         customEngagement: resData?.customEngagement,
         panelOrderId: result.orderId,
+        usedServiceId: result.usedServiceId,
         engagementFired: cleanedEngagementFired,
         engagementPanelOrderIds: engPanelOrderIds,
         ...result.rawResponse as object,
@@ -315,13 +342,12 @@ async function handler(request: NextRequest) {
     },
   });
 
-  // Update order progress — views + any engagement sent this tick
+  // Update order progress
   const updated = await prisma.order.update({
     where: { id: orderId },
     data: {
       viewsDelivered:  { increment: actualViewsDelivered },
       viewsRemaining:  { decrement: actualViewsDelivered },
-      // Only increment engagement counters for types that actually fired
       ...(cleanedEngagementFired.likes    > 0 ? { likesDelivered:    { increment: cleanedEngagementFired.likes    } } : {}),
       ...(cleanedEngagementFired.saves    > 0 ? { savesDelivered:    { increment: cleanedEngagementFired.saves    } } : {}),
       ...(cleanedEngagementFired.shares   > 0 ? { sharesDelivered:   { increment: cleanedEngagementFired.shares   } } : {}),
@@ -331,22 +357,16 @@ async function handler(request: NextRequest) {
   });
 
   const prevProgress = order.viewsDelivered / order.viewsTarget;
-  const newProgress = updated.viewsDelivered / updated.viewsTarget;
-
-  // Trigger Mid-Campaign and Completion Refill Checks
+  const newProgress  = updated.viewsDelivered / updated.viewsTarget;
   const isMidCampaign = prevProgress < 0.5 && newProgress >= 0.5;
-  const isCompleted = updated.viewsRemaining <= 0 || newProgress >= 1.0;
+  const isCompleted   = updated.viewsRemaining <= 0 || newProgress >= 1.0;
 
   if (isCompleted) {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: "COMPLETED", completedAt: new Date() },
-    });
+    await prisma.order.update({ where: { id: orderId }, data: { status: "COMPLETED", completedAt: new Date() } });
   }
 
   if (isMidCampaign || isCompleted) {
     try {
-      console.log(`[TICK WEBHOOK] Triggering refill check for ${isMidCampaign ? '50% mark' : '100% completion'} of Order ID: ${orderId}`);
       await checkAndRefillOrder(orderId);
     } catch (err) {
       console.error("[TICK WEBHOOK] Refill check failed:", err);
@@ -361,18 +381,13 @@ async function handler(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     panelOrderId: result.orderId,
-    viewsDelivered: viewsBatch,
+    usedServiceId: result.usedServiceId,
+    viewsDelivered: actualViewsDelivered,
     engagementFired: cleanedEngagementFired,
   });
 }
 
-/**
- * Wrap with QStash signature verification lazily (at request time, not build time).
- * This prevents the Next.js static build from crashing when QSTASH env vars
- * are not present in the Vercel build environment.
- */
 export async function POST(req: NextRequest) {
-  // In production, always verify the QStash signature
   if (process.env.NODE_ENV === "production") {
     const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
     const nextKey    = process.env.QSTASH_NEXT_SIGNING_KEY;
@@ -382,6 +397,5 @@ export async function POST(req: NextRequest) {
     const { verifySignatureAppRouter } = await import("@upstash/qstash/nextjs");
     return verifySignatureAppRouter(handler)(req);
   }
-  // In development/staging: skip verification for easier local testing
   return handler(req);
 }

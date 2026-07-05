@@ -494,9 +494,12 @@ model AdminService {
   panel        Panel    @relation(fields: [panelId], references: [id], onDelete: Cascade)
   platform     Platform
   type         String   // "views", "likes", "saves", "shares", "comments"
-  serviceId    String   @map("service_id") // SMM service ID
+  serviceId    String   @map("service_id") // Primary SMM service ID
+  // Ordered list of fallback service IDs to try if primary fails.
+  // e.g. ["13840", "5215"] — tried in order before giving up.
+  fallbackServiceIds Json? @default("[]") @map("fallback_service_ids")
   originalRate Float    @map("original_rate") // rate per 1000 from SMM API
-  customRate   Float    @map("custom_rate") // custom rate per 1000 charged to user
+  customRate   Float    @map("custom_rate") // custom rate per 1000 charged to user (always = originalRate × 5)
   name         String?  // name of service from SMM API for reference
   minQuantity  Int      @default(10) @map("min_quantity")
   createdAt    DateTime @default(now()) @map("created_at")

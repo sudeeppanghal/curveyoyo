@@ -69,7 +69,9 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { action, panelId, platform, type, serviceId, originalRate, customRate, name, minQuantity } = body;
+  const { action, panelId, platform, type, serviceId, originalRate, name, minQuantity } = body;
+  // customRate is always auto-computed as originalRate × 5 — never manually set
+  const PRICE_MULTIPLIER = 5;
 
   if (!panelId) {
     return NextResponse.json({ error: "panelId is required" }, { status: 400 });
@@ -118,16 +120,18 @@ export async function POST(request: NextRequest) {
             type: s.type,
             serviceId: s.serviceId,
             originalRate: s.originalRate,
-            customRate: s.customRate,
+            customRate: parseFloat((s.originalRate * PRICE_MULTIPLIER).toFixed(6)),
             name: s.name,
             minQuantity: s.minQuantity,
+            fallbackServiceIds: s.fallbackServiceIds ?? [],
           },
           update: {
             serviceId: s.serviceId,
             originalRate: s.originalRate,
-            customRate: s.customRate,
+            customRate: parseFloat((s.originalRate * PRICE_MULTIPLIER).toFixed(6)),
             name: s.name,
             minQuantity: s.minQuantity,
+            fallbackServiceIds: s.fallbackServiceIds ?? [],
           },
         });
         syncedServicesCount++;
@@ -143,7 +147,7 @@ export async function POST(request: NextRequest) {
   }
 
   // STANDARD SAVE: Save pricing and auto-apply to ALL matching API keys of this provider
-  if (!platform || !type || !serviceId || originalRate === undefined || customRate === undefined) {
+  if (!platform || !type || !serviceId || originalRate === undefined) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -173,14 +177,14 @@ export async function POST(request: NextRequest) {
         type: typeLower,
         serviceId: String(serviceId),
         originalRate: parseFloat(originalRate),
-        customRate: parseFloat(customRate),
+        customRate: parseFloat((parseFloat(originalRate) * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
       },
       update: {
         serviceId: String(serviceId),
         originalRate: parseFloat(originalRate),
-        customRate: parseFloat(customRate),
+        customRate: parseFloat((parseFloat(originalRate) * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
       },
