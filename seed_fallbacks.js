@@ -33,7 +33,7 @@ async function main() {
   for (const svc of svcs) {
     const cfg = FALLBACK_MAP[svc.platform] && FALLBACK_MAP[svc.platform][svc.type];
     const fallbacks = cfg ? cfg.fallbacks.filter(function(id) { return id !== svc.serviceId; }) : [];
-    const newCustomRate = parseFloat((svc.originalRate * 5).toFixed(6));
+    const newCustomRate = parseFloat((svc.originalRate * 96 * 5).toFixed(6));
     await prisma.adminService.update({
       where: { id: svc.id },
       data: { customRate: newCustomRate, fallbackServiceIds: fallbacks }

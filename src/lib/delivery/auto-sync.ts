@@ -28,10 +28,9 @@ const SEARCH_CONFIG: Record<string, Record<string, string[]>> = {
   },
 };
 
-// ─── 5x pricing multiplier ────────────────────────────────────────────────
-// This is the ONLY place the markup is defined.
-// customRate = originalRate × PRICE_MULTIPLIER, always, forever.
-const PRICE_MULTIPLIER = 5;
+// ─── Exchange Rate & Pricing Markup ──────────────────────────────────────
+const USD_TO_INR = 96;
+const PRICE_MULTIPLIER = 5; // customRate = originalRate (USD) × 96 (USD/INR) × 5 (markup)
 
 // ─── Organic compatibility threshold ──────────────────────────────────────
 // Services with minQuantity <= this value can receive organic jitter numbers
@@ -117,7 +116,7 @@ export async function runAutoSync() {
         const rateChangePct = savedRate > 0 ? Math.abs(liveRate - savedRate) / savedRate : 1;
 
         if (rateChangePct > 0.001) { // Rate changed by more than 0.1%
-          const newCustomRate = parseFloat((liveRate * PRICE_MULTIPLIER).toFixed(6));
+          const newCustomRate = parseFloat((liveRate * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6));
           await prisma.adminService.update({
             where: { id: configuredService.id },
             data: {
@@ -134,99 +133,49 @@ export async function runAutoSync() {
         }
       }
 
-      // ── B. UPDATE FALLBACK LIST (always keep top 3 best alternatives) ──
-      {
-        const keywords = getKeywords(configuredService.platform, configuredService.type);
-        const candidates = liveServices
-          .filter(s => {
-            const lowerName = s.name.toLowerCase();
-            if (lowerName.includes("disabled") || lowerName.includes("stop")) return false;
-            if (s.service === configuredService.serviceId) return false; // exclude primary
-            return keywords.every(kw => lowerName.includes(kw));
-          })
-          .sort((a, b) => scoreCandidateService(b) - scoreCandidateService(a)) // best first
-          .slice(0, MAX_FALLBACKS)
-          .map(s => s.service);
-
-        // Only update if fallback list changed
-        const currentFallbacks = configuredService.fallbackServiceIds as string[] | null ?? [];
-        const listsMatch = candidates.length === currentFallbacks.length &&
-          candidates.every((id, i) => id === currentFallbacks[i]);
-
-        if (!listsMatch) {
-          await prisma.adminService.update({
-            where: { id: configuredService.id },
-            data: { fallbackServiceIds: candidates }
-          });
+      // ── B. UPDATE CUSTOM RATES OF CONFIGURED FALLBACKS ─────────────────
+      let fallbacksChanged = false;
+      const currentFallbacks = configuredService.fallbackServiceIds && Array.isArray(configuredService.fallbackServiceIds)
+        ? configuredService.fallbackServiceIds
+        : [];
+      
+      const updatedFallbacks = currentFallbacks.map((fb: any) => {
+        if (typeof fb === "object" && fb !== null && fb.serviceId) {
+          const liveMatch = liveServiceMap.get(String(fb.serviceId));
+          if (liveMatch) {
+            const liveRate = parseFloat(liveMatch.rate) || 0;
+            const savedRate = fb.originalRate || 0;
+            if (Math.abs(liveRate - savedRate) > 0.001) {
+              fallbacksChanged = true;
+              return {
+                ...fb,
+                originalRate: liveRate,
+                customRate: parseFloat((liveRate * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
+                name: liveMatch.name,
+              };
+            }
+          }
         }
-      }
+        return fb;
+      });
 
-      // ── C. REPLACE DEAD SERVICE (auto-swap to best live alternative) ──
-      if (isDead) {
-        console.log(`AutoSync: Panel ${panel.id} | Service ${configuredService.serviceId} is dead. Finding replacement for ${configuredService.platform} ${configuredService.type}...`);
-
-        const keywords = getKeywords(configuredService.platform, configuredService.type);
-        let candidates = liveServices
-          .filter(s => {
-            const lowerName = s.name.toLowerCase();
-            if (lowerName.includes("disabled") || lowerName.includes("stop")) return false;
-            return keywords.every(kw => lowerName.includes(kw));
-          })
-          .sort((a, b) => scoreCandidateService(b) - scoreCandidateService(a));
-
-        if (candidates.length === 0) {
-          const msg = `⚠️ *AutoSync Critical*\nPanel: ${panel.name || panel.id}\nService *${configuredService.platform} ${configuredService.type}* went offline.\n❌ No matching candidates found to replace it!`;
-          console.warn(msg);
-          await sendTelegramAlert(msg);
-          continue;
-        }
-
-        // Best candidate = primary replacement
-        const replacement = candidates[0];
-        // Rest become new fallbacks
-        const newFallbacks = candidates.slice(1, MAX_FALLBACKS + 1).map(s => s.service);
-
-        const liveRate = parseFloat(replacement.rate) || 0;
-        const newCustomRate = parseFloat((liveRate * PRICE_MULTIPLIER).toFixed(6));
-
+      if (fallbacksChanged) {
         await prisma.adminService.update({
           where: { id: configuredService.id },
-          data: {
-            serviceId: replacement.service,
-            originalRate: liveRate,
-            customRate: newCustomRate,
-            name: replacement.name,
-            minQuantity: parseInt(replacement.min) || 10,
-            fallbackServiceIds: newFallbacks,
-          }
+          data: { fallbackServiceIds: updatedFallbacks }
         });
+      }
 
-        const log = await prisma.serviceChangeLog.create({
-          data: {
-            panelId: panel.id,
-            platform: configuredService.platform,
-            type: configuredService.type,
-            oldServiceId: configuredService.serviceId,
-            newServiceId: replacement.service,
-            oldServiceName: configuredService.name,
-            newServiceName: replacement.name,
-            reason: `Service ID ${configuredService.serviceId} went offline. Auto-switched to best organic-compatible alternative (min=${replacement.min}).`,
-          }
-        });
-        logs.push(log);
-
-        const platformKey = configuredService.platform.toLowerCase();
-        const typeKey = configuredService.type.toLowerCase();
-        if (!serviceIdsObj[platformKey]) serviceIdsObj[platformKey] = {};
-        serviceIdsObj[platformKey][typeKey] = replacement.service;
-        mappingChanged = true;
-
-        const organicNote = parseInt(replacement.min) <= ORGANIC_MIN_THRESHOLD
-          ? "✅ Organic compatible (min≤50)"
-          : "⚠️ Min>50 — will round quantities";
-
+      // ── C. DETECT DEAD PRIMARY SERVICE (alert only, do not auto-overwrite) ──
+      if (isDead) {
+        console.warn(`AutoSync: Primary service ID ${configuredService.serviceId} for ${configuredService.platform} ${configuredService.type} is offline.`);
+        
         await sendTelegramAlert(
-          `🔄 *AutoSync Swap*\nPanel: ${panel.name || panel.id}\nPlatform: ${configuredService.platform} | Type: ${configuredService.type}\n\n*Old*: ${configuredService.serviceId} (Offline)\n*New*: ${replacement.service} (${replacement.name})\n*Rate*: ₹${liveRate}/1k → Customer: ₹${newCustomRate}/1k (5x)\n${organicNote}\n*Fallbacks set*: ${newFallbacks.join(", ") || "none"}`
+          `⚠️ *AutoSync Warning: Primary Service Offline*\n` +
+          `Panel: ${panel.name || panel.id}\n` +
+          `Platform: *${configuredService.platform}* | Type: *${configuredService.type}*\n` +
+          `❌ Configured Primary ID *${configuredService.serviceId}* went offline or is disabled.\n` +
+          `ℹ️ Delivery will automatically use your configured fallbacks, but please update the primary ID in the Admin Panel ASAP.`
         );
       }
     }

@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const { action, panelId, platform, type, serviceId, originalRate, name, minQuantity, fallbackServiceIds } = body;
-  // customRate is always auto-computed as originalRate × 5 — never manually set
+  // customRate is always auto-computed as originalRate (USD) × 96 (exchange rate) × 5 (markup) — never manually set
+  const USD_TO_INR = 96;
   const PRICE_MULTIPLIER = 5;
 
   if (!panelId) {
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
             type: s.type,
             serviceId: s.serviceId,
             originalRate: s.originalRate,
-            customRate: parseFloat((s.originalRate * PRICE_MULTIPLIER).toFixed(6)),
+            customRate: parseFloat((s.originalRate * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
             name: s.name,
             minQuantity: s.minQuantity,
             fallbackServiceIds: s.fallbackServiceIds ?? [],
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
           update: {
             serviceId: s.serviceId,
             originalRate: s.originalRate,
-            customRate: parseFloat((s.originalRate * PRICE_MULTIPLIER).toFixed(6)),
+            customRate: parseFloat((s.originalRate * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
             name: s.name,
             minQuantity: s.minQuantity,
             fallbackServiceIds: s.fallbackServiceIds ?? [],
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
         type: typeLower,
         serviceId: String(serviceId),
         originalRate: parseFloat(originalRate),
-        customRate: parseFloat((parseFloat(originalRate) * PRICE_MULTIPLIER).toFixed(6)),
+        customRate: parseFloat((parseFloat(originalRate) * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
         fallbackServiceIds: fallbackServiceIds ?? [],
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
       update: {
         serviceId: String(serviceId),
         originalRate: parseFloat(originalRate),
-        customRate: parseFloat((parseFloat(originalRate) * PRICE_MULTIPLIER).toFixed(6)),
+        customRate: parseFloat((parseFloat(originalRate) * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
         fallbackServiceIds: fallbackServiceIds ?? [],
