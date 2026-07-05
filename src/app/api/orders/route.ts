@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Trigger delivery scheduling (fire-and-forget)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
   fetch(`${appUrl}/api/delivery/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-internal-key": process.env.NEXTAUTH_SECRET ?? "" },

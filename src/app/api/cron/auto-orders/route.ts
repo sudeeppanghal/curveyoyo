@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       post = await fetchLatestFacebookPost(sub.username);
     }
     
-    if (post && post.id !== sub.lastPostId) {
+    if (post && post.id && post.url && post.id !== sub.lastPostId) {
       // It's a new post! Place an order.
       try {
         const url = post.url;
