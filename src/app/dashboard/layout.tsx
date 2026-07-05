@@ -243,7 +243,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Content */}
-        <main style={{ flex:1, padding:"28px 28px", overflowY:"auto", maxWidth:1200 }}>
+        <main style={{ flex:1, padding:"28px 28px", overflowY:"auto", maxWidth:1440, width: "100%" }}>
           {children}
         </main>
       </div>

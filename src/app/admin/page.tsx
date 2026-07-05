@@ -1121,7 +1121,7 @@ export default function AdminPage() {
 
       `}</style>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
+      <div style={{ maxWidth: 1440, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
 
         {/* Header */}
 
