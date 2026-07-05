@@ -2105,7 +2105,7 @@ export default function AdminPage() {
 
                         {["User", "Network", "Transaction Hash / TXID", "Amount", "Status", "Date", "Actions"].map((h) => (
 
-                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          <th key={h} style={{ padding: "10px 12px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
 
                         ))}
 
@@ -2123,9 +2123,9 @@ export default function AdminPage() {
 
                           <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
+                            <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 12px" }}>
 
                               <span style={{
 
@@ -2145,22 +2145,22 @@ export default function AdminPage() {
 
                             </td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 12px" }}>
 
                               <code style={{ fontSize: 12, fontWeight: 700, color: N.accent }}>{p.txHash ? `${p.txHash.slice(0, 20)}…` : "—"}</code>
 
                             </td>
 
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 900, color: N.text }}>{p.amountUsdt ? `$${p.amountUsdt} USDT` : "—"}</td>
+                            <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 900, color: N.text }}>{p.amountUsdt ? `$${p.amountUsdt} USDT` : "—"}</td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 12px" }}>
 
                               <strong style={{ fontSize: 12, color: statusColors[p.status] ?? N.muted }}>{p.status}</strong>
 
                             </td>
 
-                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 12px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                            <td style={{ padding: "10px 12px" }}>
                               {(p.status === "PENDING" || p.status === "VERIFYING") ? (
                                 <div style={{ display: "flex", gap: 8 }}>
                                   <button onClick={() => {
@@ -2235,7 +2235,7 @@ export default function AdminPage() {
 
                         {["User Email", "Amount (₹)", "UTR Number", "Status", "Date", "Actions"].map((h) => (
 
-                          <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          <th key={h} style={{ padding: "10px 12px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
 
                         ))}
 
@@ -2253,18 +2253,18 @@ export default function AdminPage() {
 
                           <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
+                            <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.user?.email}</td>
 
-                            <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 800, color: p.amount < (settings.minDeposit ?? 500) ? "#dc2626" : "#16a34a" }}>
+                            <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 800, color: p.amount < (settings.minDeposit ?? 500) ? "#dc2626" : "#16a34a" }}>
                               ₹ {p.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                               {p.amount < (settings.minDeposit ?? 500) && (
                                 <span style={{ display: "block", fontSize: 9, color: "#dc2626", fontWeight: 900 }}>⚠️ BELOW MIN (NO REFUND)</span>
                               )}
                             </td>
 
-                            <td style={{ padding: "14px 24px", fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: N.accent }}>{p.utr}</td>
+                            <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: N.accent }}>{p.utr}</td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 12px" }}>
 
                               <span style={{
 
@@ -2284,9 +2284,9 @@ export default function AdminPage() {
 
                             </td>
 
-                            <td style={{ padding: "14px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleString()}</td>
+                            <td style={{ padding: "10px 12px", fontSize: 12, color: N.muted, fontWeight: 600 }}>{new Date(p.createdAt).toLocaleString()}</td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 12px" }}>
 
                               {p.status === "PENDING" ? (
 
@@ -3259,17 +3259,17 @@ export default function AdminPage() {
 
               {/* Table */}
 
-              <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+              <div style={{ overflowX: "auto", margin: "0 -16px" }}>
 
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 850 }}>
 
                   <thead>
 
                     <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
 
-                      {["User & Reel", "Speed & Curve", "Progress (%)", "Views (Delivered / Target / Rem.)", "Engagement Tracking", "Status", "Manual Overrides"].map((h) => (
+                      {["User & Reel", "Speed & Curve", "Delivery Progress", "Engagement", "Status", "Actions"].map((h) => (
 
-                        <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                        <th key={h} style={{ padding: "10px 8px", fontSize: 11, fontWeight: 800, textAlign: "left" }}>{h}</th>
 
                       ))}
 
@@ -3308,30 +3308,30 @@ export default function AdminPage() {
 
                           <tr key={o.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 8px", maxWidth: 180 }}>
 
-                              <p style={{ fontSize: 13, fontWeight: 700, color: N.text, margin: 0 }}>{o.user?.email}</p>
+                              <p style={{ fontSize: 12, fontWeight: 700, color: N.text, margin: 0, wordBreak: "break-all" }}>{o.user?.email}</p>
 
-                              <p style={{ fontSize: 10, fontFamily: "monospace", color: N.muted, margin: "2px 0" }}>ID: {o.id}</p>
-                               <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
+                              <p style={{ fontSize: 9, fontFamily: "monospace", color: N.muted, margin: "2px 0" }}>ID: {o.id}</p>
+                               <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: N.accent, fontWeight: 700, textDecoration: "none", wordBreak: "break-all" }}>
 
-                                {o.reel?.url?.length > 42 ? `${o.reel.url.slice(0, 42)}…` : o.reel?.url}
+                                {o.reel?.url?.length > 30 ? `${o.reel.url.slice(0, 30)}…` : o.reel?.url}
 
                               </a>
 
                             </td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 8px" }}>
 
                               <span style={{
 
-                                fontSize: 11,
+                                fontSize: 10,
 
                                 fontWeight: 800,
 
-                                padding: "4px 8px",
+                                padding: "3px 6px",
 
-                                borderRadius: 6,
+                                borderRadius: 4,
 
                                 background: "rgba(217,119,6,0.08)",
 
@@ -3339,71 +3339,67 @@ export default function AdminPage() {
 
                               }}>{o.curveStyle}</span>
 
-                              <p style={{ color: N.muted, fontSize: 11, margin: "4px 0 0", fontWeight: 600 }}>{o.durationHours}h schedule</p>
+                              <p style={{ color: N.muted, fontSize: 10, margin: "2px 0 0", fontWeight: 600 }}>{o.durationHours}h schedule</p>
 
                             </td>
 
-                            <td style={{ padding: "14px 24px" }}>
-                              <div style={{ width: 110 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 11, fontWeight: 800, color: pct === 100 ? "#16a34a" : N.accent }}>
-                                  <span>{pct}%</span>
-                                  <span style={{ fontSize: 10, color: N.muted }}>{o.status === "COMPLETED" ? "Done" : `${viewsRem.toLocaleString()} rem.`}</span>
-                                </div>
-                                <div style={{ width: "100%", height: 8, background: "rgba(200, 208, 231, 0.4)", borderRadius: 999, overflow: "hidden" }}>
+                            <td style={{ padding: "10px 8px" }}>
+                              <p style={{ color: "#16a34a", margin: 0, fontWeight: 800, fontSize: 12 }}>
+                                👁 {viewsDel.toLocaleString()} <span style={{ color: N.muted, fontSize: 10, fontWeight: 600 }}>/ {o.viewsTarget.toLocaleString()}</span>
+                                <span style={{ marginLeft: 6, fontSize: 11, color: pct === 100 ? "#16a34a" : N.accent }}>({pct}%)</span>
+                              </p>
+                              <div style={{ width: 110, marginTop: 4 }}>
+                                <div style={{ width: "100%", height: 6, background: "rgba(200, 208, 231, 0.4)", borderRadius: 999, overflow: "hidden" }}>
                                   <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "#16a34a" : N.accent, borderRadius: 999, transition: "width 0.3s ease" }} />
                                 </div>
                               </div>
-                            </td>
-
-                            <td style={{ padding: "14px 24px" }}>
-                              <p style={{ color: "#16a34a", margin: 0, fontWeight: 800, fontSize: 13 }}>👁 {viewsDel.toLocaleString()} <span style={{ color: N.muted, fontSize: 11, fontWeight: 600 }}>/ {o.viewsTarget.toLocaleString()}</span></p>
-                              <p style={{ color: o.status === "COMPLETED" ? N.muted : "#d97706", fontSize: 11, margin: "4px 0 0", fontWeight: 700 }}>
+                              <p style={{ color: o.status === "COMPLETED" ? N.muted : "#d97706", fontSize: 10, margin: "4px 0 0", fontWeight: 700 }}>
                                 ⏳ {viewsRem.toLocaleString()} views left
                               </p>
                             </td>
 
-                            <td style={{ padding: "14px 24px" }}>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, fontWeight: 700 }}>
+                            <td style={{ padding: "10px 8px" }}>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px", maxWidth: 160, fontSize: 10, fontWeight: 700 }}>
                                 {o.likesTarget > 0 && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.likesDelivered || 0) >= o.likesTarget ? "#16a34a" : N.text }}>
-                                    <span>👍</span> <span>{(o.likesDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.likesTarget.toLocaleString()}</span></span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 3, color: (o.likesDelivered || 0) >= o.likesTarget ? "#16a34a" : N.text }}>
+                                    <span>👍</span> <span>{(o.likesDelivered || 0).toLocaleString()}/{o.likesTarget.toLocaleString()}</span>
                                   </div>
                                 )}
                                 {o.savesTarget > 0 && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.savesDelivered || 0) >= o.savesTarget ? "#16a34a" : N.text }}>
-                                    <span>🔖</span> <span>{(o.savesDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.savesTarget.toLocaleString()}</span></span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 3, color: (o.savesDelivered || 0) >= o.savesTarget ? "#16a34a" : N.text }}>
+                                    <span>🔖</span> <span>{(o.savesDelivered || 0).toLocaleString()}/{o.savesTarget.toLocaleString()}</span>
                                   </div>
                                 )}
                                 {o.sharesTarget > 0 && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.sharesDelivered || 0) >= o.sharesTarget ? "#16a34a" : N.text }}>
-                                    <span>📤</span> <span>{(o.sharesDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.sharesTarget.toLocaleString()}</span></span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 3, color: (o.sharesDelivered || 0) >= o.sharesTarget ? "#16a34a" : N.text }}>
+                                    <span>📤</span> <span>{(o.sharesDelivered || 0).toLocaleString()}/{o.sharesTarget.toLocaleString()}</span>
                                   </div>
                                 )}
                                 {o.commentsTarget > 0 && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.commentsDelivered || 0) >= o.commentsTarget ? "#16a34a" : N.text }}>
-                                    <span>💬</span> <span>{(o.commentsDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.commentsTarget.toLocaleString()}</span></span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 3, color: (o.commentsDelivered || 0) >= o.commentsTarget ? "#16a34a" : N.text }}>
+                                    <span>💬</span> <span>{(o.commentsDelivered || 0).toLocaleString()}/{o.commentsTarget.toLocaleString()}</span>
                                   </div>
                                 )}
                                 {o.repostsTarget > 0 && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: (o.repostsDelivered || 0) >= o.repostsTarget ? "#16a34a" : N.text }}>
-                                    <span>🔁</span> <span>{(o.repostsDelivered || 0).toLocaleString()} <span style={{ color: N.muted, fontWeight: 500 }}>/ {o.repostsTarget.toLocaleString()}</span></span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 3, color: (o.repostsDelivered || 0) >= o.repostsTarget ? "#16a34a" : N.text }}>
+                                    <span>🔁</span> <span>{(o.repostsDelivered || 0).toLocaleString()}/{o.repostsTarget.toLocaleString()}</span>
                                   </div>
                                 )}
                                 {!(o.likesTarget > 0 || o.savesTarget > 0 || o.sharesTarget > 0 || o.commentsTarget > 0 || o.repostsTarget > 0) && (
-                                  <span style={{ color: N.muted, fontStyle: "italic" }}>No extra engagement</span>
+                                  <span style={{ color: N.muted, fontStyle: "italic", fontSize: 9 }}>No extra engagement</span>
                                 )}
                               </div>
                             </td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 8px" }}>
 
-                              <strong style={{ fontSize: 12, color: statusColors[o.status] ?? N.muted }}>{o.status}</strong>
+                              <strong style={{ fontSize: 11, color: statusColors[o.status] ?? N.muted }}>{o.status}</strong>
 
                             </td>
 
-                            <td style={{ padding: "14px 24px" }}>
+                            <td style={{ padding: "10px 8px" }}>
 
-                              <div style={{ display: "flex", gap: 8 }}>
+                              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: 130 }}>
 
                                 {o.status === "DELIVERING" && (
 
@@ -3493,32 +3489,32 @@ export default function AdminPage() {
                 <thead>
                   <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
                     {["Order ID & Reel", "User", "Error Reason", "Status", "Actions"].map((h) => (
-                      <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                      <th key={h} style={{ padding: "10px 12px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {orders.filter(o => o.status === "FAILED").map(o => (
                     <tr key={o.id} style={{ borderBottom: `1px solid ${N.border}` }}>
-                      <td style={{ padding: "16px 24px" }}>
+                      <td style={{ padding: "10px 12px" }}>
                         <div style={{ fontSize: 13, fontWeight: 800, color: N.text }}>{o.id}</div>
                         <a href={o.reel.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, wordBreak: "break-all" }}>
                           {o.reel.url.substring(0, 30)}...
                         </a>
                       </td>
-                      <td style={{ padding: "16px 24px" }}>
+                      <td style={{ padding: "10px 12px" }}>
                         <div style={{ fontSize: 13, fontWeight: 800, color: N.text }}>{o.user.name || "Unknown"}</div>
                         <div style={{ fontSize: 11, color: N.muted }}>{o.user.email}</div>
                       </td>
-                      <td style={{ padding: "16px 24px" }}>
+                      <td style={{ padding: "10px 12px" }}>
                         <div style={{ padding: "8px 12px", background: "rgba(220,38,38,0.1)", color: "#dc2626", borderRadius: 8, fontSize: 12, fontWeight: 700, wordBreak: "break-word" }}>
                           {o.failReason || "No specific reason logged (check panel)"}
                         </div>
                       </td>
-                      <td style={{ padding: "16px 24px" }}>
+                      <td style={{ padding: "10px 12px" }}>
                         <span style={{ fontSize: 11, fontWeight: 800, color: "#dc2626", background: "rgba(220, 38, 38, 0.1)", padding: "4px 10px", borderRadius: 20 }}>FAILED</span>
                       </td>
-                      <td style={{ padding: "16px 24px" }}>
+                      <td style={{ padding: "10px 12px" }}>
                         <button onClick={() => handleCampaignAction(o.id, "resume")} className="neo-btn" style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", border: "none", cursor: "pointer", background: N.bg, boxShadow: N.raisedSm }}>
                           Resume
                         </button>
@@ -3618,21 +3614,21 @@ export default function AdminPage() {
 
                             <tr key={p.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
-                              <td style={{ padding: "12px 24px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{p.user?.email}</td>
+                              <td style={{ padding: "10px 12px", fontSize: 13, color: N.muted, fontWeight: 600 }}>{p.user?.email}</td>
 
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.name}</td>
+                              <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.name}</td>
 
-                              <td style={{ padding: "12px 24px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
+                              <td style={{ padding: "10px 12px", fontSize: 12, color: N.muted, fontFamily: "monospace" }}>{p.apiUrl}</td>
 
-                              <td style={{ padding: "12px 24px" }}>
+                              <td style={{ padding: "10px 12px" }}>
 
                                 <strong style={{ fontSize: 12, color: statusColor }}>{p.status}</strong>
 
                               </td>
 
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.lastResponseMs ? `${p.lastResponseMs}ms` : "—"}</td>
+                              <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.lastResponseMs ? `${p.lastResponseMs}ms` : "—"}</td>
 
-                              <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.successRate.toFixed(1)}%</td>
+                              <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: N.text }}>{p.successRate.toFixed(1)}%</td>
 
                             </tr>
 
@@ -3704,7 +3700,7 @@ export default function AdminPage() {
                               return (
                                 <React.Fragment key={g.orderId}>
                                   <tr className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                                    <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 900, color: N.text }}>
+                                    <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 900, color: N.text }}>
                                       <span
                                         onClick={() => setExpandedOrders(prev => ({ ...prev, [g.orderId]: !isExpanded }))}
                                         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, color: N.accent }}
@@ -3712,8 +3708,8 @@ export default function AdminPage() {
                                         {isExpanded ? "▼" : "▶"} {g.orderId}
                                       </span>
                                     </td>
-                                    <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>{g.email}</td>
-                                    <td style={{ padding: "14px 24px" }}>
+                                    <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: N.text }}>{g.email}</td>
+                                    <td style={{ padding: "10px 12px" }}>
                                       {g.url && g.url !== "No URL" ? (
                                         <a href={g.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: N.accent, fontWeight: 700, textDecoration: "none" }}>
                                           {g.url.length > 50 ? `${g.url.slice(0, 50)}…` : g.url}
@@ -3722,17 +3718,17 @@ export default function AdminPage() {
                                         <span style={{ fontSize: 12, color: N.muted }}>No URL</span>
                                       )}
                                     </td>
-                                    <td style={{ padding: "14px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>
+                                    <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: N.text }}>
                                       {g.events.length} ticks
                                     </td>
-                                    <td style={{ padding: "14px 24px" }}>
+                                    <td style={{ padding: "10px 12px" }}>
                                       {lastEvent ? (
                                         <strong style={{ fontSize: 12, color: statusColors[lastEvent.status] ?? N.muted }}>
                                           {lastEvent.status}
                                         </strong>
                                       ) : "—"}
                                     </td>
-                                    <td style={{ padding: "14px 24px" }}>
+                                    <td style={{ padding: "10px 12px" }}>
                                       <button
                                         onClick={() => setExpandedOrders(prev => ({ ...prev, [g.orderId]: !isExpanded }))}
                                         className="neo-btn"
@@ -3744,7 +3740,7 @@ export default function AdminPage() {
                                   </tr>
                                   {isExpanded && (
                                     <tr style={{ background: "rgba(8,1,15,0.4)" }}>
-                                      <td colSpan={6} style={{ padding: "16px 24px" }}>
+                                      <td colSpan={6} style={{ padding: "10px 12px" }}>
                                         <div style={{ border: `1.5px solid #1c0a35`, borderRadius: 16, padding: 20, background: "#0c0218", boxShadow: N.inset }}>
                                           <h4 style={{ margin: "0 0 12px 0", color: "#f3e8ff", fontSize: 13, fontWeight: 900 }}>
                                             📋 Webhook Delivery Ticks Log for Order ID: <span style={{ color: N.accent }}>{g.orderId}</span>
@@ -3842,7 +3838,7 @@ export default function AdminPage() {
                     setAffiliateSearchEmail("bizanomarketing.carrd.co@gmail.com");
                     fetchAffiliateStats("bizanomarketing.carrd.co@gmail.com");
                   }}
-                  style={{ padding: "12px 24px", borderRadius: 14, background: "#d97706", color: "#fff", fontWeight: 800, border: "none", cursor: "pointer", boxShadow: "0 4px 12px rgba(217,119,6,0.3)" }}
+                  style={{ padding: "10px 12px", borderRadius: 14, background: "#d97706", color: "#fff", fontWeight: 800, border: "none", cursor: "pointer", boxShadow: "0 4px 12px rgba(217,119,6,0.3)" }}
                 >
                   📊 Load Bizano Stats Now
                 </button>
@@ -4083,7 +4079,7 @@ export default function AdminPage() {
                         disabled={adminReplying || !adminReplyText.trim()}
                         className="neo-btn"
                         style={{
-                          padding: "14px 24px",
+                          padding: "10px 12px",
                           borderRadius: 14,
                           background: !adminReplyText.trim() ? N.muted : "#4f46e5",
                           color: "#ffffff",
