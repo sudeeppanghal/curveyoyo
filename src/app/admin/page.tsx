@@ -73,7 +73,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "failed_orders" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync";
 
 
 
@@ -1460,7 +1460,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "system", "tickets", "affiliates", "blogs", "auto_sync"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "failed_orders", "system", "tickets", "affiliates", "blogs", "auto_sync"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1475,6 +1475,7 @@ export default function AdminPage() {
               admin_panels: "🚀 ",
 
               campaigns: "📦 ",
+              failed_orders: "🚨 ",
 
               system: "⚡ ",
               tickets: "✉️ ",
@@ -1991,7 +1992,7 @@ export default function AdminPage() {
                                 fontWeight: 800,
                                 boxShadow: N.raisedSm,
                                 cursor: "pointer",
-                                whiteSpace: "nowrap"
+                                wordBreak: "break-word"
                               }}
                             >
                               {u.walletMode ? "✓ Wallet ON" : "Wallet OFF"}
@@ -1999,7 +2000,7 @@ export default function AdminPage() {
                           </td>
 
                           {/* Wallet Balance Edit */}
-                          <td style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>
+                          <td style={{ padding: "12px 8px", wordBreak: "break-word" }}>
                             {u.walletMode ? (
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <span style={{ fontSize: 12, fontWeight: 800, color: "#16a34a" }}>
@@ -2032,11 +2033,11 @@ export default function AdminPage() {
                               <span style={{ fontSize: 12, color: N.muted, fontWeight: 600 }}>—</span>
                             )}
                           </td>
-                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: "#16a34a", wordBreak: "break-word" }}>
                             ₹ {((u as any).totalDepositedInr || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}<br/>
                             {((u as any).totalDepositedUsdt > 0) && <span style={{ fontSize: 10, color: N.muted }}>$ {((u as any).totalDepositedUsdt).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>}
                           </td>
-                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.accent, whiteSpace: "nowrap" }}>
+                          <td style={{ padding: "12px 8px", fontSize: 12, fontWeight: 700, color: N.accent, wordBreak: "break-word" }}>
                             ₹ {((u as any).totalSpent || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </td>
                           <td style={{ padding: "12px 8px" }}>
@@ -2135,7 +2136,7 @@ export default function AdminPage() {
 
                 <div style={{ overflowX: "auto", margin: "0 -32px" }}>
 
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
                     <thead>
 
@@ -2265,7 +2266,7 @@ export default function AdminPage() {
 
                 <div style={{ overflowX: "auto", margin: "0 -32px" }}>
 
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
                     <thead>
 
@@ -2555,7 +2556,7 @@ export default function AdminPage() {
                                 cursor: "pointer",
                                 background: servicePlatformFilter ? N.accentBg : N.inset,
                                 color: servicePlatformFilter ? "#fff" : N.text,
-                                whiteSpace: "nowrap",
+                                wordBreak: "break-word",
                                 boxShadow: servicePlatformFilter ? N.raisedSm : "none"
                               }}
                             >
@@ -3179,7 +3180,7 @@ export default function AdminPage() {
 
               <div style={{ overflowX: "auto", margin: "0 -32px" }}>
 
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
                   <thead>
 
@@ -3395,7 +3396,68 @@ export default function AdminPage() {
 
           {/* ── SYSTEM HEALTH TAB ─── */}
 
-          {tab === "system" && (
+          
+        {/* Failed Orders Tab */}
+        {tab === "failed_orders" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              <div>
+                <h2 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>Failed Campaigns</h2>
+                <p style={{ fontSize: 13, color: N.muted, margin: "4px 0 0", fontWeight: 600 }}>Review orders that failed delivery</p>
+              </div>
+            </div>
+            
+            <div style={{ overflowX: "auto", margin: "0 -32px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                    {["Order ID & Reel", "User", "Error Reason", "Status", "Actions"].map((h) => (
+                      <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.filter(o => o.status === "FAILED").map(o => (
+                    <tr key={o.id} style={{ borderBottom: `1px solid ${N.border}` }}>
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: N.text }}>{o.id}</div>
+                        <a href={o.reel.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, wordBreak: "break-all" }}>
+                          {o.reel.url.substring(0, 30)}...
+                        </a>
+                      </td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: N.text }}>{o.user.name || "Unknown"}</div>
+                        <div style={{ fontSize: 11, color: N.muted }}>{o.user.email}</div>
+                      </td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <div style={{ padding: "8px 12px", background: "rgba(220,38,38,0.1)", color: "#dc2626", borderRadius: 8, fontSize: 12, fontWeight: 700, wordBreak: "break-word" }}>
+                          {o.failReason || "No specific reason logged (check panel)"}
+                        </div>
+                      </td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: "#dc2626", background: "rgba(220, 38, 38, 0.1)", padding: "4px 10px", borderRadius: 20 }}>FAILED</span>
+                      </td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <button onClick={() => handleCampaignAction(o.id, "resume")} className="neo-btn" style={{ padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, color: "#16a34a", border: "none", cursor: "pointer", background: N.bg, boxShadow: N.raisedSm }}>
+                          Resume
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {orders.filter(o => o.status === "FAILED").length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: 40, textAlign: "center", color: N.muted, fontSize: 14, fontWeight: 700 }}>
+                        No failed orders found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {tab === "system" && (
 
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
@@ -3449,7 +3511,7 @@ export default function AdminPage() {
 
                   <div style={{ overflowX: "auto", margin: "0 -32px" }}>
 
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
                       <thead>
 
@@ -3544,7 +3606,7 @@ export default function AdminPage() {
                       const groupedList = Object.values(groupedOrders);
 
                       return (
-                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
                           <thead>
                             <tr style={{ borderBottom: `1px solid ${N.border}`, color: N.muted }}>
                               {["Order ID", "Campaign User", "Reel / Video URL", "Total Ticks", "Last Run Status", "Actions"].map((h) => (
@@ -3949,7 +4011,7 @@ export default function AdminPage() {
                           cursor: !adminReplyText.trim() ? "not-allowed" : "pointer",
                           boxShadow: !adminReplyText.trim() ? "none" : "0 4px 14px rgba(79, 70, 229, 0.3)",
                           fontSize: 13,
-                          whiteSpace: "nowrap",
+                          wordBreak: "break-word",
                           transition: "all 0.2s"
                         }}
                       >
@@ -3986,7 +4048,7 @@ export default function AdminPage() {
                                 <td style={{ padding: "14px 16px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text }}>{t.id}</td>
                                 <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 700, color: N.text }}>{t.user?.email || "Unknown"}</td>
                                 <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 800, color: N.text }}>{t.subject}</td>
-                                <td style={{ padding: "14px 16px", fontSize: 12, color: N.muted, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                <td style={{ padding: "14px 16px", fontSize: 12, color: N.muted, maxWidth: 200, wordBreak: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
                                   {t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1].message : t.message}
                                 </td>
                                 <td style={{ padding: "14px 16px" }}>
