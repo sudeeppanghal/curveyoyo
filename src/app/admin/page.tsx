@@ -227,6 +227,7 @@ export default function AdminPage() {
   const [savedServices, setSavedServices] = useState<any[]>([]);
 
   const [fetchingServices, setFetchingServices] = useState(false);
+  const [isManualInput, setIsManualInput] = useState(false);
 
   const [savingService, setSavingService] = useState(false);
 
@@ -260,6 +261,7 @@ export default function AdminPage() {
   const [pricingCustomRate, setPricingCustomRate] = useState("");
 
   const [pricingName, setPricingName] = useState("");
+  const [pricingFallbacks, setPricingFallbacks] = useState<{ serviceId: string; originalRate: string; customRate: string; name: string }[]>([]);
 
   const [pricingMultiplier, setPricingMultiplier] = useState("");
 
@@ -680,61 +682,40 @@ export default function AdminPage() {
   };
 
   const handleLoadServices = async (panelId: string) => {
-
     setSelectedPanelId(panelId);
-
-    setFetchingServices(true);
-
     setLiveServices([]);
-
     setSavedServices([]);
+    setIsManualInput(false); // Default to dropdown select mode when switching panels
 
+    // 1. Fetch saved services config immediately (fast DB query)
     try {
-
-      // Fetch live services from SMM API
-
-      const liveRes = await fetch(`/api/admin/services?action=fetch&panelId=${panelId}`, { headers });
-
-      if (liveRes.ok) {
-
-        const liveJson = await liveRes.json();
-
-        setLiveServices(liveJson.services ?? []);
-
-      } else {
-
-        const errJson = await liveRes.json();
-
-        setError(errJson.error ?? "Failed to load live services from SMM API");
-
-        setTimeout(() => setError(""), 4000);
-
-      }
-
-      // Fetch saved services config
-
       const savedRes = await fetch(`/api/admin/services?panelId=${panelId}`, { headers });
-
       if (savedRes.ok) {
-
         const savedJson = await savedRes.json();
-
         setSavedServices(savedJson.services ?? []);
-
       }
-
     } catch (e) {
-
-      setError(String(e));
-
-      setTimeout(() => setError(""), 3000);
-
-    } finally {
-
-      setFetchingServices(false);
-
+      console.error("Failed to load saved services configuration", e);
     }
 
+    // 2. Fetch live services list from external SMM API in background
+    setFetchingServices(true);
+    try {
+      const liveRes = await fetch(`/api/admin/services?action=fetch&panelId=${panelId}`, { headers });
+      if (liveRes.ok) {
+        const liveJson = await liveRes.json();
+        setLiveServices(liveJson.services ?? []);
+      } else {
+        const errJson = await liveRes.json();
+        setError(errJson.error ?? "Failed to load live services from SMM API");
+        setTimeout(() => setError(""), 4000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setFetchingServices(false);
+    }
   };
 
   const handleSyncAllServices = async () => {
@@ -777,64 +758,44 @@ export default function AdminPage() {
     try {
 
       const res = await fetch("/api/admin/services", {
-
         method: "POST",
-
         headers,
-
         body: JSON.stringify({
-
           panelId: selectedPanelId,
-
           platform: pricingPlatform,
-
           type: pricingType,
-
           serviceId: pricingServiceId,
-
           originalRate: parseFloat(pricingOriginalRate) || 0,
-
           customRate: parseFloat(pricingCustomRate),
-
           name: pricingName,
           minQuantity: pricingMin ? parseInt(pricingMin) : 10,
-
+          fallbackServiceIds: pricingFallbacks.filter((f: any) => f.serviceId.trim() !== "").map((f: any) => ({
+            serviceId: f.serviceId.trim(),
+            originalRate: parseFloat(f.originalRate) || 0,
+            customRate: parseFloat(f.customRate) || 0,
+            name: f.name.trim()
+          }))
         }),
-
       });
 
       if (res.ok) {
-
         setSaved(`✅ Successfully mapped Service #${pricingServiceId} across all API keys!`);
-
         setPricingOriginalRate("");
-
         setPricingCustomRate("");
-
         setPricingName("");
-
+        setPricingFallbacks([]);
         setTimeout(() => setSaved(""), 2000);
 
         // Refresh saved services config
-
         const savedRes = await fetch(`/api/admin/services?panelId=${selectedPanelId}`, { headers });
-
         if (savedRes.ok) {
-
           const savedJson = await savedRes.json();
-
           setSavedServices(savedJson.services ?? []);
-
         }
-
       } else {
-
         const errJson = await res.json();
-
         setError(errJson.error ?? "Failed to save pricing");
-
         setTimeout(() => setError(""), 3000);
-
       }
 
     } catch (e) {
@@ -2565,107 +2526,104 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        {fetchingServices ? (
+                        {isManualInput || (!fetchingServices && liveServices.length === 0) ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            <div style={{ display: "flex", gap: 10 }}>
+                              <input value={pricingServiceId} onChange={e => {
+                                const val = e.target.value;
+                                setPricingServiceId(val);
+                                const selected = liveServices.find(s => String(s.service) === val.trim());
+                                if (selected) {
+                                  setPricingOriginalRate(String(selected.rate || ""));
+                                  setPricingName(selected.name ?? "");
+                                  setPricingMin(String(selected.min ?? ""));
+                                  setPricingMax(String(selected.max ?? ""));
+                                  if (pricingMultiplier) {
+                                    handleMultiplierChange(pricingMultiplier, String(selected.rate || ""));
+                                  }
+                                }
+                              }} placeholder="Service ID (e.g. 1042)"
+                                style={{ flex:1, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, fontWeight: 800 }} />
 
-                          <p style={{ fontSize:12, color:N.muted, margin: "6px 0", fontWeight:600 }}>Loading services list from API…</p>
+                              <input type="number" step="0.000001" value={pricingOriginalRate} onChange={e => setPricingOriginalRate(e.target.value)} placeholder="Cost Rate per 1k"
+                                style={{ width: 130, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, fontWeight: 800 }} />
+                            </div>
+                            
+                            <input value={pricingName} onChange={e => setPricingName(e.target.value)} placeholder="Service Name (Optional reference)"
+                              style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, fontWeight: 800 }} />
+                            
+                            {!fetchingServices && liveServices.length > 0 && (
+                              <button type="button" onClick={() => setIsManualInput(false)}
+                                style={{ alignSelf: "flex-start", background: "none", border: "none", color: N.accent, fontSize: 11, fontWeight: 800, cursor: "pointer", padding: "4px 8px" }}>
+                                🌐 Switch back to SMM API Dropdown List
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                              {fetchingServices ? (
+                                <span style={{ fontSize: 11, color: N.muted, fontWeight: 700, animation: "pulse 1.5s infinite" }}>
+                                  ⏳ Loading {pricingPlatform} services from API...
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>
+                                  ✅ loaded {liveServices.length} services from API
+                                </span>
+                              )}
+                              <button type="button" onClick={() => setIsManualInput(true)}
+                                style={{ padding: "6px 12px", borderRadius: 8, fontSize: 10, fontWeight: 900, border: `1.5px dashed ${N.accent}`, background: "transparent", color: N.accent, cursor: "pointer" }}>
+                                ⌨️ Type ID Manually
+                              </button>
+                            </div>
 
-                        ) : liveServices.length === 0 ? (
-
-                          <div style={{ display: "flex", gap: 10 }}>
-
-                            <input value={pricingServiceId} onChange={e => {
+                            <select value={pricingServiceId} onChange={e => {
                               const val = e.target.value;
                               setPricingServiceId(val);
-                              const selected = liveServices.find(s => String(s.service) === val.trim());
+                              const selected = liveServices.find(s => String(s.service) === val);
                               if (selected) {
-                                setPricingOriginalRate(String(selected.rate || ""));
+                                setPricingOriginalRate(selected.rate);
                                 setPricingName(selected.name ?? "");
-                                setPricingMin(String(selected.min ?? ""));
-                                setPricingMax(String(selected.max ?? ""));
+                                setPricingMin(selected.min ?? "");
+                                setPricingMax(selected.max ?? "");
                                 if (pricingMultiplier) {
-                                  handleMultiplierChange(pricingMultiplier, String(selected.rate || ""));
+                                  handleMultiplierChange(pricingMultiplier, selected.rate);
                                 }
                               }
-                            }} placeholder="e.g. 1042"
-
-                              style={{ flex:1, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-
-                            <input type="number" step="0.01" value={pricingOriginalRate} onChange={e => setPricingOriginalRate(e.target.value)} placeholder="Rate per 1k"
-
-                              style={{ width: 110, padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm }} />
-
+                            }}
+                              style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer", fontWeight: 800 }}>
+                              <option value="">-- Select Service from API --</option>
+                              {liveServices.filter(s => {
+                                if (serviceSearch) {
+                                  const q = serviceSearch.toLowerCase();
+                                  const match = String(s.service).includes(q) || String(s.name || "").toLowerCase().includes(q) || String(s.category || "").toLowerCase().includes(q);
+                                  if (!match) return false;
+                                }
+                                if (servicePlatformFilter && pricingPlatform) {
+                                  const p = pricingPlatform.toLowerCase();
+                                  const kwMap: Record<string, string[]> = {
+                                    instagram: ["instagram", "ig", "insta", "reels"],
+                                    tiktok: ["tiktok", "tt", "tok"],
+                                    youtube: ["youtube", "yt", "shorts"],
+                                    telegram: ["telegram", "tg"],
+                                    facebook: ["facebook", "fb"],
+                                    twitter: ["twitter", " x ", "retweet"],
+                                  };
+                                  const kws = kwMap[p] || [p];
+                                  const platMatch = kws.some(kw => String(s.name || "").toLowerCase().includes(kw) || String(s.category || "").toLowerCase().includes(kw));
+                                  const anyPlatExists = liveServices.some(x => kws.some(kw => String(x.name || "").toLowerCase().includes(kw) || String(x.category || "").toLowerCase().includes(kw)));
+                                  if (!platMatch && anyPlatExists) {
+                                    return false;
+                                  }
+                                }
+                                return true;
+                              }).map(s => (
+                                <option key={s.service} value={s.service}>
+                                  #{s.service} - {s.name?.slice(0, 50)} (Cost: ${s.rate}/1k | Min: {s.min})
+                                </option>
+                              ))}
+                            </select>
                           </div>
-
-                        ) : (
-
-                          <select value={pricingServiceId} onChange={e => {
-
-                            const val = e.target.value;
-
-                            setPricingServiceId(val);
-
-                            const selected = liveServices.find(s => String(s.service) === val);
-
-                            if (selected) {
-
-                              setPricingOriginalRate(selected.rate);
-
-                              setPricingName(selected.name ?? "");
-
-                              setPricingMin(selected.min ?? "");
-
-                              setPricingMax(selected.max ?? "");
-
-                              if (pricingMultiplier) {
-
-                                handleMultiplierChange(pricingMultiplier, selected.rate);
-
-                              }
-
-                            }
-
-                          }}
-
-                            style={{ width:"100%", padding:"10px 14px", borderRadius:10, fontSize:12, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow: N.raisedSm, cursor: "pointer" }}>
-
-                            <option value="">-- Select Service from API --</option>
-
-                            {liveServices.filter(s => {
-                              if (serviceSearch) {
-                                const q = serviceSearch.toLowerCase();
-                                const match = String(s.service).includes(q) || String(s.name || "").toLowerCase().includes(q) || String(s.category || "").toLowerCase().includes(q);
-                                if (!match) return false;
-                              }
-                              if (servicePlatformFilter && pricingPlatform) {
-                                const p = pricingPlatform.toLowerCase();
-                                const kwMap: Record<string, string[]> = {
-                                  instagram: ["instagram", "ig", "insta", "reels"],
-                                  tiktok: ["tiktok", "tt", "tok"],
-                                  youtube: ["youtube", "yt", "shorts"],
-                                  telegram: ["telegram", "tg"],
-                                  facebook: ["facebook", "fb"],
-                                  twitter: ["twitter", " x ", "retweet"],
-                                };
-                                const kws = kwMap[p] || [p];
-                                const platMatch = kws.some(kw => String(s.name || "").toLowerCase().includes(kw) || String(s.category || "").toLowerCase().includes(kw));
-                                const anyPlatExists = liveServices.some(x => kws.some(kw => String(x.name || "").toLowerCase().includes(kw) || String(x.category || "").toLowerCase().includes(kw)));
-                                if (!platMatch && anyPlatExists) {
-                                  return false;
-                                }
-                              }
-                              return true;
-                            }).map(s => (
-
-                              <option key={s.service} value={s.service}>
-
-                                #{s.service} - {s.name?.slice(0, 50)} (Cost: ${s.rate}/1k | Min: {s.min} | Max: {s.max})
-
-                              </option>
-
-                            ))}
-
-                          </select>
-
                         )}
 
                       </div>
@@ -2802,12 +2760,92 @@ export default function AdminPage() {
 
                       </div>
 
+                      {/* 6. Fallback Services configuration */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: `1px solid ${N.border}`, paddingTop: 14, marginTop: 4 }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 800, color: N.muted, marginBottom: 2 }}>
+                          🛡️ 6. Fallback SMM Backup Services ({pricingFallbacks.length})
+                        </label>
+                        <p style={{ fontSize: 10, color: N.muted, margin: "0 0 6px", fontWeight: 600 }}>
+                          Configure backup SMM service IDs. If the primary service fails, the PACING engine will automatically fall back to these IDs.
+                        </p>
+                        
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, background: N.bg, padding: 12, borderRadius: 12, border: `1.5px dashed ${N.border}`, boxShadow: N.inset }}>
+                          {pricingFallbacks.map((fb: any, idx: number) => (
+                            <div key={idx} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <input
+                                value={fb.serviceId}
+                                onChange={e => {
+                                  const updated = [...pricingFallbacks];
+                                  updated[idx].serviceId = e.target.value;
+                                  setPricingFallbacks(updated);
+                                }}
+                                placeholder="Backup ID"
+                                style={{ width: 85, padding: "8px 10px", borderRadius: 8, fontSize: 11, background: N.inset, border: "none", color: N.text, outline: "none", fontWeight: 700 }}
+                              />
+                              <input
+                                type="number"
+                                step="0.000001"
+                                value={fb.originalRate}
+                                onChange={e => {
+                                  const updated = [...pricingFallbacks];
+                                  updated[idx].originalRate = e.target.value;
+                                  // Auto calculate custom rate = original rate * 5
+                                  const val = parseFloat(e.target.value);
+                                  if (!isNaN(val)) {
+                                    updated[idx].customRate = String(parseFloat((val * 5).toFixed(6)));
+                                  }
+                                  setPricingFallbacks(updated);
+                                }}
+                                placeholder="Cost rate"
+                                style={{ width: 95, padding: "8px 10px", borderRadius: 8, fontSize: 11, background: N.inset, border: "none", color: N.text, outline: "none", fontWeight: 700 }}
+                              />
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={fb.customRate}
+                                onChange={e => {
+                                  const updated = [...pricingFallbacks];
+                                  updated[idx].customRate = e.target.value;
+                                  setPricingFallbacks(updated);
+                                }}
+                                placeholder="Custom ₹"
+                                style={{ width: 95, padding: "8px 10px", borderRadius: 8, fontSize: 11, background: N.inset, border: "none", color: "#16a34a", outline: "none", fontWeight: 700 }}
+                              />
+                              <input
+                                value={fb.name}
+                                onChange={e => {
+                                  const updated = [...pricingFallbacks];
+                                  updated[idx].name = e.target.value;
+                                  setPricingFallbacks(updated);
+                                }}
+                                placeholder="Description (Optional)"
+                                style={{ flex: 1, padding: "8px 10px", borderRadius: 8, fontSize: 11, background: N.inset, border: "none", color: N.text, outline: "none", fontWeight: 600 }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPricingFallbacks(pricingFallbacks.filter((_: any, i: number) => i !== idx));
+                                }}
+                                style={{ background: "none", border: "none", color: "#dc2626", fontWeight: 900, cursor: "pointer", padding: "0 6px", fontSize: 13 }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+
+                          <button
+                            type="button"
+                            onClick={() => setPricingFallbacks([...pricingFallbacks, { serviceId: "", originalRate: "", customRate: "", name: "" }])}
+                            style={{ alignSelf: "flex-start", border: `1.2px dashed ${N.accent}`, background: "rgba(168, 85, 247, 0.04)", color: N.accent, padding: "6px 12px", borderRadius: 8, fontSize: 10, fontWeight: 800, cursor: "pointer", transition: "all 0.15s ease" }}
+                          >
+                            ➕ Add Fallback Backup Service
+                          </button>
+                        </div>
+                      </div>
+
                       <button onClick={handleSaveServicePrice} disabled={savingService} className="neo-btn"
-
-                        style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer", opacity: savingService ? 0.5 : 1 }}>
-
+                        style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 10, fontSize: 12, fontWeight: 850, border: "none", color: "#ffffff", background: N.accentBg, boxShadow: N.raisedSm, cursor: "pointer", opacity: savingService ? 0.5 : 1, marginTop: 10 }}>
                         {savingService ? "Saving configuration…" : "Save Custom Pricing"}
-
                       </button>
 
                     </div>
@@ -2840,6 +2878,37 @@ export default function AdminPage() {
                               setPricingCustomRate(String(s.customRate || ""));
                               setPricingName(s.name || "");
                               setPricingMin(String(s.minQuantity ?? 10));
+
+                              let fallbacks: any[] = [];
+                              if (s.fallbackServiceIds) {
+                                try {
+                                  const parsed = typeof s.fallbackServiceIds === "string" 
+                                    ? JSON.parse(s.fallbackServiceIds) 
+                                    : s.fallbackServiceIds;
+                                  if (Array.isArray(parsed)) {
+                                    fallbacks = parsed.map(item => {
+                                      if (typeof item === "object" && item !== null) {
+                                        return {
+                                          serviceId: String(item.serviceId || ""),
+                                          originalRate: String(item.originalRate || ""),
+                                          customRate: String(item.customRate || ""),
+                                          name: item.name || ""
+                                        };
+                                      } else {
+                                        return {
+                                          serviceId: String(item || ""),
+                                          originalRate: "",
+                                          customRate: "",
+                                          name: ""
+                                        };
+                                      }
+                                    });
+                                  }
+                                } catch (e) {
+                                  console.error("Failed to parse fallbacks", e);
+                                }
+                              }
+                              setPricingFallbacks(fallbacks);
                             }} style={{ padding: 12, borderRadius: 12, background: N.bg, boxShadow: N.raisedSm, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", border: pricingServiceId === String(s.serviceId) && pricingType === s.type ? `1.5px solid ${N.accent}` : "none", transition: "all 0.2s" }} title="Click to edit this service configuration">
 
                               <div>

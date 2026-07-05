@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { action, panelId, platform, type, serviceId, originalRate, name, minQuantity } = body;
+  const { action, panelId, platform, type, serviceId, originalRate, name, minQuantity, fallbackServiceIds } = body;
   // customRate is always auto-computed as originalRate × 5 — never manually set
   const PRICE_MULTIPLIER = 5;
 
@@ -180,6 +180,7 @@ export async function POST(request: NextRequest) {
         customRate: parseFloat((parseFloat(originalRate) * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
+        fallbackServiceIds: fallbackServiceIds ?? [],
       },
       update: {
         serviceId: String(serviceId),
@@ -187,6 +188,7 @@ export async function POST(request: NextRequest) {
         customRate: parseFloat((parseFloat(originalRate) * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
+        fallbackServiceIds: fallbackServiceIds ?? [],
       },
     });
 
