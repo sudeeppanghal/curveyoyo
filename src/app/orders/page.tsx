@@ -51,6 +51,29 @@ export default function OrdersPage() {
       .catch(() => setLoading(false));
   };
 
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const handleAction = async (id: string, action: "pause" | "cancel" | "resume") => {
+    if (!confirm(`Are you sure you want to ${action} this campaign?${action === "cancel" ? " You will receive a partial refund for the remaining views." : ""}`)) return;
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to perform action");
+      
+      // Update local state instead of doing a full reload for better UX
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: data.status } : o));
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   useEffect(() => { load(); }, []);
 
   const filtered = filter === "All" ? orders : orders.filter(o => o.status === filter);
@@ -188,6 +211,50 @@ export default function OrdersPage() {
                       {st.dot && <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, animation: "pulse 1.5s infinite", display: "inline-block" }} />}
                       {o.status}
                     </span>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {(o.status === "DELIVERING" || o.status === "QUEUED") && (
+                        <button
+                          disabled={actionLoading === o.id}
+                          onClick={() => handleAction(o.id, "pause")}
+                          style={{
+                            background: N.bg, border: "none", boxShadow: N.raisedSm, color: N.text,
+                            padding: "4px 10px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                            opacity: actionLoading === o.id ? 0.5 : 1
+                          }}
+                        >
+                          Pause
+                        </button>
+                      )}
+                      
+                      {o.status === "PAUSED" && (
+                        <button
+                          disabled={actionLoading === o.id}
+                          onClick={() => handleAction(o.id, "resume")}
+                          style={{
+                            background: N.bg, border: "none", boxShadow: N.raisedSm, color: "#16a34a",
+                            padding: "4px 10px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                            opacity: actionLoading === o.id ? 0.5 : 1
+                          }}
+                        >
+                          Resume
+                        </button>
+                      )}
+
+                      {(o.status === "DELIVERING" || o.status === "QUEUED" || o.status === "PAUSED") && (
+                        <button
+                          disabled={actionLoading === o.id}
+                          onClick={() => handleAction(o.id, "cancel")}
+                          style={{
+                            background: N.bg, border: "none", boxShadow: N.raisedSm, color: "#dc2626",
+                            padding: "4px 10px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                            opacity: actionLoading === o.id ? 0.5 : 1
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
