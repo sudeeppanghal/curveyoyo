@@ -2775,8 +2775,16 @@ export default function AdminPage() {
                               <input
                                 value={fb.serviceId}
                                 onChange={e => {
+                                  const val = e.target.value;
                                   const updated = [...pricingFallbacks];
-                                  updated[idx].serviceId = e.target.value;
+                                  updated[idx].serviceId = val;
+                                  // Auto-lookup in liveServices
+                                  const liveMatch = liveServices.find(x => String(x.service) === val.trim());
+                                  if (liveMatch) {
+                                    updated[idx].originalRate = String(liveMatch.rate || "");
+                                    updated[idx].customRate = String(parseFloat((parseFloat(liveMatch.rate) * 96 * 5).toFixed(6)));
+                                    updated[idx].name = liveMatch.name || "";
+                                  }
                                   setPricingFallbacks(updated);
                                 }}
                                 placeholder="Backup ID"
@@ -2789,10 +2797,10 @@ export default function AdminPage() {
                                 onChange={e => {
                                   const updated = [...pricingFallbacks];
                                   updated[idx].originalRate = e.target.value;
-                                  // Auto calculate custom rate = original rate * 5
+                                  // Auto calculate custom rate = original rate * 96 * 5
                                   const val = parseFloat(e.target.value);
                                   if (!isNaN(val)) {
-                                    updated[idx].customRate = String(parseFloat((val * 5).toFixed(6)));
+                                    updated[idx].customRate = String(parseFloat((val * 96 * 5).toFixed(6)));
                                   }
                                   setPricingFallbacks(updated);
                                 }}
@@ -2888,18 +2896,22 @@ export default function AdminPage() {
                                   if (Array.isArray(parsed)) {
                                     fallbacks = parsed.map(item => {
                                       if (typeof item === "object" && item !== null) {
+                                        const sId = String(item.serviceId || "");
+                                        const liveMatch = liveServices.find(x => String(x.service) === sId);
                                         return {
-                                          serviceId: String(item.serviceId || ""),
-                                          originalRate: String(item.originalRate || ""),
-                                          customRate: String(item.customRate || ""),
-                                          name: item.name || ""
+                                          serviceId: sId,
+                                          originalRate: item.originalRate ? String(item.originalRate) : (liveMatch ? String(liveMatch.rate || "") : ""),
+                                          customRate: item.customRate ? String(item.customRate) : (liveMatch ? String(parseFloat((parseFloat(liveMatch.rate) * 96 * 5).toFixed(6))) : ""),
+                                          name: item.name ? String(item.name) : (liveMatch ? (liveMatch.name || "") : "")
                                         };
                                       } else {
+                                        const sId = String(item || "");
+                                        const liveMatch = liveServices.find(x => String(x.service) === sId);
                                         return {
-                                          serviceId: String(item || ""),
-                                          originalRate: "",
-                                          customRate: "",
-                                          name: ""
+                                          serviceId: sId,
+                                          originalRate: liveMatch ? String(liveMatch.rate || "") : "",
+                                          customRate: liveMatch ? String(parseFloat((parseFloat(liveMatch.rate) * 96 * 5).toFixed(6))) : "",
+                                          name: liveMatch ? (liveMatch.name || "") : ""
                                         };
                                       }
                                     });
