@@ -399,7 +399,7 @@ export default function DashboardPage() {
       {/* Promotion Announcement Banner */}
       {announcement && announcement.offerEnabled && announcement.endsAt && new Date(announcement.endsAt).getTime() > Date.now() && (
         <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-          <Link href={announcement.targetLink || "/dashboard/billing"} style={{ textDecoration: "none", width: "100%", maxWidth: 858 }}>
+          <Link href={announcement.targetLink || "/dashboard/billing"} style={{ textDecoration: "none", width: "100%", maxWidth: 1025 }}>
             <div className="promo-card-animated" style={{
               borderRadius: 24,
               background: "linear-gradient(135deg, #0f0c1b 0%, #08010f 100%)",
@@ -424,7 +424,7 @@ export default function DashboardPage() {
             }}
             >
               {announcement.imageUrl && (
-                <div style={{ width: "100%", height: 165, display: "flex", background: "#06070a", borderBottom: "1.5px solid rgba(168, 85, 247, 0.2)", overflow: "hidden" }}>
+                <div style={{ width: "100%", height: 247, display: "flex", background: "#06070a", borderBottom: "1.5px solid rgba(168, 85, 247, 0.2)", overflow: "hidden" }}>
                   <img src={announcement.imageUrl} alt="Offer Announcement" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
               )}
