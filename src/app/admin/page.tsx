@@ -271,25 +271,15 @@ export default function AdminPage() {
   const [pricingMax, setPricingMax] = useState("");
 
   const handleMultiplierChange = (multValue: string, customOriginalRate?: string) => {
-
     setPricingMultiplier(multValue);
-
     const m = parseFloat(multValue);
-
     const orig = parseFloat(customOriginalRate ?? pricingOriginalRate);
-
     if (!isNaN(m) && !isNaN(orig)) {
-
-      const customVal = (orig * 83 * m).toFixed(2);
-
+      const customVal = (orig * m).toFixed(2);
       setPricingCustomRate(customVal);
-
     } else {
-
       setPricingCustomRate("");
-
     }
-
   };
   useEffect(() => {
     const savedSecret = localStorage.getItem("yoyo_admin_secret");
@@ -2537,12 +2527,13 @@ export default function AdminPage() {
                                 setPricingServiceId(val);
                                 const selected = liveServices.find(s => String(s.service) === val.trim());
                                 if (selected) {
-                                  setPricingOriginalRate(String(selected.rate || ""));
+                                  const inrRate = String(parseFloat((parseFloat(selected.rate || "0") * 96).toFixed(6)));
+                                  setPricingOriginalRate(inrRate);
                                   setPricingName(selected.name ?? "");
                                   setPricingMin(String(selected.min ?? ""));
                                   setPricingMax(String(selected.max ?? ""));
                                   if (pricingMultiplier) {
-                                    handleMultiplierChange(pricingMultiplier, String(selected.rate || ""));
+                                    handleMultiplierChange(pricingMultiplier, inrRate);
                                   }
                                 }
                               }} placeholder="Service ID (e.g. 1042)"
@@ -2585,12 +2576,13 @@ export default function AdminPage() {
                               setPricingServiceId(val);
                               const selected = liveServices.find(s => String(s.service) === val);
                               if (selected) {
-                                setPricingOriginalRate(selected.rate);
+                                const inrRate = String(parseFloat((parseFloat(selected.rate || "0") * 96).toFixed(6)));
+                                setPricingOriginalRate(inrRate);
                                 setPricingName(selected.name ?? "");
                                 setPricingMin(selected.min ?? "");
                                 setPricingMax(selected.max ?? "");
                                 if (pricingMultiplier) {
-                                  handleMultiplierChange(pricingMultiplier, selected.rate);
+                                  handleMultiplierChange(pricingMultiplier, inrRate);
                                 }
                               }
                             }}
@@ -2632,19 +2624,9 @@ export default function AdminPage() {
                       </div>
 
                       {pricingOriginalRate && (
-
                         <div style={{ padding: 14, borderRadius: 12, background: "rgba(168, 85, 247, 0.04)", border: `1.5px solid ${N.border}`, display: "flex", flexDirection: "column", gap: 12 }}>
-
                           <p style={{ fontSize: 11, color: N.muted, margin: 0, fontWeight: 700 }}>
-
-                            💵 Original Cost: <strong style={{ color: N.text }}>${pricingOriginalRate} per 1k</strong>
-
-                            <span style={{ marginLeft: 8, color: "#16a34a" }}>
-
-                              (~ ₹{(parseFloat(pricingOriginalRate) * 83).toFixed(2)} per 1k)
-
-                            </span>
-
+                            💵 Original Cost: <strong style={{ color: N.text }}>₹{pricingOriginalRate} per 1k</strong>
                           </p>
 
                           {pricingMin && (

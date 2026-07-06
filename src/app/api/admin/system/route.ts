@@ -79,8 +79,8 @@ export async function GET(request: NextRequest) {
     include: { user: true },
   });
   for (const cp of confirmedCrypto) {
-    // approx 83 INR per USDT if not tracked explicitly
-    totalDepositInr += Math.round((cp.amountUsdt ?? 0) * 83);
+    // approx 96 INR per USDT if not tracked explicitly
+    totalDepositInr += Math.round((cp.amountUsdt ?? 0) * 96);
   }
 
   // 5. Calculate Total Profit and Revenue (INR) - EXCLUDING ADMIN ACCOUNTS

@@ -830,6 +830,8 @@ export default function NewReelPage() {
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const isPendingRef = useRef(false);
+  const isBulkPendingRef = useRef(false);
   const [error, setError] = useState("");
   const [schedule, setSchedule] = useState<DeliveryBatch[]>([]);
   const [expandedSchedule, setExpandedSchedule] = useState(false);
@@ -1150,8 +1152,10 @@ export default function NewReelPage() {
   };
 
   const triggerBulkCampaigns = async () => {
+    if (isBulkPendingRef.current) return;
+    isBulkPendingRef.current = true;
     const validRows = bulkRows.filter(r => r.isValid);
-    if (!validRows.length) { setBulkError("No valid rows to schedule"); return; }
+    if (!validRows.length) { setBulkError("No valid rows to schedule"); isBulkPendingRef.current = false; return; }
     setSubmitting(true);
     setBulkProgress({ current: 0, total: validRows.length });
 
@@ -1193,6 +1197,7 @@ export default function NewReelPage() {
       setBulkProgress({ current: count, total: validRows.length });
     }
 
+    isBulkPendingRef.current = false;
     setSubmitting(false); setBulkSuccess(true);
     setTimeout(() => { router.push("/orders"); }, 2000);
   };
@@ -1253,6 +1258,8 @@ export default function NewReelPage() {
   const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1 && (!isCustomMode || !hasCustomScheduleErrors);
 
   const submit = useCallback(async () => {
+    if (isPendingRef.current) return;
+    isPendingRef.current = true;
     setSubmitting(true); setError("");
     try {
       if (saveAsTemplate && templateName.trim()) {
@@ -1282,10 +1289,10 @@ export default function NewReelPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Failed to create order"); setSubmitting(false); return; }
+      if (!res.ok) { setError(data.error ?? "Failed to create order"); setSubmitting(false); isPendingRef.current = false; return; }
       router.push(`/orders`);
     } catch (e) {
-      setError(String(e)); setSubmitting(false);
+      setError(String(e)); setSubmitting(false); isPendingRef.current = false;
     }
   }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, repostsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, repostsRatio, eng, router, saveAsTemplate, templateName, isCustomMode, customSchedule, selectedViewsService]);
   return (
