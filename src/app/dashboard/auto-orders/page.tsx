@@ -132,12 +132,12 @@ export default function AutoOrdersPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (step < 5) {
+    if (step < 4) {
       setStep(step + 1);
       return;
     }
 
-    if (!form.username || form.templateIds.length === 0) return alert("Username and at least one Template are required.");
+    if (!form.username) return alert("Username is required.");
     if (form.viewsMin >= form.viewsMax) return alert("Maximum views must be greater than Minimum views.");
     
     try {
@@ -235,11 +235,11 @@ export default function AutoOrdersPage() {
           <div style={{ position: 'absolute', top: 14, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, zIndex: 0 }}>
             <motion.div 
               initial={false}
-              animate={{ width: `${((step - 1) / 4) * 100}%` }}
+              animate={{ width: `${((step - 1) / 3) * 100}%` }}
               style={{ height: '100%', background: N.accentBg, borderRadius: 2 }}
             />
           </div>
-          {[1, 2, 3, 4, 5].map(i => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} onClick={() => i < step && setStep(i)} style={{ zIndex: 1, width: 32, height: 32, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: step >= i ? N.accent : N.bg, boxShadow: step >= i ? '0 4px 10px rgba(217, 119, 6, 0.3)' : N.raisedSm, color: step >= i ? '#fff' : N.muted, fontWeight: 800, fontSize: 14, cursor: i < step ? 'pointer' : 'default', transition: 'all 0.3s' }}>
               {i}
             </div>
@@ -359,55 +359,7 @@ export default function AutoOrdersPage() {
 
             {step === 4 && (
               <motion.div key="step4" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, margin: 0 }}>Step 4: AI Pacing Graphs</h2>
-                  <button type="button" onClick={handleQuickTemplate} style={{ fontSize: 12, fontWeight: 800, color: N.accent, background: "none", border: "none", cursor: "pointer", padding: "6px 12px", borderRadius: 8, backgroundColor: "rgba(217, 119, 6, 0.1)" }}>+ Add Graph</button>
-                </div>
-                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Select multiple graphs. The AI will randomly select one for each new post so no two posts look exactly the same.</p>
-                
-                {templates.length === 0 && (
-                  <div style={{ padding: 20, background: "rgba(217, 119, 6, 0.1)", borderRadius: 12, marginBottom: 24, textAlign: 'center' }}>
-                    <p style={{ color: N.accent, fontWeight: 800, margin: "0 0 12px 0" }}>You don't have any AI templates yet.</p>
-                    <button type="button" onClick={handleQuickTemplate} style={{ padding: "12px 20px", background: N.accentBg, color: "#fff", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer" }}>Create Default AI Template</button>
-                  </div>
-                )}
-
-                {templates.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                    {templates.map(t => {
-                      const isSelected = form.templateIds.includes(t.id);
-                      return (
-                        <div 
-                          key={t.id} 
-                          onClick={() => toggleTemplate(t.id)}
-                          style={{ 
-                            padding: "16px 20px", borderRadius: 16, 
-                            background: isSelected ? "#3b0764" : N.surface, 
-                            boxShadow: isSelected ? "0 8px 25px rgba(107, 33, 168, 0.4)" : N.raisedSm,
-                            color: isSelected ? "#f3e8ff" : N.text,
-                            fontWeight: 700, fontSize: 14, cursor: "pointer",
-                            border: isSelected ? "2px solid #a855f7" : `2px solid transparent`,
-                            transition: "all 0.2s", width: "180px", display: "flex", flexDirection: "column", gap: 8
-                          }}
-                        >
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span>{t.name}</span>
-                            <span style={{ opacity: isSelected ? 0.9 : 0.6, fontSize: 11, fontWeight: 800 }}>{t.style}</span>
-                          </div>
-                          <div style={{ background: isSelected ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.5)", borderRadius: 8, padding: 8, marginTop: 4 }}>
-                            <MiniCurveChart template={t} active={isSelected} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {step === 5 && (
-              <motion.div key="step5" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, marginBottom: 8 }}>Step 5: Review & Start</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, marginBottom: 8 }}>Step 4: Review & Start</h2>
                 <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Review your automation settings before starting.</p>
                 
                 <div style={{ background: "rgba(0,0,0,0.02)", padding: 24, borderRadius: 16, marginBottom: 24 }}>
@@ -420,8 +372,8 @@ export default function AutoOrdersPage() {
                     <span style={{ color: N.text, fontWeight: 800 }}>{form.viewsMin.toLocaleString()} to {form.viewsMax.toLocaleString()}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                    <span style={{ color: N.muted, fontWeight: 700 }}>Total Graphs Selected:</span>
-                    <span style={{ color: N.text, fontWeight: 800 }}>{form.templateIds.length} Graphs</span>
+                    <span style={{ color: N.muted, fontWeight: 700 }}>Total Pacing Graphs:</span>
+                    <span style={{ color: N.text, fontWeight: 800 }}>10 Random Graphs (AI Configured)</span>
                   </div>
                 </div>
 
@@ -454,7 +406,7 @@ export default function AutoOrdersPage() {
                 boxShadow: "0 8px 25px rgba(217, 119, 6, 0.4)", transition: "transform 0.2s, box-shadow 0.2s"
               }}
             >
-              {step === 5 ? "Start Now 🔥" : "Next Step ➔"}
+              {step === 4 ? "Start Now 🔥" : "Next Step ➔"}
             </button>
           </div>
         </form>

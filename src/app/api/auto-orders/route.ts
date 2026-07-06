@@ -52,15 +52,23 @@ export async function POST(request: NextRequest) {
       repostsMin, repostsMax
     } = await request.json();
 
-    if (!platform || !username || !templateIds || !Array.isArray(templateIds) || templateIds.length === 0) {
+    if (!platform || !username) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    }
+
+    let templateIdsToSave = templateIds;
+    if (!templateIdsToSave || !Array.isArray(templateIdsToSave) || templateIdsToSave.length === 0) {
+      // Pick 10 random global template IDs
+      const globalIds = CURVE_100_LIST.map(c => c.id);
+      const shuffled = [...globalIds].sort(() => Math.random() - 0.5);
+      templateIdsToSave = shuffled.slice(0, 10);
     }
 
     const globalIds = CURVE_100_LIST.map(c => c.id);
 
     // Verify templates belong to user OR are global
     const dbTemplates = await prisma.curveTemplate.findMany({
-      where: { id: { in: templateIds }, userId: dbUser.id }
+      where: { id: { in: templateIdsToSave }, userId: dbUser.id }
     });
 
     const validTemplateIds = new Set([
@@ -68,14 +76,14 @@ export async function POST(request: NextRequest) {
       ...globalIds
     ]);
 
-    const allValid = templateIds.every((id: string) => validTemplateIds.has(id));
+    const allValid = templateIdsToSave.every((id: string) => validTemplateIds.has(id));
 
     if (!allValid) {
       return NextResponse.json({ error: "One or more templates not found" }, { status: 404 });
     }
 
     const dbTemplateIds = new Set(dbTemplates.map(t => t.id));
-    const firstTemplateId = templateIds[0];
+    const firstTemplateId = templateIdsToSave[0];
     const templateIdToSave = dbTemplateIds.has(firstTemplateId) ? firstTemplateId : null;
 
     const autoSub = await prisma.autoSubscription.create({
@@ -83,7 +91,7 @@ export async function POST(request: NextRequest) {
         userId: dbUser.id,
         platform,
         username: username.trim(),
-        templateIds,
+        templateIds: templateIdsToSave,
         templateId: templateIdToSave, // fallback for legacy safety
         viewsMin: Number(viewsMin) || 1000,
         viewsMax: Number(viewsMax) || 5000,
