@@ -107,10 +107,21 @@ async function _placeSingleOrder(
     }
 
     if (data.error) {
-      return { ok: false, error: String(data.error), rawResponse: data };
+      const errMsg = typeof data.error === "object" && data.error !== null && "message" in data.error
+        ? String((data.error as any).message)
+        : String(data.error);
+      return { ok: false, error: errMsg, rawResponse: data };
+    }
+
+    if (data.status === "fail" || data.status === "error" || data.status === "failed") {
+      return { ok: false, error: String(data.message ?? data.error ?? "API returned failure status"), rawResponse: data };
     }
 
     const orderId = String(data.order ?? data.id ?? data.order_id ?? "");
+    if (!orderId) {
+      return { ok: false, error: "API succeeded but returned no order ID", rawResponse: data };
+    }
+
     return { ok: true, orderId, rawResponse: data, usedServiceId: serviceId };
 
   } catch (err: unknown) {

@@ -117,6 +117,28 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   const responseMs = Date.now() - startMs;
 
   if (!result.ok) {
+    const isConcurrentOrderError = result.error && (
+      result.error.toLowerCase().includes("active order") ||
+      result.error.toLowerCase().includes("wait until order") ||
+      result.error.toLowerCase().includes("duplicate") ||
+      result.error.toLowerCase().includes("already exists") ||
+      result.error.toLowerCase().includes("link has active")
+    );
+
+    if (isConcurrentOrderError) {
+      // Temporary block. Reschedule this batch 20 minutes in the future.
+      const newScheduledAt = new Date(Date.now() + 20 * 60 * 1000);
+      await prisma.deliveryEvent.update({
+        where: { id: eventId },
+        data: {
+          status: "SCHEDULED",
+          scheduledAt: newScheduledAt,
+          errorMessage: `Rescheduled: ${result.error}`,
+        }
+      });
+      return { ok: false, error: `Rescheduled due to concurrent order block: ${result.error}` };
+    }
+
     await prisma.deliveryEvent.update({
       where: { id: eventId },
       data: { status: "FAILED", errorMessage: result.error },
@@ -250,6 +272,7 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       where: { id: order.id },
       data: { status: "COMPLETED", completedAt: new Date() },
     });
+    await triggerMidwayRefund(order.id);
   }
 
   const isMidCampaign = prevProgress < 0.5 && newProgress >= 0.5;

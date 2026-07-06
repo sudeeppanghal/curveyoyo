@@ -353,6 +353,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: false, error: "Views must be between 100 and 10,000,000" }, { status: 400, headers: corsHeaders });
       }
 
+      // Prevent duplicate concurrent orders on the same URL
+      const activeDuplicateOrder = await prisma.order.findFirst({
+        where: {
+          status: { in: ["PENDING", "QUEUED", "DELIVERING", "PAUSED"] },
+          reel: { url: reelUrl }
+        },
+        select: { id: true }
+      });
+      if (activeDuplicateOrder) {
+        return NextResponse.json({
+          ok: false,
+          error: "There is already an active campaign running for this video link. Please wait until it completes before ordering again."
+        }, { status: 400, headers: corsHeaders });
+      }
+
       const activeAdminPanels = await prisma.panel.findMany({
         where: { userId: null, isActive: true },
         orderBy: { priority: "asc" },

@@ -185,6 +185,31 @@ async function handler(request: NextRequest) {
 
   // ── Handle permanent failure ───────────────────────────────────────────
   if (!result.ok) {
+    const isConcurrentOrderError = result.error && (
+      result.error.toLowerCase().includes("active order") ||
+      result.error.toLowerCase().includes("wait until order") ||
+      result.error.toLowerCase().includes("duplicate") ||
+      result.error.toLowerCase().includes("already exists") ||
+      result.error.toLowerCase().includes("link has active")
+    );
+
+    if (isConcurrentOrderError) {
+      // Temporary block. Reschedule this batch 20 minutes in the future.
+      const newScheduledAt = new Date(Date.now() + 20 * 60 * 1000);
+      await prisma.deliveryEvent.update({
+        where: { id: eventId },
+        data: {
+          status: "SCHEDULED",
+          scheduledAt: newScheduledAt,
+          errorMessage: `Rescheduled: ${result.error}`,
+        }
+      });
+      await sendTelegramAlert(
+        `⏳ *Batch Rescheduled*\nOrder ID: \`${orderId}\`\nReason: Concurrent active order block. Retrying in 20 minutes.`
+      ).catch(() => {});
+      return NextResponse.json({ ok: false, error: `Rescheduled due to concurrent order block: ${result.error}` });
+    }
+
     const failReason = result.error ?? "Unknown delivery failure";
     await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: failReason } });
     await prisma.deliveryEvent.updateMany({
@@ -363,6 +388,7 @@ async function handler(request: NextRequest) {
 
   if (isCompleted) {
     await prisma.order.update({ where: { id: orderId }, data: { status: "COMPLETED", completedAt: new Date() } });
+    await triggerMidwayRefund(orderId);
   }
 
   if (isMidCampaign || isCompleted) {
