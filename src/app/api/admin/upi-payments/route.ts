@@ -58,6 +58,21 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "approve") {
+    // Check if there is an active deposit bonus
+    const now = new Date();
+    const activeOffer = await prisma.announcement.findFirst({
+      where: {
+        offerEnabled: true,
+        endsAt: { gte: now },
+        minDeposit: { lte: payment.amount }
+      }
+    });
+
+    let bonusAmount = 0;
+    if (activeOffer) {
+      bonusAmount = payment.amount * (activeOffer.bonusPercent / 100);
+    }
+
     // Approve: increment user balance + set payment status CONFIRMED
     await prisma.$transaction([
       prisma.upiPayment.update({
@@ -66,13 +81,21 @@ export async function POST(request: NextRequest) {
       }),
       prisma.user.update({
         where: { id: payment.userId },
-        data: { balance: { increment: payment.amount } },
+        data: { 
+          balance: { increment: payment.amount },
+          ...(bonusAmount > 0 ? { bonusBalance: { increment: bonusAmount } } : {})
+        },
       }),
       prisma.auditLog.create({
         data: {
           userId: payment.userId,
           action: "UPI_DEPOSIT_APPROVED",
-          metadata: { paymentId, amount: payment.amount, utr: payment.utr },
+          metadata: { 
+            paymentId, 
+            amount: payment.amount, 
+            utr: payment.utr,
+            ...(bonusAmount > 0 ? { bonusAmount, announcementId: activeOffer?.id } : {})
+          },
         },
       }),
     ]);

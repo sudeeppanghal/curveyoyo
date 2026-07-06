@@ -40,17 +40,40 @@ export async function POST(request: NextRequest) {
       if (!payment || payment.status !== "PENDING") {
         responseText = "Payment not found or already processed.";
       } else {
+        const now = new Date();
+        const activeOffer = await prisma.announcement.findFirst({
+          where: {
+            offerEnabled: true,
+            endsAt: { gte: now },
+            minDeposit: { lte: payment.amount }
+          }
+        });
+
+        let bonusAmount = 0;
+        if (activeOffer) {
+          bonusAmount = payment.amount * (activeOffer.bonusPercent / 100);
+        }
+
         await prisma.$transaction([
           prisma.upiPayment.update({ where: { id: payment.id }, data: { status: "CONFIRMED" } }),
           prisma.user.update({
             where: { id: payment.userId },
-            data: { balance: { increment: payment.amount } }
+            data: { 
+              balance: { increment: payment.amount },
+              ...(bonusAmount > 0 ? { bonusBalance: { increment: bonusAmount } } : {})
+            }
           }),
           prisma.auditLog.create({
             data: {
               userId: payment.userId,
               action: "UPI_DEPOSIT_APPROVED",
-              metadata: { paymentId: payment.id, amount: payment.amount, source: "Telegram Webhook", adminName },
+              metadata: { 
+                paymentId: payment.id, 
+                amount: payment.amount, 
+                source: "Telegram Webhook", 
+                adminName,
+                ...(bonusAmount > 0 ? { bonusAmount, announcementId: activeOffer?.id } : {})
+              },
             }
           })
         ]);
@@ -86,17 +109,41 @@ export async function POST(request: NextRequest) {
         const amountUsdt = payment.amountUsdt || 0;
         const amountInr = amountUsdt * exchangeRate;
 
+        const now = new Date();
+        const activeOffer = await prisma.announcement.findFirst({
+          where: {
+            offerEnabled: true,
+            endsAt: { gte: now },
+            minDeposit: { lte: amountInr }
+          }
+        });
+
+        let bonusAmount = 0;
+        if (activeOffer) {
+          bonusAmount = amountInr * (activeOffer.bonusPercent / 100);
+        }
+
         await prisma.$transaction([
           prisma.cryptoPayment.update({ where: { id: payment.id }, data: { status: "CONFIRMED" } }),
           prisma.user.update({
             where: { id: payment.userId },
-            data: { balance: { increment: amountInr } }
+            data: { 
+              balance: { increment: amountInr },
+              ...(bonusAmount > 0 ? { bonusBalance: { increment: bonusAmount } } : {})
+            }
           }),
           prisma.auditLog.create({
             data: {
               userId: payment.userId,
               action: "CRYPTO_DEPOSIT_APPROVED",
-              metadata: { paymentId: payment.id, amountInr, amountUsdt, source: "Telegram Webhook", adminName },
+              metadata: { 
+                paymentId: payment.id, 
+                amountInr, 
+                amountUsdt, 
+                source: "Telegram Webhook", 
+                adminName,
+                ...(bonusAmount > 0 ? { bonusAmount, announcementId: activeOffer?.id } : {})
+              },
             }
           })
         ]);

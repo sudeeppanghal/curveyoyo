@@ -24,6 +24,7 @@ export async function GET() {
     lifetimeUnlocked: dbUser.lifetimeUnlocked,
     walletMode: dbUser.walletMode,
     balance: dbUser.balance,
+    bonusBalance: dbUser.bonusBalance,
     payments,
     cryptoPayments,
     wallet: {

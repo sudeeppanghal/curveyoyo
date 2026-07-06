@@ -25,6 +25,7 @@ model User {
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   walletMode       Boolean  @default(false) @map("wallet_mode")
   balance          Float    @default(0.0)
+  bonusBalance     Float    @default(0.0) @map("bonus_balance")
   referredBy       String?  @map("referred_by")
   affiliateCode    String?  @unique @map("affiliate_code")
   affiliateClicks  Int      @default(0) @map("affiliate_clicks")
@@ -625,4 +626,24 @@ model ProfitSplit {
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("profit_splits")
+}
+
+// ─────────────── ANNOUNCEMENT & PROMO ───────────────
+model Announcement {
+  id           String    @id @default("active")
+  imageUrl     String?   @map("image_url")
+  title        String?
+  description  String?
+  targetLink   String?   @map("target_link")
+  
+  // Promo Offer Config
+  offerEnabled Boolean   @default(false) @map("offer_enabled")
+  minDeposit   Float     @default(2000.0) @map("min_deposit")
+  bonusPercent Float     @default(100.0) @map("bonus_percent")
+  endsAt       DateTime? @map("ends_at")
+  
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("announcements")
 }

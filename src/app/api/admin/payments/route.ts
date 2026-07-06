@@ -62,6 +62,21 @@ export async function POST(request: NextRequest) {
     const exchangeRate = settings?.priceUsdt || 90;
     const finalInrAmount = inrAmount || (payment.amountUsdt || 0) * exchangeRate;
 
+    // Check if there is an active deposit bonus
+    const now = new Date();
+    const activeOffer = await prisma.announcement.findFirst({
+      where: {
+        offerEnabled: true,
+        endsAt: { gte: now },
+        minDeposit: { lte: finalInrAmount }
+      }
+    });
+
+    let bonusAmount = 0;
+    if (activeOffer) {
+      bonusAmount = finalInrAmount * (activeOffer.bonusPercent / 100);
+    }
+
     await prisma.$transaction([
       prisma.cryptoPayment.update({
         where: { id: paymentId },
@@ -69,13 +84,21 @@ export async function POST(request: NextRequest) {
       }),
       prisma.user.update({
         where: { id: payment.userId },
-        data: { balance: { increment: finalInrAmount } },
+        data: { 
+          balance: { increment: finalInrAmount },
+          ...(bonusAmount > 0 ? { bonusBalance: { increment: bonusAmount } } : {})
+        },
       }),
       prisma.auditLog.create({
         data: {
           userId: payment.userId,
           action: "CRYPTO_DEPOSIT_APPROVED",
-          metadata: { paymentId, amountUsdt: payment.amountUsdt, amountInr: finalInrAmount },
+          metadata: { 
+            paymentId, 
+            amountUsdt: payment.amountUsdt, 
+            amountInr: finalInrAmount,
+            ...(bonusAmount > 0 ? { bonusAmount, announcementId: activeOffer?.id } : {})
+          },
         },
       }),
     ]);

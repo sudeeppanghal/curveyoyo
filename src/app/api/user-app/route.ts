@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
           email: dbUser.email,
           name: dbUser.name || dbUser.email.split("@")[0],
           balance: dbUser.balance,
+          bonusBalance: dbUser.bonusBalance,
           walletMode: dbUser.walletMode,
           plan: dbUser.plan,
         },
@@ -199,6 +200,7 @@ export async function POST(request: NextRequest) {
           email: dbUser.email,
           name: dbUser.name,
           balance: dbUser.balance,
+          bonusBalance: dbUser.bonusBalance,
           walletMode: dbUser.walletMode,
           plan: dbUser.plan,
         },
@@ -315,6 +317,7 @@ export async function POST(request: NextRequest) {
           email: dbUser.email,
           name: dbUser.name || dbUser.email.split("@")[0],
           balance: dbUser.balance,
+          bonusBalance: dbUser.bonusBalance,
           walletMode: dbUser.walletMode,
           plan: dbUser.plan,
         },
@@ -384,10 +387,10 @@ export async function POST(request: NextRequest) {
 
       const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
-      if (dbUser.balance < totalPrice) {
+      if (dbUser.balance + dbUser.bonusBalance < totalPrice) {
         return NextResponse.json({
           ok: false,
-          error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your wallet balance is ₹${dbUser.balance.toFixed(2)}. Please deposit funds first.`,
+          error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your wallet total combined balance is ₹${(dbUser.balance + dbUser.bonusBalance).toFixed(2)}. Please deposit funds first.`,
         }, { status: 400, headers: corsHeaders });
       }
 
@@ -399,10 +402,22 @@ export async function POST(request: NextRequest) {
         update: { url: reelUrl, platform: platform.toUpperCase() as any },
       });
 
+      let bonusDeduct = 0;
+      let realDeduct = 0;
+      if (dbUser.bonusBalance >= totalPrice) {
+        bonusDeduct = totalPrice;
+      } else {
+        bonusDeduct = dbUser.bonusBalance;
+        realDeduct = totalPrice - dbUser.bonusBalance;
+      }
+
       const order = await prisma.$transaction(async (tx) => {
         await tx.user.update({
           where: { id: dbUser.id },
-          data: { balance: { decrement: totalPrice } },
+          data: { 
+            balance: { decrement: realDeduct },
+            bonusBalance: { decrement: bonusDeduct }
+          },
         });
 
         return tx.order.create({

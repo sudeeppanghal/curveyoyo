@@ -161,15 +161,28 @@ export default function BillingPage() {
         `}</style>
 
         {/* Header */}
-        <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap: "wrap", gap: 16 }}>
           <div>
             <h1 style={{ fontSize:22, fontWeight:900, color:N.text, margin:"0 0 4px" }}>My Wallet</h1>
             <p style={{ fontSize:13, color:N.muted, margin:0, fontWeight:600 }}>Deposit funds via UPI to pay for campaigns instantly</p>
           </div>
-          <div style={{ textAlign:"right" }}>
-            <div style={{ padding:"8px 16px", borderRadius:16, background:N.bg, boxShadow:N.inset, display:"inline-flex", flexDirection:"column", alignItems:"flex-end" }}>
-              <span style={{ fontSize:10, fontWeight:800, color:N.muted }}>WALLET BALANCE</span>
-              <span style={{ fontSize:24, fontWeight:900, color:"#16a34a" }}>₹ {(data.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {/* Real Balance */}
+            <div style={{ padding:"10px 16px", borderRadius:16, background:N.bg, boxShadow:N.inset, display:"flex", flexDirection:"column", alignItems:"flex-end", minWidth: 120 }}>
+              <span style={{ fontSize:9, fontWeight:850, color:N.muted }}>REAL BALANCE</span>
+              <span style={{ fontSize:18, fontWeight:900, color:N.text }}>₹ {(data.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            
+            {/* Bonus Balance */}
+            <div style={{ padding:"10px 16px", borderRadius:16, background:N.bg, boxShadow:N.inset, display:"flex", flexDirection:"column", alignItems:"flex-end", minWidth: 120, border: "1px solid rgba(168, 85, 247, 0.2)" }}>
+              <span style={{ fontSize:9, fontWeight:850, color: "#a855f7" }}>✨ BONUS BALANCE</span>
+              <span style={{ fontSize:18, fontWeight:900, color:"#a855f7" }}>₹ {(data.bonusBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+
+            {/* Total Balance */}
+            <div style={{ padding:"10px 16px", borderRadius:16, background:N.bg, boxShadow:N.inset, display:"flex", flexDirection:"column", alignItems:"flex-end", minWidth: 140 }}>
+              <span style={{ fontSize:9, fontWeight:850, color:"#16a34a" }}>TOTAL POWER</span>
+              <span style={{ fontSize:18, fontWeight:900, color:"#16a34a" }}>₹ {((data.balance ?? 0) + (data.bonusBalance ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>

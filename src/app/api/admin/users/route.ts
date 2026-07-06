@@ -46,7 +46,12 @@ export async function PATCH(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await request.json();
-  const { userId, action, balance } = body as { userId: string; action: "upgrade" | "suspend" | "unsuspend" | "toggleWalletMode" | "updateBalance"; balance?: number };
+  const { userId, action, balance, bonusBalance } = body as { 
+    userId: string; 
+    action: "upgrade" | "suspend" | "unsuspend" | "toggleWalletMode" | "updateBalance" | "updateBonusBalance"; 
+    balance?: number;
+    bonusBalance?: number;
+  };
   
   if (!userId || !action) return NextResponse.json({ error: "userId and action required" }, { status: 400 });
 
@@ -77,6 +82,14 @@ export async function PATCH(request: NextRequest) {
     await prisma.user.update({
       where: { id: userId },
       data: { balance: parseFloat(Number(balance).toFixed(2)) }
+    });
+  } else if (action === "updateBonusBalance") {
+    if (bonusBalance === undefined || isNaN(Number(bonusBalance))) {
+      return NextResponse.json({ error: "Valid bonus balance amount required" }, { status: 400 });
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { bonusBalance: parseFloat(Number(bonusBalance).toFixed(2)) }
     });
   } else {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

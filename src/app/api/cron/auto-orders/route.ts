@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
         const repostsCost = (engTargets.repostsTarget / 1000) * getRate("reposts", 12.0);
         const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
-        if (sub.user.balance < totalPrice) {
+        if (sub.user.balance + sub.user.bonusBalance < totalPrice) {
           // Pause subscription
           await prisma.autoSubscription.update({
             where: { id: sub.id },
@@ -120,10 +120,22 @@ export async function GET(request: NextRequest) {
         }
 
         // Deduct balance and create order
+        let bonusDeduct = 0;
+        let realDeduct = 0;
+        if (sub.user.bonusBalance >= totalPrice) {
+          bonusDeduct = totalPrice;
+        } else {
+          bonusDeduct = sub.user.bonusBalance;
+          realDeduct = totalPrice - sub.user.bonusBalance;
+        }
+
         const txOrder = await prisma.$transaction(async (tx) => {
           await tx.user.update({
             where: { id: sub.user.id },
-            data: { balance: { decrement: totalPrice } }
+            data: { 
+              balance: { decrement: realDeduct },
+              bonusBalance: { decrement: bonusDeduct }
+            }
           });
 
           let reel = await tx.reel.findFirst({ where: { url, userId: sub.user.id } });

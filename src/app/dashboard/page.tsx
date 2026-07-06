@@ -111,6 +111,68 @@ function DashboardMiniChart({ data }: { data: any[] }) {
   );
 }
 
+function AnnouncementCountdown({ targetDate }: { targetDate: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const difference = +new Date(targetDate) - +new Date();
+      if (difference <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+        expired: false
+      });
+    };
+
+    calculateTime();
+    const interval = setInterval(calculateTime, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  if (timeLeft.expired) {
+    return <span style={{ color: "#ef4444", fontWeight: 800 }}>Offer Expired!</span>;
+  }
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", width: "100%", padding: "4px 0" }}>
+      <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.05em" }}>⏳ OFFER ENDS IN:</span>
+      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+        {[
+          { label: "D", val: timeLeft.days },
+          { label: "H", val: timeLeft.hours },
+          { label: "M", val: timeLeft.minutes },
+          { label: "S", val: timeLeft.seconds }
+        ].map((item, idx) => (
+          <div key={idx} style={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <div style={{
+              background: "rgba(168, 85, 247, 0.2)",
+              color: "#c084fc",
+              padding: "4px 8px",
+              borderRadius: 6,
+              fontFamily: "monospace",
+              fontSize: 14,
+              fontWeight: 900,
+              border: "1px solid rgba(168, 85, 247, 0.3)",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+            }}>
+              {pad(item.val)}
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 950, color: N.muted, marginRight: idx < 3 ? 4 : 0 }}>{item.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({});
   const [loading, setLoading] = useState(true);
@@ -122,6 +184,7 @@ export default function DashboardPage() {
   const [walletMode, setWalletMode] = useState(false);
   const [activeRoutes, setActiveRoutes] = useState(482);
   const [userEmail, setUserEmail] = useState("");
+  const [announcement, setAnnouncement] = useState<any | null>(null);
 
   useEffect(() => {
     setActiveRoutes(Math.floor(Math.random() * (1000 - 300 + 1)) + 300);
@@ -138,6 +201,15 @@ export default function DashboardPage() {
         if (data) {
           setWalletMode(!!data.walletMode);
           if (data.email) setUserEmail(data.email);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/announcements")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.announcement) {
+          setAnnouncement(data.announcement);
         }
       })
       .catch(() => {});
@@ -257,6 +329,49 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Promotion Announcement Banner */}
+      {announcement && announcement.offerEnabled && announcement.endsAt && new Date(announcement.endsAt).getTime() > Date.now() && (
+        <Link href={announcement.targetLink || "/dashboard/billing"} style={{ textDecoration: "none" }}>
+          <div style={{
+            borderRadius: 24,
+            background: "linear-gradient(135deg, #0f0c1b 0%, #08010f 100%)",
+            border: "1.5px solid rgba(168, 85, 247, 0.2)",
+            boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            cursor: "pointer",
+            transition: "transform 0.2s ease, border-color 0.2s ease",
+            animation: "fadeUp 0.3s ease",
+            marginBottom: 20
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = "translateY(-2px)";
+            e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.2)";
+          }}
+          >
+            {announcement.imageUrl && (
+              <div style={{ width: "100%", display: "flex", background: "#06070a", borderBottom: `1.5px solid ${N.border}` }}>
+                <img src={announcement.imageUrl} alt="Offer Announcement" style={{ width: "100%", height: "auto", maxHeight: 300, objectFit: "cover" }} />
+              </div>
+            )}
+            <div style={{ width: "100%", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 4, alignItems: "center", textAlign: "center", boxSizing: "border-box" }}>
+              <h3 style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.5px" }}>{announcement.title}</h3>
+              <p style={{ fontSize: 13, color: N.muted, margin: 0, fontWeight: 600 }}>{announcement.description}</p>
+              
+              <div style={{ width: "100%", height: "1px", background: `linear-gradient(90deg, transparent, ${N.border}, transparent)`, margin: "12px 0 4px" }} />
+              
+              <AnnouncementCountdown targetDate={announcement.endsAt} />
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Live Campaign Tracker Widget */}
       {runningCampaign && (

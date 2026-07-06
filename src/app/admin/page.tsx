@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BlogsTab } from "./BlogsTab";
 import { AutoSyncTab } from "./AutoSyncTab";
+import { AnnouncementsTab } from "./AnnouncementsTab";
 import { N } from "@/lib/theme";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -73,7 +74,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "failed_orders" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "failed_orders" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync" | "announcements";
 
 
 
@@ -1421,7 +1422,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "failed_orders", "system", "tickets", "affiliates", "blogs", "auto_sync"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "failed_orders", "system", "tickets", "affiliates", "blogs", "auto_sync", "announcements"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1442,7 +1443,8 @@ export default function AdminPage() {
               tickets: "✉️ ",
               affiliates: "🤝 ",
               blogs: "📝 ",
-              auto_sync: "🔄 "
+              auto_sync: "🔄 ",
+              announcements: "📢 "
             };
 
             return (
@@ -4202,6 +4204,11 @@ export default function AdminPage() {
           {/* ── AUTO SYNC TAB ─── */}
           {tab === "auto_sync" && (
             <AutoSyncTab />
+          )}
+
+          {/* ── ANNOUNCEMENTS TAB ─── */}
+          {tab === "announcements" && (
+            <AnnouncementsTab secret={secret} />
           )}
 
       {/* USER HISTORY MODAL */}

@@ -131,9 +131,9 @@ export async function POST(request: NextRequest) {
 
   totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
-  if (dbUser.balance < totalPrice) {
+  if (dbUser.balance + dbUser.bonusBalance < totalPrice) {
     return NextResponse.json({
-      error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your balance is ₹${dbUser.balance.toFixed(2)}.`
+      error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your total combined balance is ₹${(dbUser.balance + dbUser.bonusBalance).toFixed(2)}.`
     }, { status: 400 });
   }
 
@@ -177,9 +177,21 @@ export async function POST(request: NextRequest) {
   const defDuration = curveStyle === "AGGRESSIVE" ? 6 : curveStyle === "FAST" ? 12 : 24;
 
   const order = await prisma.$transaction(async (tx) => {
+    let bonusDeduct = 0;
+    let realDeduct = 0;
+    if (dbUser.bonusBalance >= totalPrice) {
+      bonusDeduct = totalPrice;
+    } else {
+      bonusDeduct = dbUser.bonusBalance;
+      realDeduct = totalPrice - dbUser.bonusBalance;
+    }
+
     await tx.user.update({
       where: { id: dbUser.id },
-      data: { balance: { decrement: totalPrice } },
+      data: { 
+        balance: { decrement: realDeduct },
+        bonusBalance: { decrement: bonusDeduct }
+      },
     });
 
     return tx.order.create({
