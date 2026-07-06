@@ -40,7 +40,7 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string; la
 
 /* ── Dual-layer delivery chart ── */
 function DeliveryChart({ data }: { data: ChartPoint[] }) {
-  const [mode, setMode] = useState<"velocity" | "cumulative">("velocity");
+  const [mode, setMode] = useState<"velocity" | "cumulative">("cumulative");
   if (!data.length) return null;
 
   // Calculate cumulative planned and actual views

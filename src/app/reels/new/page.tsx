@@ -679,7 +679,11 @@ function MiniCurveChart({ style, active }: { style: CurveStyle; active: boolean 
       engagementEnabled: false,
       tzOffsetHours: 0,
     });
-    return batches.map((b) => b.views);
+    let run = 0;
+    return batches.map((b) => {
+      run += b.views;
+      return run;
+    });
   }, [style, info?.warmup, info?.peak]);
 
   const maxVal = Math.max(...points, 1);

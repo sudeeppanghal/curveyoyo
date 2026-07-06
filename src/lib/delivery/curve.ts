@@ -130,15 +130,35 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
   const stepsPerHour = 60 / intervalMins;
   const totalSteps = Math.max(1, durationHours * stepsPerHour);
 
-  const raw = Array.from({ length: totalSteps }, (_, t) => {
+  // 1. Evaluate the raw curve values at each step
+  const config = CURVE_100_MAP[style];
+  const curveVals = Array.from({ length: totalSteps }, (_, t) => {
     const progress = t / totalSteps;
-    const hourTime = t / stepsPerHour;
-    const config = CURVE_100_MAP[style];
-    let val = 1.0;
     if (config && config.evalCurve) {
-      val = config.evalCurve(t, progress, totalSteps);
+      return config.evalCurve(t, progress, totalSteps);
+    }
+    return 1 / (1 + Math.exp(-6 * (progress - 0.45)));
+  });
+
+  // 2. Check if the curve is cumulative (strictly or mostly rising)
+  let isCumulative = true;
+  for (let t = 1; t < totalSteps; t++) {
+    if (curveVals[t] < curveVals[t - 1] - 0.05) { // allow tiny fluctuations
+      isCumulative = false;
+      break;
+    }
+  }
+
+  // 3. Calculate batch weights based on curve type
+  const raw = Array.from({ length: totalSteps }, (_, t) => {
+    const hourTime = t / stepsPerHour;
+    let val = 1.0;
+
+    if (isCumulative) {
+      const prevVal = t > 0 ? curveVals[t - 1] : 0;
+      val = Math.max(0, curveVals[t] - prevVal);
     } else {
-      val = 1 / (1 + Math.exp(-6 * (progress - 0.45)));
+      val = curveVals[t];
     }
 
     const utcHour = (nowUtcHour + hourTime) % 24;

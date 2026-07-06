@@ -26,12 +26,38 @@ function GrowthCurveGraph({ curve, progressPct = 0 }: { curve: CurveStyleConfig;
   const pad = 16;
   const graphW = width - pad * 2;
   const graphH = height - pad * 2;
-  const points: string[] = [];
 
+  // Evaluate the raw curve values first
+  const rawVals: number[] = [];
   for (let i = 0; i <= 20; i++) {
     const p = i / 20;
-    const val = Math.max(0, Math.min(1, curve.evalCurve(p, p, 20)));
-    const x = pad + p * graphW;
+    rawVals.push(curve.evalCurve(i, p, 20));
+  }
+
+  // Check if it is cumulative or velocity
+  let isCumulative = true;
+  for (let i = 1; i < rawVals.length; i++) {
+    if (rawVals[i] < rawVals[i - 1] - 0.05) {
+      isCumulative = false;
+      break;
+    }
+  }
+
+  let cumulativeVals = rawVals;
+  if (!isCumulative) {
+    let run = 0;
+    const summed = rawVals.map((v) => {
+      run += Math.max(0, v);
+      return run;
+    });
+    const max = Math.max(...summed, 1);
+    cumulativeVals = summed.map(v => v / max);
+  }
+
+  const points: string[] = [];
+  for (let i = 0; i <= 20; i++) {
+    const val = Math.max(0, Math.min(1, cumulativeVals[i]));
+    const x = pad + (i / 20) * graphW;
     const y = height - pad - val * graphH;
     points.push(`${x},${y}`);
   }
@@ -39,11 +65,12 @@ function GrowthCurveGraph({ curve, progressPct = 0 }: { curve: CurveStyleConfig;
   const pathD = `M ${points[0]} ` + points.slice(1).map(pt => `L ${pt}`).join(" ");
   const areaD = `${pathD} L ${pad + graphW},${height - pad} L ${pad},${height - pad} Z`;
 
-  // Progress dot position
+  // Progress dot position on the cumulative line
   const currP = Math.min(1, Math.max(0, progressPct / 100));
-  const currVal = Math.max(0, Math.min(1, curve.evalCurve(currP, currP, 20)));
+  const dotIdx = Math.min(20, Math.max(0, Math.round(currP * 20)));
+  const dotVal = Math.max(0, Math.min(1, cumulativeVals[dotIdx]));
   const dotX = pad + currP * graphW;
-  const dotY = height - pad - currVal * graphH;
+  const dotY = height - pad - dotVal * graphH;
 
   return (
     <div style={{ width: "100%", background: "rgba(0,0,0,0.4)", borderRadius: 16, padding: 12, border: "1px solid var(--border)" }}>

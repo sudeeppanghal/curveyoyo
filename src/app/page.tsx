@@ -704,10 +704,18 @@ function CurveChart({ style, duration }: { style: string; duration:number }) {
     }
     pts.push(Math.max(3, v + Math.sin(i * 1.2) * 1.0));
   }
-  const max = Math.max(...pts);
+  
+  // Convert velocity points to cumulative growth points
+  let runningSum = 0;
+  const cumulativePts = pts.map(p => {
+    runningSum += p;
+    return runningSum;
+  });
+
+  const max = Math.max(...cumulativePts);
   const W = 520, H = 160, pad = 18;
-  const xs = pts.map((_, i) => pad + (i / (N - 1)) * (W - 2 * pad));
-  const ys = pts.map(p => H - pad - (p / max) * (H - 2 * pad));
+  const xs = cumulativePts.map((_, i) => pad + (i / (N - 1)) * (W - 2 * pad));
+  const ys = cumulativePts.map(p => H - pad - (p / max) * (H - 2 * pad));
   const line = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
   const area = line + ` L ${xs[N - 1].toFixed(1)} ${H - pad} L ${xs[0].toFixed(1)} ${H - pad} Z`;
   const COLOR_MAP: Record<string, { color: string; glow: string; dot: string; gradStart: string }> = {
