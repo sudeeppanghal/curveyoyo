@@ -142,8 +142,8 @@ function AnnouncementCountdown({ targetDate }: { targetDate: string }) {
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%", padding: "8px 0" }}>
-      <span style={{ fontSize: 12, fontWeight: 900, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.12em", display: "flex", alignItems: "center", gap: 6 }}>
+    <div className="countdown-container" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12, width: "100%", padding: "8px 0" }}>
+      <span style={{ fontSize: 11, fontWeight: 900, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.12em", display: "flex", alignItems: "center", gap: 6 }}>
         ⏳ SPECIAL DEPOSIT OFFER ENDS IN
       </span>
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -300,6 +300,29 @@ export default function DashboardPage() {
         .neo-qa:hover{box-shadow:10px 10px 24px #c8d0e7,-5px -5px 14px #ffffff !important;transform:translateY(-2px)}
         .neo-qa:active{box-shadow:inset 4px 4px 10px #c8d0e7,inset -2px -2px 6px #ffffff !important;transform:none}
         .neo-step:hover{box-shadow:6px 6px 16px #c8d0e7,-3px -3px 10px #ffffff !important}
+        
+        .countdown-container {
+          align-items: flex-start !important;
+        }
+        @media (max-width: 991px) {
+          .promo-card {
+            flex-direction: column !important;
+          }
+          .promo-image-col {
+            width: 100% !important;
+            min-width: 100% !important;
+            height: 200px !important;
+            border-left: none !important;
+            border-top: 1px solid rgba(168, 85, 247, 0.15) !important;
+          }
+          .promo-card > div:first-child {
+            align-items: center !important;
+            text-align: center !important;
+          }
+          .countdown-container {
+            align-items: center !important;
+          }
+        }
       `}</style>
 
       {/* VIP Partner Banner */}
@@ -346,12 +369,12 @@ export default function DashboardPage() {
             boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
             overflow: "hidden",
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
+            flexDirection: "row",
             cursor: "pointer",
             transition: "transform 0.2s ease, border-color 0.2s ease",
             animation: "fadeUp 0.3s ease",
-            marginBottom: 20
+            marginBottom: 28,
+            minHeight: 220
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = "translateY(-2px)";
@@ -361,20 +384,75 @@ export default function DashboardPage() {
             e.currentTarget.style.transform = "translateY(0)";
             e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.2)";
           }}
+          className="promo-card"
           >
-            {announcement.imageUrl && (
-              <div style={{ width: "100%", display: "flex", background: "#06070a", borderBottom: "1.5px solid rgba(168, 85, 247, 0.2)" }}>
-                <img src={announcement.imageUrl} alt="Offer Announcement" style={{ width: "100%", height: "auto", display: "block" }} />
+            {/* Left Column: Details & Countdown */}
+            <div style={{
+              flex: 1,
+              padding: "24px 32px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              textAlign: "left",
+              gap: 8,
+              boxSizing: "border-box"
+            }}>
+              <div style={{
+                background: "linear-gradient(90deg, #c084fc, #e879f9)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: "0.15em",
+                textTransform: "uppercase"
+              }}>
+                🔥 ACTIVE PROMOTIONAL OFFER
               </div>
-            )}
-            <div style={{ width: "100%", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 4, alignItems: "center", textAlign: "center", boxSizing: "border-box" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.5px" }}>{announcement.title}</h3>
-              <p style={{ fontSize: 13, color: N.muted, margin: 0, fontWeight: 600 }}>{announcement.description}</p>
+              <h3 style={{ fontSize: 20, fontWeight: 900, color: "#fff", margin: "4px 0 0", letterSpacing: "-0.5px" }}>
+                {announcement.title}
+              </h3>
+              <p style={{ fontSize: 13, color: "#94a3b8", margin: 0, fontWeight: 600, lineHeight: "1.4" }}>
+                {announcement.description}
+              </p>
               
-              <div style={{ width: "100%", height: "1px", background: `linear-gradient(90deg, transparent, ${N.border}, transparent)`, margin: "12px 0 4px" }} />
+              <div style={{ width: "100%", height: "1px", background: "linear-gradient(90deg, rgba(168, 85, 247, 0.2), transparent)", margin: "8px 0" }} />
               
               <AnnouncementCountdown targetDate={announcement.endsAt} />
             </div>
+
+            {/* Right Column: Illustration Image */}
+            {announcement.imageUrl && (
+              <div style={{
+                width: "40%",
+                minWidth: 320,
+                position: "relative",
+                borderLeft: "1px solid rgba(168, 85, 247, 0.15)",
+                display: "block"
+              }}
+              className="promo-image-col"
+              >
+                <img 
+                  src={announcement.imageUrl} 
+                  alt="Offer Illustration" 
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "center"
+                  }} 
+                />
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  background: "linear-gradient(90deg, #08010f 0%, transparent 20%)",
+                  pointerEvents: "none"
+                }} />
+              </div>
+            )}
           </div>
         </Link>
       )}
