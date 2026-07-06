@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { N } from "@/lib/theme";
 
 /* ── Types ── */
-interface ChartPoint { hour: number; planned: number; actual: number; likes?: number; saves?: number; shares?: number; comments?: number; status: string; scheduledAt?: string; responseData?: any }
+interface ChartPoint { hour: number; planned: number; actual: number; likes?: number; saves?: number; shares?: number; comments?: number; reposts?: number; status: string; scheduledAt?: string; responseData?: any }
 interface OrderStatus {
   order: {
     id: string; status: string; viewsTarget: number; viewsDelivered: number;
@@ -443,37 +443,11 @@ export default function OrderDetailPage() {
                       })
                     : `+${row.hour}h`;
 
-                // Calculate engagement values for this batch based on views proportion
-                let bLikes = 0;
-                let bSaves = 0;
-                let bShares = 0;
-                let bComments = 0;
-                let bReposts = 0;
-
-                const resData = row.responseData as any;
-                const isCustomOrder = !!(resData && (resData.customEngagement || resData.engagementFired));
-                
-                if (resData && resData.engagementFired) {
-                  bLikes = resData.engagementFired.likes ?? 0;
-                  bSaves = resData.engagementFired.saves ?? 0;
-                  bShares = resData.engagementFired.shares ?? 0;
-                  bComments = resData.engagementFired.comments ?? 0;
-                  bReposts = resData.engagementFired.reposts ?? 0;
-                } else if (row.likes !== undefined || (resData && resData.customEngagement)) {
-                  bLikes = row.likes ?? resData?.customEngagement?.likes ?? 0;
-                  bSaves = row.saves ?? resData?.customEngagement?.saves ?? 0;
-                  bShares = row.shares ?? resData?.customEngagement?.shares ?? 0;
-                  bComments = row.comments ?? resData?.customEngagement?.comments ?? 0;
-                  bReposts = resData?.customEngagement?.reposts ?? 0; // Using responseData since row.reposts isn't tracked in ChartPoint interface
-                } else if (!isCustomOrder) {
-                  // Fallback for scheduled standard orders (not fired yet)
-                  const scale = order.viewsTarget > 0 ? row.planned / order.viewsTarget : 0;
-                  bLikes = order.likesTarget > 0 ? Math.round(order.likesTarget * scale) : 0;
-                  bSaves = order.savesTarget > 0 ? Math.round(order.savesTarget * scale) : 0;
-                  bShares = order.sharesTarget > 0 ? Math.round(order.sharesTarget * scale) : 0;
-                  bComments = order.commentsTarget > 0 ? Math.round(order.commentsTarget * scale) : 0;
-                  bReposts = order.repostsTarget > 0 ? Math.round(order.repostsTarget * scale) : 0;
-                }
+                const bLikes = row.likes ?? 0;
+                const bSaves = row.saves ?? 0;
+                const bShares = row.shares ?? 0;
+                const bComments = row.comments ?? 0;
+                const bReposts = row.reposts ?? 0;
 
                 return (
                   <tr key={i} style={{ borderBottom:`1px solid ${N.border}`, transition:"background 0.2s" }}>
