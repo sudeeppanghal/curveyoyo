@@ -12,7 +12,11 @@ function MiniCurveChart({ template, active }: { template: any; active: boolean }
   const points = useMemo(() => {
     if (template.customSchedule && Array.isArray(template.customSchedule) && template.customSchedule.length > 0) {
       const sorted = [...template.customSchedule].sort((a, b) => (a.hour || 0) - (b.hour || 0));
-      return sorted.map((b) => b.views);
+      let run = 0;
+      return sorted.map((b) => {
+        run += b.views;
+        return run;
+      });
     }
     const batches = generateRawSchedule({
       totalViews: 10000,
@@ -23,7 +27,11 @@ function MiniCurveChart({ template, active }: { template: any; active: boolean }
       engagementEnabled: false,
       tzOffsetHours: 0,
     });
-    return batches.map((b) => b.views);
+    let run = 0;
+    return batches.map((b) => {
+      run += b.views;
+      return run;
+    });
   }, [template]);
 
   const maxVal = Math.max(...points, 1);

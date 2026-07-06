@@ -71,10 +71,17 @@ function ClippingPlatformExplorer() {
     }
     pts.push(Math.max(0.05, Math.min(1.0, v)));
   }
-  const max = Math.max(...pts, 1);
+  // Convert velocity points to cumulative growth points
+  let runningSum = 0;
+  const cumulativePts = pts.map(p => {
+    runningSum += p;
+    return runningSum;
+  });
+
+  const max = Math.max(...cumulativePts, 1);
   const W = 500, H = 140, pad = 16;
-  const xs = pts.map((_, i) => pad + (i / (N_PTS - 1)) * (W - 2 * pad));
-  const ys = pts.map(p => H - pad - (p / max) * (H - 2 * pad));
+  const xs = cumulativePts.map((_, i) => pad + (i / (N_PTS - 1)) * (W - 2 * pad));
+  const ys = cumulativePts.map(p => H - pad - (p / max) * (H - 2 * pad));
   const line = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
   const area = line + ` L ${xs[N_PTS - 1].toFixed(1)} ${H - pad} L ${xs[0].toFixed(1)} ${H - pad} Z`;
 
