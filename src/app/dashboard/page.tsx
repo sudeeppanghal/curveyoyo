@@ -154,7 +154,7 @@ function AnnouncementCountdown({ targetDate }: { targetDate: string }) {
           { label: "Secs", val: timeLeft.seconds }
         ].map((item, idx) => (
           <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <div style={{
+            <div className="digit-box-pulse" style={{
               background: "linear-gradient(180deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.08) 100%)",
               color: "#e9d5ff",
               minWidth: 48,
@@ -167,7 +167,8 @@ function AnnouncementCountdown({ targetDate }: { targetDate: string }) {
               fontSize: 22,
               fontWeight: 900,
               border: "1px solid rgba(168, 85, 247, 0.35)",
-              boxShadow: "0 4px 12px rgba(168, 85, 247, 0.2)"
+              boxShadow: "0 4px 12px rgba(168, 85, 247, 0.2)",
+              transition: "transform 0.2s ease"
             }}>
               {pad(item.val)}
             </div>
@@ -300,6 +301,65 @@ export default function DashboardPage() {
         .neo-qa:hover{box-shadow:10px 10px 24px #c8d0e7,-5px -5px 14px #ffffff !important;transform:translateY(-2px)}
         .neo-qa:active{box-shadow:inset 4px 4px 10px #c8d0e7,inset -2px -2px 6px #ffffff !important;transform:none}
         .neo-step:hover{box-shadow:6px 6px 16px #c8d0e7,-3px -3px 10px #ffffff !important}
+        
+        .promo-card-animated {
+          position: relative;
+          overflow: hidden;
+          animation: neonGlow 4s infinite ease-in-out, fadeUp 0.3s ease;
+        }
+        
+        .promo-card-animated::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -150%;
+          width: 60%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.12) 50%,
+            transparent
+          );
+          transform: skewX(-20deg);
+          pointer-events: none;
+          animation: shimmerSweep 5s infinite ease-in-out;
+        }
+
+        .digit-box-pulse {
+          animation: digitBreathe 3s infinite ease-in-out;
+        }
+
+        @keyframes neonGlow {
+          0%, 100% {
+            border-color: rgba(168, 85, 247, 0.25);
+            box-shadow: 0 12px 36px rgba(0,0,0,0.6), 0 0 15px rgba(168, 85, 247, 0.1);
+          }
+          50% {
+            border-color: rgba(236, 72, 153, 0.55);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.65), 0 0 25px rgba(236, 72, 153, 0.25);
+          }
+        }
+
+        @keyframes shimmerSweep {
+          0% { left: -150%; }
+          30% { left: 150%; }
+          100% { left: 150%; }
+        }
+
+        @keyframes digitBreathe {
+          0%, 100% {
+            transform: scale(1);
+            border-color: rgba(168, 85, 247, 0.35);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
+          }
+          50% {
+            transform: scale(1.04);
+            border-color: rgba(168, 85, 247, 0.65);
+            box-shadow: 0 6px 18px rgba(168, 85, 247, 0.45);
+            color: #fff;
+          }
+        }
       `}</style>
 
       {/* VIP Partner Banner */}
@@ -340,7 +400,7 @@ export default function DashboardPage() {
       {announcement && announcement.offerEnabled && announcement.endsAt && new Date(announcement.endsAt).getTime() > Date.now() && (
         <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
           <Link href={announcement.targetLink || "/dashboard/billing"} style={{ textDecoration: "none", width: "100%", maxWidth: 858 }}>
-            <div style={{
+            <div className="promo-card-animated" style={{
               borderRadius: 24,
               background: "linear-gradient(135deg, #0f0c1b 0%, #08010f 100%)",
               border: "1.5px solid rgba(168, 85, 247, 0.2)",
@@ -351,7 +411,6 @@ export default function DashboardPage() {
               alignItems: "center",
               cursor: "pointer",
               transition: "transform 0.2s ease, border-color 0.2s ease",
-              animation: "fadeUp 0.3s ease",
               marginBottom: 28,
               width: "100%"
             }}
