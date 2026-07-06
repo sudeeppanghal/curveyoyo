@@ -166,26 +166,24 @@ export async function GET(request: NextRequest) {
       );
       orderRevenue = Math.min(orderRevenue, order.priceCharged);
 
-      let providerCostUsd = 0;
-      providerCostUsd += (order.viewsDelivered / 1000) * originalViewsRate;
-      providerCostUsd += (order.likesDelivered / 1000) * originalLikesRate;
-      providerCostUsd += (order.savesDelivered / 1000) * originalSavesRate;
-      providerCostUsd += (order.sharesDelivered / 1000) * originalSharesRate;
-      providerCostUsd += (order.commentsDelivered / 1000) * originalCommentsRate;
+      let providerCostInr = 0;
+      providerCostInr += (order.viewsDelivered / 1000) * originalViewsRate;
+      providerCostInr += (order.likesDelivered / 1000) * originalLikesRate;
+      providerCostInr += (order.savesDelivered / 1000) * originalSavesRate;
+      providerCostInr += (order.sharesDelivered / 1000) * originalSharesRate;
+      providerCostInr += (order.commentsDelivered / 1000) * originalCommentsRate;
 
-      const providerCostInr = providerCostUsd * 83;
       orderProfit = (orderRevenue - providerCostInr);
       totalRevenueInr += orderRevenue;
       totalProfitInr += orderProfit;
     } else {
-      let providerCostUsd = 0;
-      providerCostUsd += (order.viewsTarget / 1000) * originalViewsRate;
-      providerCostUsd += (order.likesTarget / 1000) * originalLikesRate;
-      providerCostUsd += (order.savesTarget / 1000) * originalSavesRate;
-      providerCostUsd += (order.sharesTarget / 1000) * originalSharesRate;
-      providerCostUsd += (order.commentsTarget / 1000) * originalCommentsRate;
+      let providerCostInr = 0;
+      providerCostInr += (order.viewsTarget / 1000) * originalViewsRate;
+      providerCostInr += (order.likesTarget / 1000) * originalLikesRate;
+      providerCostInr += (order.savesTarget / 1000) * originalSavesRate;
+      providerCostInr += (order.sharesTarget / 1000) * originalSharesRate;
+      providerCostInr += (order.commentsTarget / 1000) * originalCommentsRate;
 
-      const providerCostInr = providerCostUsd * 83;
       orderProfit = (orderRevenue - providerCostInr);
       totalRevenueInr += orderRevenue;
       totalProfitInr += orderProfit;
