@@ -38,14 +38,15 @@ type ErrorClass =
   | "user_error"
   | "fatal";
 
-function classifyError(errMsg: string): ErrorClass {
+export function classifyError(errMsg: string): ErrorClass {
   const e = errMsg.toLowerCase();
 
   // Qty mismatch — panel requires exact multiples (e.g. TikTok views Min=100)
   if (
     e.includes("amount") || e.includes("quantity") ||
     e.includes("doesn't match") || e.includes("does not match") ||
-    e.includes("invalid quantity") || e.includes("minimum")
+    e.includes("invalid quantity") || e.includes("minimum") ||
+    e.includes("min:") || e.includes("min ")
   ) return "retry_rounded";
 
   // Dead service — service was removed / disabled on the panel

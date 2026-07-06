@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { placePanelOrder } from "@/lib/delivery/panel-client";
+import { placePanelOrder, placeOrderWithFallback, classifyError } from "@/lib/delivery/panel-client";
 import { calculateEngagementDue, applyJitter } from "@/lib/delivery/curve";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
 import { triggerMidwayRefund } from "@/lib/delivery/refund";
@@ -90,12 +90,28 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
   let activePanel = shuffledPanels[0];
   
   for (const panel of shuffledPanels) {
-    result = await placePanelOrder({
+    let viewsMinQty = 100;
+    let viewsFallbackIds: string[] = [];
+    try {
+      const activeSvc = await prisma.adminService.findFirst({
+        where: { panelId: panel.id, platform: order.reel.platform as any, type: "views" }
+      });
+      if (activeSvc) {
+        if (activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
+        if (activeSvc.fallbackServiceIds && Array.isArray(activeSvc.fallbackServiceIds)) {
+          viewsFallbackIds = (activeSvc.fallbackServiceIds as string[]).filter(Boolean);
+        }
+      }
+    } catch {}
+
+    result = await placeOrderWithFallback({
       apiUrl: panel.apiUrl,
       apiKeyEncrypted: panel.apiKeyEncrypted,
-      serviceId: viewsServiceId,
+      primaryServiceId: viewsServiceId,
+      fallbackServiceIds: viewsFallbackIds,
       link: order.reel.url,
-      quantity: jitteredViews,
+      quantity: Math.max(viewsMinQty, jitteredViews),
+      minQuantity: viewsMinQty,
     });
 
     if (result.ok) {
@@ -106,11 +122,13 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
       }
       break;
     } else {
-      // Mark failed panel as OFFLINE in background so we don't hit it constantly
-      prisma.panel.update({
-        where: { id: panel.id },
-        data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: Date.now() - startMs },
-      }).catch(() => {});
+      // ONLY mark failed panel as OFFLINE if the error class indicates entire panel is down (auth, connectivity, balance)
+      if (result.errorClass === "panel_down") {
+        prisma.panel.update({
+          where: { id: panel.id },
+          data: { status: "OFFLINE", lastCheckedAt: new Date(), lastResponseMs: Date.now() - startMs },
+        }).catch(() => {});
+      }
     }
   }
 
