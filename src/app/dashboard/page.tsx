@@ -142,30 +142,36 @@ function AnnouncementCountdown({ targetDate }: { targetDate: string }) {
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", width: "100%", padding: "4px 0" }}>
-      <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.05em" }}>⏳ OFFER ENDS IN:</span>
-      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%", padding: "8px 0" }}>
+      <span style={{ fontSize: 12, fontWeight: 900, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.12em", display: "flex", alignItems: "center", gap: 6 }}>
+        ⏳ SPECIAL DEPOSIT OFFER ENDS IN
+      </span>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
         {[
-          { label: "D", val: timeLeft.days },
-          { label: "H", val: timeLeft.hours },
-          { label: "M", val: timeLeft.minutes },
-          { label: "S", val: timeLeft.seconds }
+          { label: "Days", val: timeLeft.days },
+          { label: "Hours", val: timeLeft.hours },
+          { label: "Mins", val: timeLeft.minutes },
+          { label: "Secs", val: timeLeft.seconds }
         ].map((item, idx) => (
-          <div key={idx} style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
             <div style={{
-              background: "rgba(168, 85, 247, 0.2)",
-              color: "#c084fc",
-              padding: "4px 8px",
-              borderRadius: 6,
-              fontFamily: "monospace",
-              fontSize: 14,
+              background: "linear-gradient(180deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.08) 100%)",
+              color: "#e9d5ff",
+              minWidth: 48,
+              height: 48,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 12,
+              fontFamily: "Outfit, Inter, system-ui, sans-serif",
+              fontSize: 22,
               fontWeight: 900,
-              border: "1px solid rgba(168, 85, 247, 0.3)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+              border: "1px solid rgba(168, 85, 247, 0.35)",
+              boxShadow: "0 4px 12px rgba(168, 85, 247, 0.2)"
             }}>
               {pad(item.val)}
             </div>
-            <span style={{ fontSize: 10, fontWeight: 950, color: N.muted, marginRight: idx < 3 ? 4 : 0 }}>{item.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</span>
           </div>
         ))}
       </div>
@@ -357,8 +363,8 @@ export default function DashboardPage() {
           }}
           >
             {announcement.imageUrl && (
-              <div style={{ width: "100%", display: "flex", background: "#06070a", borderBottom: `1.5px solid ${N.border}` }}>
-                <img src={announcement.imageUrl} alt="Offer Announcement" style={{ width: "100%", height: "auto", maxHeight: 300, objectFit: "cover" }} />
+              <div style={{ width: "100%", display: "flex", background: "#06070a", borderBottom: "1.5px solid rgba(168, 85, 247, 0.2)" }}>
+                <img src={announcement.imageUrl} alt="Offer Announcement" style={{ width: "100%", height: "auto", display: "block" }} />
               </div>
             )}
             <div style={{ width: "100%", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 4, alignItems: "center", textAlign: "center", boxSizing: "border-box" }}>
