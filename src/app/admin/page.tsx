@@ -2934,7 +2934,7 @@ export default function AdminPage() {
 
                                 <p style={{ fontSize: 11, color: N.muted, margin: "4px 0 0" }}>Service ID: #{s.serviceId} {s.name ? `(${s.name.slice(0, 25)}…)` : ""}</p>
 
-                                <p style={{ fontSize: 10, color: N.muted, margin: "2px 0 0" }}>Base Cost: ${s.originalRate}/1k | Min Qty: <strong style={{ color: N.text }}>{s.minQuantity ?? 10}</strong></p>
+                                <p style={{ fontSize: 10, color: N.muted, margin: "2px 0 0" }}>Base Cost: ₹{s.originalRate}/1k | Min Qty: <strong style={{ color: N.text }}>{s.minQuantity ?? 10}</strong></p>
 
                               </div>
 

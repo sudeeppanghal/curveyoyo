@@ -164,6 +164,24 @@ export async function POST(request: NextRequest) {
   let mainAdminService = null;
 
   for (const p of matchingPanels) {
+    const updatedFallbacks = (fallbackServiceIds as any[] ?? []).map(f => {
+      if (typeof f === "object" && f !== null && f.serviceId) {
+        const origUSD = parseFloat(f.originalRate) || 0;
+        const origINR = parseFloat((origUSD * USD_TO_INR).toFixed(6));
+        const custINR = f.customRate !== undefined && f.customRate !== null && !isNaN(parseFloat(f.customRate)) && parseFloat(f.customRate) > 0
+          ? parseFloat(f.customRate)
+          : parseFloat((origINR * PRICE_MULTIPLIER).toFixed(6));
+        return {
+          ...f,
+          originalRate: origINR,
+          customRate: custINR
+        };
+      }
+      return f;
+    });
+
+    const originalInrRate = parseFloat((parseFloat(originalRate) * USD_TO_INR).toFixed(6));
+
     const s = await prisma.adminService.upsert({
       where: {
         panelId_platform_type: {
@@ -177,23 +195,23 @@ export async function POST(request: NextRequest) {
         platform: uppercasePlatform,
         type: typeLower,
         serviceId: String(serviceId),
-        originalRate: parseFloat(originalRate),
+        originalRate: originalInrRate,
         customRate: customRate !== undefined && customRate !== null && !isNaN(parseFloat(customRate))
           ? parseFloat(customRate)
-          : parseFloat((parseFloat(originalRate) * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
+          : parseFloat((originalInrRate * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
-        fallbackServiceIds: fallbackServiceIds ?? [],
+        fallbackServiceIds: updatedFallbacks,
       },
       update: {
         serviceId: String(serviceId),
-        originalRate: parseFloat(originalRate),
+        originalRate: originalInrRate,
         customRate: customRate !== undefined && customRate !== null && !isNaN(parseFloat(customRate))
           ? parseFloat(customRate)
-          : parseFloat((parseFloat(originalRate) * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
+          : parseFloat((originalInrRate * PRICE_MULTIPLIER).toFixed(6)),
         name: name ?? null,
         minQuantity: minQuantity ? parseInt(minQuantity) : 10,
-        fallbackServiceIds: fallbackServiceIds ?? [],
+        fallbackServiceIds: updatedFallbacks,
       },
     });
 

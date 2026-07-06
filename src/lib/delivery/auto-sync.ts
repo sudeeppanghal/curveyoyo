@@ -111,23 +111,24 @@ export async function runAutoSync() {
 
       // ── A. CHECK FOR PRICE CHANGES (auto-apply 5x) ───────────────────
       if (!isDead && liveMatch) {
-        const liveRate = parseFloat(liveMatch.rate) || 0;
+        const liveRateUSD = parseFloat(liveMatch.rate) || 0;
+        const liveRateINR = parseFloat((liveRateUSD * USD_TO_INR).toFixed(6));
         const savedRate = configuredService.originalRate || 0;
-        const rateChangePct = savedRate > 0 ? Math.abs(liveRate - savedRate) / savedRate : 1;
+        const rateChangePct = savedRate > 0 ? Math.abs(liveRateINR - savedRate) / savedRate : 1;
 
         if (rateChangePct > 0.001) { // Rate changed by more than 0.1%
-          const newCustomRate = parseFloat((liveRate * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6));
+          const newCustomRate = parseFloat((liveRateINR * PRICE_MULTIPLIER).toFixed(6));
           await prisma.adminService.update({
             where: { id: configuredService.id },
             data: {
-              originalRate: liveRate,
+              originalRate: liveRateINR,
               customRate: newCustomRate,
             }
           });
 
           if (rateChangePct > 0.1) { // Alert only for >10% price change
             priceChanges.push(
-              `${configuredService.platform} ${configuredService.type}: ₹${savedRate.toFixed(4)} → ₹${liveRate.toFixed(4)}/1k`
+              `${configuredService.platform} ${configuredService.type}: ₹${savedRate.toFixed(4)} → ₹${liveRateINR.toFixed(4)}/1k`
             );
           }
         }
@@ -143,14 +144,15 @@ export async function runAutoSync() {
         if (typeof fb === "object" && fb !== null && fb.serviceId) {
           const liveMatch = liveServiceMap.get(String(fb.serviceId));
           if (liveMatch) {
-            const liveRate = parseFloat(liveMatch.rate) || 0;
+            const liveRateUSD = parseFloat(liveMatch.rate) || 0;
+            const liveRateINR = parseFloat((liveRateUSD * USD_TO_INR).toFixed(6));
             const savedRate = fb.originalRate || 0;
-            if (Math.abs(liveRate - savedRate) > 0.001) {
+            if (Math.abs(liveRateINR - savedRate) > 0.001) {
               fallbacksChanged = true;
               return {
                 ...fb,
-                originalRate: liveRate,
-                customRate: parseFloat((liveRate * USD_TO_INR * PRICE_MULTIPLIER).toFixed(6)),
+                originalRate: liveRateINR,
+                customRate: parseFloat((liveRateINR * PRICE_MULTIPLIER).toFixed(6)),
                 name: liveMatch.name,
               };
             }
