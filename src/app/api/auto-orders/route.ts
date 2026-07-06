@@ -74,13 +74,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "One or more templates not found" }, { status: 404 });
     }
 
+    const dbTemplateIds = new Set(dbTemplates.map(t => t.id));
+    const firstTemplateId = templateIds[0];
+    const templateIdToSave = dbTemplateIds.has(firstTemplateId) ? firstTemplateId : null;
+
     const autoSub = await prisma.autoSubscription.create({
       data: {
         userId: dbUser.id,
         platform,
         username: username.trim(),
         templateIds,
-        templateId: templateIds[0], // fallback for legacy safety
+        templateId: templateIdToSave, // fallback for legacy safety
         viewsMin: Number(viewsMin) || 1000,
         viewsMax: Number(viewsMax) || 5000,
         likesMin: Number(likesMin) || 0,
