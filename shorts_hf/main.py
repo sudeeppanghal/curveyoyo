@@ -835,6 +835,7 @@ def crop_video(
         download_success = download_google_drive(url, temp_input)
     
     # Fallback to yt-dlp for YouTube/FB/TikTok/Insta/etc.
+    ytdlp_err_output = ""
     if not download_success:
         try:
             print(f"yt-dlp download initiated for section *{start_seconds}-{end_seconds} for job {job_id}")
@@ -851,8 +852,10 @@ def crop_video(
             if ytdlp_result.returncode == 0:
                 download_success = True
             else:
+                ytdlp_err_output = ytdlp_result.stderr
                 print("yt-dlp Error output:", ytdlp_result.stderr)
         except Exception as e:
+            ytdlp_err_output = str(e)
             print("yt-dlp Exception:", e)
 
     # Fallback to direct HTTP download (for direct raw mp4 link files)
@@ -868,7 +871,7 @@ def crop_video(
             print("Direct HTTP Fallback Download Failed:", e)
 
     if not download_success or not os.path.exists(temp_input):
-        return JSONResponse(status_code=400, content={"success": False, "error": "Failed to download the video. Make sure the link is public and valid."})
+        return JSONResponse(status_code=400, content={"success": False, "error": f"Failed to download the video. yt-dlp error: {ytdlp_err_output}"})
 
     try:
         # 2. Process Video Cropping / Face-tracking Reframe
