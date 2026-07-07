@@ -1,103 +1,54 @@
-import { ApifyClient } from 'apify-client';
 import { prisma } from "@/lib/prisma";
 
-// Simple round-robin key rotator
-let currentKeyIndex = 0;
-
-async function getNextApifyClient() {
-  const settings = await prisma.adminSettings.findUnique({
-    where: { id: "global" }
-  });
-
-  const keysStr = settings?.apifyKeys || process.env.APIFY_API_KEYS;
-  if (!keysStr) {
-    throw new Error("Missing APIFY_API_KEYS in database or .env");
-  }
-  
-  const keys = keysStr.split(',').map(k => k.trim()).filter(Boolean);
-  if (keys.length === 0) {
-    throw new Error("No valid Apify keys found.");
-  }
-  
-  const key = keys[currentKeyIndex];
-  currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-  
-  return new ApifyClient({ token: key });
-}
+const SCRAPER_API_URL = process.env.SCRAPER_API_URL || "https://jaatram-yoyo-scraper.hf.space";
+const SCRAPER_API_SECRET = process.env.SCRAPER_API_SECRET || "yoyosmm_scraper_secret_xyz123";
 
 export async function fetchLatestInstagramPost(username: string): Promise<{ id: string, url: string } | null> {
-  const client = await getNextApifyClient();
-
-  
-  const input = {
-    "directUrls": [`https://www.instagram.com/${username}/`],
-    "resultsType": "posts",
-    "resultsLimit": 1
-  };
-
   try {
-    // We use a popular Apify actor for Instagram scraping
-    // "apify/instagram-scraper" is a commonly used actor ID.
-    // If we need a specific one, we can change this string.
-    const run = await client.actor("apify/instagram-scraper").call(input);
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    
-    if (items && items.length > 0) {
-      const post = items[0] as any;
+    console.log(`[Scraper] Fetching latest Instagram post for: ${username}`);
+    const url = `${SCRAPER_API_URL}/scrape?platform=instagram&username=${encodeURIComponent(username)}&secret=${SCRAPER_API_SECRET}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Scraper API returned status ${res.status}`);
+    }
+    const data = await res.json() as any;
+    if (data && data.success) {
+      console.log(`[Scraper] Success Instagram for ${username}: ${data.id}`);
       return {
-        id: post.id || post.shortCode || post.url,
-        url: post.url
+        id: data.id,
+        url: data.url
       };
     }
-  } catch (error) {
-    console.error(`Apify Scraper Error for ${username}:`, error);
+  } catch (error: any) {
+    console.error(`[Scraper] Instagram Error for ${username}:`, error.message);
   }
-  
   return null;
 }
-export async function fetchLatestTiktokPost(username: string): Promise<{ id: string, url: string } | null> {
-  const client = await getNextApifyClient();
-  const input = {
-    "profiles": [username],
-    "resultsPerPage": 1,
-    "shouldDownloadVideos": false
-  };
 
+export async function fetchLatestTiktokPost(username: string): Promise<{ id: string, url: string } | null> {
   try {
-    const run = await client.actor("clockworks/tiktok-scraper").call(input);
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    if (items && items.length > 0) {
-      const post = items[0] as any;
+    console.log(`[Scraper] Fetching latest TikTok post for: ${username}`);
+    const url = `${SCRAPER_API_URL}/scrape?platform=tiktok&username=${encodeURIComponent(username)}&secret=${SCRAPER_API_SECRET}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Scraper API returned status ${res.status}`);
+    }
+    const data = await res.json() as any;
+    if (data && data.success) {
+      console.log(`[Scraper] Success TikTok for ${username}: ${data.id}`);
       return {
-        id: post.id || post.videoMeta?.id || post.webVideoUrl,
-        url: post.webVideoUrl || post.videoUrl
+        id: data.id,
+        url: data.url
       };
     }
-  } catch (error) {
-    console.error(`Apify TikTok Scraper Error for ${username}:`, error);
+  } catch (error: any) {
+    console.error(`[Scraper] TikTok Error for ${username}:`, error.message);
   }
   return null;
 }
 
 export async function fetchLatestFacebookPost(username: string): Promise<{ id: string, url: string } | null> {
-  const client = await getNextApifyClient();
-  const input = {
-    "startUrls": [{ "url": `https://www.facebook.com/${username}` }],
-    "resultsLimit": 1
-  };
-
-  try {
-    const run = await client.actor("apify/facebook-pages-scraper").call(input);
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    if (items && items.length > 0) {
-      const post = items[0] as any;
-      return {
-        id: post.postId || post.url,
-        url: post.url
-      };
-    }
-  } catch (error) {
-    console.error(`Apify Facebook Scraper Error for ${username}:`, error);
-  }
+  console.log(`[Scraper] Facebook scraping is currently not used/active.`);
   return null;
 }
+
