@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { N } from "@/lib/theme";
-import { MtpOrderPanel } from "@/components/mtp/MtpOrderPanel";
 
 
 
@@ -193,8 +192,6 @@ export default function DashboardPage() {
   const [activeRoutes, setActiveRoutes] = useState(482);
   const [userEmail, setUserEmail] = useState("");
   const [announcement, setAnnouncement] = useState<any | null>(null);
-  const [mtpMode, setMtpMode] = useState(false);
-  const [userBalance, setUserBalance] = useState(0);
 
   useEffect(() => {
     setActiveRoutes(Math.floor(Math.random() * (1000 - 300 + 1)) + 300);
@@ -211,16 +208,8 @@ export default function DashboardPage() {
         if (data) {
           setWalletMode(!!data.walletMode);
           if (data.email) setUserEmail(data.email);
-          // Combine balance + bonus for display
-          setUserBalance((data.balance ?? 0) + (data.bonusBalance ?? 0));
         }
       })
-      .catch(() => {});
-
-    // Check if MTP (SMM Provider) mode is active
-    fetch("/api/mtp/check-mode")
-      .then(r => r.json())
-      .then(d => setMtpMode(!!d.mtpMode))
       .catch(() => {});
 
     fetch("/api/announcements")
@@ -613,12 +602,6 @@ export default function DashboardPage() {
       )}
 
       {/* Quick Actions */}
-
-      {/* ── MTP PROVIDER ORDER PANEL (shown only when admin enables provider mode) ── */}
-      {mtpMode && (
-        <MtpOrderPanel userBalance={userBalance} />
-      )}
-
       <div>
         <p style={{ fontSize:11, fontWeight:800, color:N.muted, textTransform:"uppercase", letterSpacing:"0.12em", margin:"0 0 14px" }}>Quick Actions</p>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:16 }}>

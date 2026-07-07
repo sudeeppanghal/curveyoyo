@@ -6,7 +6,6 @@ import Link from "next/link";
 import { BlogsTab } from "./BlogsTab";
 import { AutoSyncTab } from "./AutoSyncTab";
 import { AnnouncementsTab } from "./AnnouncementsTab";
-import { MtpTab } from "./MtpTab";
 import { N } from "@/lib/theme";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -32,8 +31,7 @@ interface AdminSettings {
 
   minDeposit: number;
   apifyKeys: string | null;
-  mtpMode?: boolean;
-  mtpApiKey?: string | null;
+
 }
 
 interface User {
@@ -76,7 +74,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "failed_orders" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync" | "announcements" | "mtp_panel";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "failed_orders" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync" | "announcements";
 
 
 
@@ -1414,7 +1412,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "failed_orders", "system", "tickets", "affiliates", "blogs", "auto_sync", "announcements", "mtp_panel"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "failed_orders", "system", "tickets", "affiliates", "blogs", "auto_sync", "announcements"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1436,8 +1434,7 @@ export default function AdminPage() {
               affiliates: "🤝 ",
               blogs: "📝 ",
               auto_sync: "🔄 ",
-              announcements: "📢 ",
-              mtp_panel: "🔌 ",
+              announcements: "📢 "
             };
 
             return (
@@ -4193,11 +4190,6 @@ export default function AdminPage() {
 
           {tab === "announcements" && (
             <AnnouncementsTab secret={secret} />
-          )}
-
-          {/* ── MTP PROVIDER TAB ─── */}
-          {tab === "mtp_panel" && (
-            <MtpTab secret={secret} />
           )}
 
       {/* USER HISTORY MODAL */}
