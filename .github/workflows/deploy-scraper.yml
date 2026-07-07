@@ -1,0 +1,26 @@
+name: Deploy Scraper to Hugging Face
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'scraper_hf/**'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Push to HF
+        env:
+          HF_TOKEN: "${{ secrets.HF_TOKEN }}"
+        run: |
+          cd scraper_hf
+          git init
+          git config user.name "jaatram"
+          git config user.email "sudeeppanghal@gmail.com"
+          git add .
+          git commit -m "Deploy to Hugging Face Space"
+          git remote add origin https://jaatram:$HF_TOKEN@huggingface.co/spaces/jaatram/yoyo-scraper
+          git push -f origin master:main
