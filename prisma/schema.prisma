@@ -46,6 +46,7 @@ model User {
   affiliateTx     AffiliateTransaction[] @relation("AffiliateEarnings")
   referredTx      AffiliateTransaction[] @relation("ReferredUser")
   autoSubscriptions AutoSubscription[]
+  mtpOrders       MtpOrder[]
 
   @@map("users")
 }
@@ -394,6 +395,11 @@ model AdminSettings {
   upiQrCode       String?  @map("upi_qr_code")
   minDeposit      Float    @default(500.0) @map("min_deposit")
   apifyKeys       String?  @map("apify_keys") @db.Text
+  // ─── MoreThanPanel Integration ───────────────────────────────
+  mtpMode         Boolean  @default(false) @map("mtp_mode")
+  mtpApiKey       String?  @map("mtp_api_key") @db.Text
+  mtpLastSyncAt   DateTime? @map("mtp_last_sync_at")
+  mtpServiceCount Int?     @map("mtp_service_count")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("admin_settings")
@@ -646,4 +652,41 @@ model Announcement {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@map("announcements")
+}
+
+// ─────────────── MTP (MORETHAN INTEGRATION) ──────────────
+model MtpService {
+  id          String   @id @default(cuid())
+  serviceId   String   @unique @map("service_id")   // MTP numeric service ID as string
+  name        String
+  category    String
+  type        String   @default("Default")
+  rate        Float                                   // original USD rate per 1000
+  customRate  Float    @map("custom_rate")            // INR rate per 1000 (rate × 1.5 × 96)
+  minOrder    Int      @map("min_order")
+  maxOrder    Int      @map("max_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("mtp_services")
+}
+
+model MtpOrder {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId       String   @map("service_id")         // FK to MtpService.serviceId
+  serviceName     String   @map("service_name")
+  category        String
+  link            String                               // target URL ordered
+  quantity        Int
+  costInr         Float    @map("cost_inr")           // INR charged to wallet
+  providerOrderId String?  @map("provider_order_id")  // order ID returned by provider
+  status          String   @default("PENDING")         // PENDING | PROCESSING | COMPLETED | FAILED
+  statusDetail    String?  @map("status_detail")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("mtp_orders")
 }
