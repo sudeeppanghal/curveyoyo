@@ -13,46 +13,6 @@ app.get('/', (req, res) => {
 });
 
 // Diagnostic debug endpoint to view links on any target page
-app.get('/debug-links', async (req, res) => {
-  const { url, secret } = req.query;
-  if (secret !== API_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-web-security',
-        '--blink-features=AutomationControlled'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
-    });
-    const page = await browser.newPage();
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-    });
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
-    
-    const pageTitle = await page.title();
-    const links = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('a')).map(l => ({
-        text: l.innerText.substring(0, 50).trim(),
-        href: l.getAttribute('href'),
-        resolvedHref: l.href
-      }));
-    });
-    
-    res.json({ pageTitle, linksCount: links.length, links: links.slice(0, 100) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    if (browser) await browser.close();
-  }
-});
 
 app.get('/scrape', async (req, res) => {
   const { username, platform, secret } = req.query;
