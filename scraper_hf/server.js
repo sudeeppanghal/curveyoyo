@@ -1,6 +1,7 @@
 const express = require('express');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const https = require('https');
 
 puppeteer.use(StealthPlugin());
 
@@ -12,52 +13,28 @@ app.get('/', (req, res) => {
   res.send("Stealth Scraper Service is Healthy & Online!");
 });
 
-// Diagnostic debug endpoint to view links and page contents
-app.get('/debug-links', async (req, res) => {
-  const { url, secret } = req.query;
-  if (secret !== API_SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-web-security',
-        '--blink-features=AutomationControlled'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
+// Helper function to fetch elite HTTP proxies from GeoNode
+function getEliteProxies() {
+  return new Promise((resolve) => {
+    const url = 'https://proxylist.geonode.com/api/proxy-list?limit=15&page=1&sort_by=latency&sort_type=asc&protocols=http&anonymityLevel=elite';
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve(json.data || []);
+        } catch (e) {
+          console.error("Failed to parse proxy JSON:", e.message);
+          resolve([]);
+        }
+      });
+    }).on('error', (err) => {
+      console.error("Failed to fetch proxies:", err.message);
+      resolve([]);
     });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-    });
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
-    
-    // Wait 6 seconds for client-side API requests to complete and render the DOM
-    await new Promise(resolve => setTimeout(resolve, 6000));
-    
-    const pageTitle = await page.title();
-    const bodyExcerpt = await page.evaluate(() => document.body.innerText.substring(0, 1000));
-    const links = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('a')).map(l => ({
-        text: l.innerText.substring(0, 50).trim(),
-        href: l.getAttribute('href'),
-        resolvedHref: l.href
-      }));
-    });
-    
-    res.json({ pageTitle, bodyExcerpt, linksCount: links.length, links: links.slice(0, 150) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    if (browser) await browser.close();
-  }
-});
+  });
+}
 
 app.get('/scrape', async (req, res) => {
   const { username, platform, secret } = req.query;
@@ -70,72 +47,128 @@ app.get('/scrape', async (req, res) => {
   }
 
   console.log(`Scraping ${platform} profile: ${username}`);
-  let browser;
-  let page;
 
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-web-security',
-        '--blink-features=AutomationControlled'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
-    });
+  if (platform.toLowerCase() === 'instagram') {
+    let proxies = [];
+    try {
+      proxies = await getEliteProxies();
+      console.log(`Retrieved ${proxies.length} elite proxies for Instagram rotation.`);
+    } catch (e) {
+      console.error("Error fetching proxies:", e.message);
+    }
 
-    page = await browser.newPage();
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-    });
+    // Attempt direct load first as a backup, then rotate through top 5 elite proxies
+    const proxyList = [null].concat(proxies.slice(0, 5));
+    let lastError = null;
 
-    // OPTIMIZATION: Block heavy assets (images, stylesheets, fonts, media) to load pages 5x faster
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const type = req.resourceType();
-      if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
-        req.abort();
-      } else {
-        req.continue();
-      }
-    });
+    for (let i = 0; i < proxyList.length; i++) {
+      const proxy = proxyList[i];
+      const proxyUrl = proxy ? `http://${proxy.ip}:${proxy.port}` : null;
+      console.log(`Instagram Scrape Attempt ${i + 1}/${proxyList.length} using Proxy: ${proxyUrl || 'Direct Connection'}`);
 
-    if (platform.toLowerCase() === 'instagram') {
-      // Scrape official Instagram page directly
-      const targetUrl = `https://www.instagram.com/${username}/`;
-      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 35000 });
-      
-      // Wait for posts link (instagram uses /p/[post_id] format)
-      await page.waitForSelector('a[href*="/p/"]', { timeout: 15000 });
-
-      const latestPost = await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll('a'));
-        const postLink = links.find(l => {
-          const href = l.getAttribute('href') || '';
-          return href.includes('/p/');
-        });
-        if (postLink) {
-          const href = postLink.getAttribute('href');
-          const id = href.split('/p/')[1].replace(/\//g, '');
-          return {
-            id: id,
-            url: `https://www.instagram.com/p/${id}/`
-          };
+      let browser;
+      let page;
+      try {
+        const launchArgs = [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-web-security'
+        ];
+        if (proxyUrl) {
+          launchArgs.push(`--proxy-server=${proxyUrl}`);
         }
-        return null;
+
+        browser = await puppeteer.launch({
+          headless: true,
+          args: launchArgs,
+          executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
+        });
+
+        page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+        await page.setExtraHTTPHeaders({
+          'Accept-Language': 'en-US,en;q=0.9',
+        });
+
+        // Optimize load times by blocking media/stylesheets
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+          const type = req.resourceType();
+          if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+            req.abort();
+          } else {
+            req.continue();
+          }
+        });
+
+        const targetUrl = `https://www.instagram.com/${username}/`;
+        // Reduce navigation timeout since we rotate proxies
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+        // Wait for post links
+        await page.waitForSelector('a[href*="/p/"]', { timeout: 8000 });
+
+        const latestPost = await page.evaluate(() => {
+          const links = Array.from(document.querySelectorAll('a'));
+          const postLink = links.find(l => {
+            const href = l.getAttribute('href') || '';
+            return href.includes('/p/');
+          });
+          if (postLink) {
+            const href = postLink.getAttribute('href');
+            const id = href.split('/p/')[1].replace(/\//g, '');
+            return {
+              id: id,
+              url: `https://www.instagram.com/p/${id}/`
+            };
+          }
+          return null;
+        });
+
+        if (!latestPost) throw new Error("No Instagram posts found in DOM");
+
+        console.log(`Instagram scrape successful on attempt ${i + 1}!`);
+        return res.json({ success: true, ...latestPost });
+
+      } catch (error) {
+        console.warn(`Instagram attempt ${i + 1} failed:`, error.message);
+        lastError = error;
+      } finally {
+        if (browser) await browser.close();
+      }
+    }
+
+    // If all attempts failed
+    return res.status(500).json({
+      error: `Instagram scraping failed after all rotation attempts. Last error: ${lastError ? lastError.message : 'Unknown'}`
+    });
+  } 
+  
+  else if (platform.toLowerCase() === 'tiktok') {
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-web-security'
+        ],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH
       });
 
-      if (!latestPost) throw new Error("No Instagram posts found via official site");
-      return res.json({ success: true, ...latestPost });
-    } 
-    
-    else if (platform.toLowerCase() === 'tiktok') {
+      const page = await browser.newPage();
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9',
+      });
+
       const targetUrl = `https://urlebird.com/user/${username}/`;
-      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 35000 });
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
       
-      await page.waitForSelector('a[href*="/video/"]', { timeout: 15000 });
+      await page.waitForSelector('a[href*="/video/"]', { timeout: 12000 });
 
       const latestPost = await page.evaluate(() => {
         const links = Array.from(document.querySelectorAll('a'));
@@ -156,31 +189,15 @@ app.get('/scrape', async (req, res) => {
 
       if (!latestPost) throw new Error("No TikTok videos found via Urlebird");
       return res.json({ success: true, ...latestPost });
+    } catch (error) {
+      console.error("TikTok scraping error:", error);
+      return res.status(500).json({ error: error.message });
+    } finally {
+      if (browser) await browser.close();
     }
-
-    res.status(400).json({ error: "Unsupported platform" });
-  } catch (error) {
-    console.error("Scraping error:", error);
-    
-    let pageTitle = "Unknown";
-    let bodyExcerpt = "No page loaded";
-    try {
-      if (page) {
-        pageTitle = await page.title();
-        bodyExcerpt = await page.evaluate(() => document.body.innerText.substring(0, 1000));
-      }
-    } catch (e) {
-      console.error("Failed to gather page debug info:", e);
-    }
-
-    res.status(500).json({ 
-      error: error.message, 
-      pageTitle,
-      bodyExcerpt
-    });
-  } finally {
-    if (browser) await browser.close();
   }
+
+  res.status(400).json({ error: "Unsupported platform" });
 });
 
 app.listen(PORT, () => {
