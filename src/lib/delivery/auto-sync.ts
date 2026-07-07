@@ -112,7 +112,7 @@ export async function runAutoSync() {
       // ── A. CHECK FOR PRICE CHANGES (auto-apply 5x) ───────────────────
       if (!isDead && liveMatch) {
         const liveRateUSD = parseFloat(liveMatch.rate) || 0;
-        const liveRateINR = parseFloat(liveRateUSD.toFixed(6));
+        const liveRateINR = parseFloat((liveRateUSD * USD_TO_INR).toFixed(6));
         const savedRate = configuredService.originalRate || 0;
         const rateChangePct = savedRate > 0 ? Math.abs(liveRateINR - savedRate) / savedRate : 1;
 
@@ -145,7 +145,7 @@ export async function runAutoSync() {
           const liveMatch = liveServiceMap.get(String(fb.serviceId));
           if (liveMatch) {
             const liveRateUSD = parseFloat(liveMatch.rate) || 0;
-            const liveRateINR = parseFloat(liveRateUSD.toFixed(6));
+            const liveRateINR = parseFloat((liveRateUSD * USD_TO_INR).toFixed(6));
             const savedRate = fb.originalRate || 0;
             if (Math.abs(liveRateINR - savedRate) > 0.001) {
               fallbacksChanged = true;
