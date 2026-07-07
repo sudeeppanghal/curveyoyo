@@ -858,6 +858,78 @@ def crop_video(
             ytdlp_err_output = str(e)
             print("yt-dlp Exception:", e)
 
+    is_fallback = False
+    
+    # Fallback to Cobalt API downloader if yt-dlp fails
+    if not download_success:
+        try:
+            print(f"yt-dlp download failed or blocked. Initiating Cobalt API fallback for job {job_id}...")
+            import requests
+            dir_res = requests.get("https://cobalt.directory/api/working?type=api", timeout=8)
+            if dir_res.status_code == 200:
+                dir_data = dir_res.json()
+                service_key = "youtube"
+                if "instagram.com" in url:
+                    service_key = "instagram"
+                elif "tiktok.com" in url:
+                    service_key = "tiktok"
+                elif "facebook.com" in url or "fb.watch" in url:
+                    service_key = "facebook"
+                
+                apis = dir_data.get("data", {}).get(service_key, [])
+                if not apis:
+                    apis = dir_data.get("data", {}).get("youtube-shorts", [])
+                
+                print(f"Found {len(apis)} fallback Cobalt APIs for {service_key}")
+                for api in apis[:5]:
+                    print(f"Trying Cobalt API: {api}")
+                    try:
+                        cobalt_res = requests.post(api, json={
+                            "url": url,
+                            "videoQuality": "720",
+                            "downloadMode": "auto"
+                        }, headers={
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        }, timeout=10)
+                        if cobalt_res.status_code == 200:
+                            cobalt_data = cobalt_res.json()
+                            direct_url = cobalt_data.get("url")
+                            if direct_url:
+                                print(f"Direct link found: {direct_url}. Downloading file...")
+                                opener = urllib.request.build_opener()
+                                opener.addheaders = [('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')]
+                                urllib.request.install_opener(opener)
+                                urllib.request.urlretrieve(direct_url, temp_input)
+                                download_success = True
+                                is_fallback = True
+                                print("Cobalt API download succeeded.")
+                                break
+                    except Exception as e:
+                        print(f"Cobalt API {api} failed:", e)
+        except Exception as e:
+            print("Cobalt fallback failed:", e)
+
+    # Slice if full video was downloaded via fallback
+    if download_success and is_fallback and os.path.exists(temp_input):
+        temp_sliced = f"temp_sliced_{job_id}.mp4"
+        try:
+            print(f"Slicing full fallback download to segment {start} for duration {duration}...")
+            slice_cmd = [
+                "ffmpeg", "-y",
+                "-ss", str(start),
+                "-i", temp_input,
+                "-t", str(duration),
+                "-c", "copy",
+                temp_sliced
+            ]
+            subprocess.run(slice_cmd)
+            if os.path.exists(temp_sliced):
+                os.replace(temp_sliced, temp_input)
+                print("Slicing completed successfully.")
+        except Exception as e:
+            print("Failed to slice fallback video:", e)
+
     # Fallback to direct HTTP download (for direct raw mp4 link files)
     if not download_success:
         try:
@@ -991,6 +1063,54 @@ def auto_shorts(
         ]
         ytdlp_res = subprocess.run(ytdlp_cmd, timeout=120)
         
+        # Fallback to Cobalt API downloader if yt-dlp fails
+        if not os.path.exists(temp_full):
+            try:
+                print(f"yt-dlp download failed or blocked. Initiating Cobalt API fallback for auto-shorts job {job_id}...")
+                import requests
+                dir_res = requests.get("https://cobalt.directory/api/working?type=api", timeout=8)
+                if dir_res.status_code == 200:
+                    dir_data = dir_res.json()
+                    service_key = "youtube"
+                    if "instagram.com" in url:
+                        service_key = "instagram"
+                    elif "tiktok.com" in url:
+                        service_key = "tiktok"
+                    elif "facebook.com" in url or "fb.watch" in url:
+                        service_key = "facebook"
+                    
+                    apis = dir_data.get("data", {}).get(service_key, [])
+                    if not apis:
+                        apis = dir_data.get("data", {}).get("youtube-shorts", [])
+                    
+                    print(f"Found {len(apis)} fallback Cobalt APIs for {service_key}")
+                    for api in apis[:5]:
+                        print(f"Trying Cobalt API: {api}")
+                        try:
+                            cobalt_res = requests.post(api, json={
+                                "url": url,
+                                "videoQuality": "720",
+                                "downloadMode": "auto"
+                            }, headers={
+                                "Accept": "application/json",
+                                "Content-Type": "application/json"
+                            }, timeout=15)
+                            if cobalt_res.status_code == 200:
+                                cobalt_data = cobalt_res.json()
+                                direct_url = cobalt_data.get("url")
+                                if direct_url:
+                                    print(f"Direct link found: {direct_url}. Downloading file...")
+                                    opener = urllib.request.build_opener()
+                                    opener.addheaders = [('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')]
+                                    urllib.request.install_opener(opener)
+                                    urllib.request.urlretrieve(direct_url, temp_full)
+                                    print("Cobalt API download succeeded.")
+                                    break
+                        except Exception as e:
+                            print(f"Cobalt API {api} failed:", e)
+            except Exception as e:
+                print("Cobalt fallback failed:", e)
+
         if not os.path.exists(temp_full):
             raise Exception("Failed to download video stream.")
             
