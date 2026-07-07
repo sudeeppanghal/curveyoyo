@@ -45,19 +45,19 @@ app.get('/scrape', async (req, res) => {
     });
 
     if (platform.toLowerCase() === 'instagram') {
-      // Use Imginn.com (Super clean, fast public Instagram viewer)
-      const targetUrl = `https://imginn.com/${username}/`;
+      // Use Dumpoir.com (Stable public Instagram viewer)
+      const targetUrl = `https://dumpoir.com/v/${username}`;
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
       
-      // Wait for posts link
-      await page.waitForSelector('a[href*="/p/"]', { timeout: 12000 });
+      // Wait for posts link (dumpoir uses /post/ format)
+      await page.waitForSelector('a[href*="/post/"]', { timeout: 12000 });
 
       const latestPost = await page.evaluate(() => {
         const links = Array.from(document.querySelectorAll('a'));
-        const postLink = links.find(l => l.href && l.href.includes('/p/'));
+        const postLink = links.find(l => l.href && l.href.includes('/post/'));
         if (postLink) {
-          const href = postLink.getAttribute('href'); // e.g., /p/C12345678/
-          const id = href.split('/p/')[1].replace(/\//g, '');
+          const href = postLink.getAttribute('href'); // e.g., /post/C12345678
+          const id = href.split('/post/')[1].replace(/\//g, '');
           return {
             id: id,
             url: `https://www.instagram.com/p/${id}/`
@@ -66,7 +66,7 @@ app.get('/scrape', async (req, res) => {
         return null;
       });
 
-      if (!latestPost) throw new Error("No Instagram posts found via Imginn");
+      if (!latestPost) throw new Error("No Instagram posts found via Dumpoir");
       return res.json({ success: true, ...latestPost });
     } 
     
@@ -80,8 +80,8 @@ app.get('/scrape', async (req, res) => {
         const links = Array.from(document.querySelectorAll('a'));
         const postLink = links.find(l => l.href && l.href.includes('/video/'));
         if (postLink) {
-          const href = postLink.getAttribute('href'); // e.g. https://urlebird.com/video/7123912039120391203/
-          const match = href.match(/\/video\/(\d+)/);
+          const href = postLink.getAttribute('href'); // e.g. https://urlebird.com/video/description-1234567/
+          const match = href.match(/\/video\/(?:[^\/]+-)?(\d+)/);
           if (match) {
             const id = match[1];
             return {
