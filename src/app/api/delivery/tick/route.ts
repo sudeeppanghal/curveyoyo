@@ -384,7 +384,17 @@ async function handler(request: NextRequest) {
   const prevProgress = order.viewsDelivered / order.viewsTarget;
   const newProgress  = updated.viewsDelivered / updated.viewsTarget;
   const isMidCampaign = prevProgress < 0.5 && newProgress >= 0.5;
-  const isCompleted   = updated.viewsRemaining <= 0 || newProgress >= 1.0;
+  
+  // Count remaining events for fail-safe completion
+  const remainingEventsCount = await prisma.deliveryEvent.count({
+    where: {
+      orderId: orderId,
+      status: { in: ["SCHEDULED", "EXECUTING", "RETRYING"] },
+      id: { not: eventId }
+    }
+  });
+
+  const isCompleted   = updated.viewsRemaining <= 0 || newProgress >= 1.0 || remainingEventsCount === 0;
 
   if (isCompleted) {
     await prisma.order.update({ where: { id: orderId }, data: { status: "COMPLETED", completedAt: new Date() } });

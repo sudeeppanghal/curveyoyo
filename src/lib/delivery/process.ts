@@ -283,7 +283,17 @@ export async function processEvent(eventId: string): Promise<{ ok: boolean; view
 
   const prevProgress = order.viewsDelivered / order.viewsTarget;
   const newProgress  = updated.viewsDelivered / updated.viewsTarget;
-  const isCompleted  = updated.viewsRemaining <= 0 || newProgress >= 1.0;
+  
+  // Prevent campaigns from getting stuck if final jittered total falls slightly short
+  const remainingEventsCount = await prisma.deliveryEvent.count({
+    where: {
+      orderId: order.id,
+      status: { in: ["SCHEDULED", "EXECUTING", "RETRYING"] },
+      id: { not: eventId }
+    }
+  });
+  
+  const isCompleted  = updated.viewsRemaining <= 0 || newProgress >= 1.0 || remainingEventsCount === 0;
 
   if (isCompleted) {
     await prisma.order.update({
