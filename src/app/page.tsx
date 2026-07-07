@@ -177,6 +177,12 @@ const FEATURES = [
     bullets:["Interactive S-curve preview chart","Sliders update the schedule live","See exact hourly batch sizes","Deploy with absolute confidence"],
   },
   {
+    id:"shorts", icon:"🎬", label:"AI Shorts Studio",
+    title:"AI face-tracking video to shorts reframe studio",
+    body:"Automatically slice, crop, and reframe horizontal videos into vertical shorts. Keep speakers perfectly centered with our smart CPU face-tracking engine, completely free.",
+    bullets:["Auto face-tracking centers speaker","1-click AI viral moments extractor","Zero-limit rule-based time slicing fallback","Download and export instantly"],
+  },
+  {
     id:"agency", icon:"🏢", label:"Agencies & Scale",
     title:"Built for operators running at scale",
     body:"Bulk campaign imports, unlimited campaigns, real-time diagnostics. Everything you need to run an SMM operation at scale.",
