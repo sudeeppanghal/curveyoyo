@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 # Install system dependencies (ffmpeg, curl, and OpenGL/Glib libraries for OpenCV headless)
 RUN apt-get update && apt-get install -y \

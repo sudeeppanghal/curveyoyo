@@ -20,7 +20,7 @@ app = FastAPI(title="YoYo Shorts & Reframe Studio")
 try:
     print("Updating yt-dlp to the latest version...")
     import subprocess
-    subprocess.run(["pip", "install", "-U", "yt-dlp"], capture_output=True, text=True, timeout=30)
+    subprocess.run(["pip", "install", "-U", "yt-dlp[default,curl-cffi]"], capture_output=True, text=True, timeout=30)
     print("yt-dlp updated successfully.")
 except Exception as e:
     print("Failed to self-update yt-dlp at startup:", e)
@@ -80,6 +80,7 @@ def extract_transcript(url: str, job_id: str) -> str:
             "--skip-download",
             "--sub-format", "srt",
             "--extractor-args", "youtube:player_client=tv,web_embedded",
+            "--impersonate", "chrome",
             "-o", sub_base,
             url
         ]
@@ -845,6 +846,7 @@ def crop_video(
                 "--download-sections", f"*{start_seconds}-{end_seconds}",
                 "--force-keyframes-at-cuts",
                 "--extractor-args", "youtube:player_client=tv,web_embedded",
+                "--impersonate", "chrome",
                 "-o", temp_input,
                 url
             ]
@@ -986,6 +988,7 @@ def auto_shorts(
             "yt-dlp",
             "-f", "best[ext=mp4]/best",
             "--extractor-args", "youtube:player_client=tv,web_embedded",
+            "--impersonate", "chrome",
             "-o", temp_full,
             url
         ]
