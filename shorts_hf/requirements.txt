@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+yt-dlp
+jinja2
+opencv-python-headless
+numpy
+requests
