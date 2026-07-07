@@ -283,6 +283,28 @@ export default function Home() {
         <p style={{ fontSize:wide ? 18 : 15, color:C.textMuted, maxWidth:620, margin:"0 auto 44px", lineHeight:1.75, fontWeight:500 }}>
           Access our premium timing delivery network. Automate organic pacing schedules, enforce custom curves, and maintain balanced engagement ratios automatically.
         </p>
+        {/* AI Shorts Studio Announcement Box */}
+        <div style={{
+          maxWidth: 600,
+          margin: "-16px auto 44px",
+          padding: "16px 20px",
+          borderRadius: 16,
+          background: C.bg,
+          boxShadow: C.inset,
+          border: `1px solid rgba(217, 119, 6, 0.15)`,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          justifyContent: "center"
+        }}>
+          <span style={{ fontSize: 20 }}>🎬</span>
+          <div style={{ textAlign: "left" }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: C.amber, textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: 2 }}>NEW FEATURE LAUNCH</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+              AI Shorts Studio is now live! Automatically trim, face-track reframe, and extract viral moments from long videos.
+            </span>
+          </div>
+        </div>
         {/* Buttons */}
         <div style={{ ...flex("center","center",16), flexWrap:"wrap", marginBottom:72 }}>
           <Link href="/signup" style={{ background:C.grad, color:"#ffffff", textDecoration:"none", fontSize:16, fontWeight:800, padding:"16px 36px", borderRadius:12, boxShadow:C.raisedLg, letterSpacing:"-0.3px" }} className="neo-btn">
