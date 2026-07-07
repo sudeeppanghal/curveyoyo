@@ -67,7 +67,7 @@ app.get('/scrape', async (req, res) => {
         const links = Array.from(document.querySelectorAll('a'));
         const postLink = links.find(l => {
           const href = l.getAttribute('href') || '';
-          return href.startsWith('/p/');
+          return href.includes('/p/');
         });
         if (postLink) {
           const href = postLink.getAttribute('href');
