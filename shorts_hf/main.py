@@ -1085,8 +1085,8 @@ def auto_shorts(
                                 urllib.request.urlretrieve(direct_url, temp_full)
                                 print("Cobalt API download succeeded.")
                                 break
-                        except Exception as e:
-                            print(f"Cobalt API {api} failed:", e)
+                    except Exception as e:
+                        print(f"Cobalt API {api} failed:", e)
             except Exception as e:
                 print("Cobalt fallback failed:", e)
 
