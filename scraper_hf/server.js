@@ -12,8 +12,6 @@ app.get('/', (req, res) => {
   res.send("Stealth Scraper Service is Healthy & Online!");
 });
 
-// Diagnostic debug endpoint to view links and page contents
-
 app.get('/scrape', async (req, res) => {
   const { username, platform, secret } = req.query;
 
@@ -46,13 +44,24 @@ app.get('/scrape', async (req, res) => {
       'Accept-Language': 'en-US,en;q=0.9',
     });
 
+    // OPTIMIZATION: Block heavy assets (images, stylesheets, fonts, media) to load pages 5x faster
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const type = req.resourceType();
+      if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
+
     if (platform.toLowerCase() === 'instagram') {
-      // Scrape official Instagram page directly (stealth mode bypasses login wall for public profiles)
+      // Scrape official Instagram page directly
       const targetUrl = `https://www.instagram.com/${username}/`;
-      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 35000 });
       
       // Wait for posts link (instagram uses /p/[post_id] format)
-      await page.waitForSelector('a[href*="/p/"]', { timeout: 12000 });
+      await page.waitForSelector('a[href*="/p/"]', { timeout: 15000 });
 
       const latestPost = await page.evaluate(() => {
         const links = Array.from(document.querySelectorAll('a'));
@@ -77,9 +86,9 @@ app.get('/scrape', async (req, res) => {
     
     else if (platform.toLowerCase() === 'tiktok') {
       const targetUrl = `https://urlebird.com/user/${username}/`;
-      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 35000 });
       
-      await page.waitForSelector('a[href*="/video/"]', { timeout: 12000 });
+      await page.waitForSelector('a[href*="/video/"]', { timeout: 15000 });
 
       const latestPost = await page.evaluate(() => {
         const links = Array.from(document.querySelectorAll('a'));
