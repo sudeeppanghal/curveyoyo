@@ -166,8 +166,7 @@ export async function POST(request: NextRequest) {
   for (const p of matchingPanels) {
     const updatedFallbacks = (fallbackServiceIds as any[] ?? []).map(f => {
       if (typeof f === "object" && f !== null && f.serviceId) {
-        const origUSD = parseFloat(f.originalRate) || 0;
-        const origINR = parseFloat((origUSD * USD_TO_INR).toFixed(6));
+        const origINR = parseFloat(f.originalRate) || 0;
         const custINR = f.customRate !== undefined && f.customRate !== null && !isNaN(parseFloat(f.customRate)) && parseFloat(f.customRate) > 0
           ? parseFloat(f.customRate)
           : parseFloat((origINR * PRICE_MULTIPLIER).toFixed(6));
@@ -180,7 +179,7 @@ export async function POST(request: NextRequest) {
       return f;
     });
 
-    const originalInrRate = parseFloat((parseFloat(originalRate) * USD_TO_INR).toFixed(6));
+    const originalInrRate = parseFloat(parseFloat(originalRate).toFixed(6));
 
     const s = await prisma.adminService.upsert({
       where: {
