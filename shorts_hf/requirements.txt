@@ -1,6 +1,7 @@
 fastapi
 uvicorn
-yt-dlp[default,curl-cffi]
+yt-dlp
+bgutil-ytdlp-pot-provider
 jinja2
 opencv-python-headless
 numpy
