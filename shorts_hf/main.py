@@ -79,7 +79,7 @@ def extract_transcript(url: str, job_id: str) -> str:
             "--write-auto-subs",
             "--skip-download",
             "--sub-format", "srt",
-            "--extractor-args", "youtube:player_client=ios,android,mweb",
+            "--impersonate", "chrome",
             "-o", sub_base,
             url
         ]
@@ -841,10 +841,10 @@ def crop_video(
             print(f"yt-dlp download initiated for section *{start_seconds}-{end_seconds} for job {job_id}")
             ytdlp_cmd = [
                 "yt-dlp",
-                "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                "-f", "best[ext=mp4]/best",
                 "--download-sections", f"*{start_seconds}-{end_seconds}",
                 "--force-keyframes-at-cuts",
-                "--extractor-args", "youtube:player_client=ios,android,mweb",
+                "--impersonate", "chrome",
                 "-o", temp_input,
                 url
             ]
@@ -984,8 +984,8 @@ def auto_shorts(
         print(f"Downloading full video for auto-shorts job {job_id} URL: {url}")
         ytdlp_cmd = [
             "yt-dlp",
-            "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-            "--extractor-args", "youtube:player_client=ios,android,mweb",
+            "-f", "best[ext=mp4]/best",
+            "--impersonate", "chrome",
             "-o", temp_full,
             url
         ]
