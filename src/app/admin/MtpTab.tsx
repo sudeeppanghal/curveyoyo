@@ -303,8 +303,8 @@ export function MtpTab({ secret }: MtpTabProps) {
           </button>
         </div>
         <p style={{ margin: 0, fontSize: 11, color: N.muted }}>
-          Pricing is auto-calculated at <strong>USD rate × 1.5 × 96 = INR per 1000 units</strong>.
-          Example: $0.10/1000 → ₹14.40/1000
+          Pricing is auto-calculated at <strong>USD rate × 2.5 × 96 = INR per 1000 units</strong>.
+          Example: $0.10/1000 → ₹24.00/1000
         </p>
       </div>
 

@@ -7,7 +7,7 @@
 
 export const MTP_API_URL = "https://morethanpanel.com/api/v2";
 export const USD_TO_INR = 96;
-export const MTP_MULTIPLIER = 1.5;
+export const MTP_MULTIPLIER = 2.5;
 
 /** Calculate custom INR price per 1000 units from USD rate */
 export function calcCustomRate(usdRatePer1000: number): number {
