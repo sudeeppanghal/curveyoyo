@@ -20,7 +20,7 @@ app = FastAPI(title="YoYo Shorts & Reframe Studio")
 try:
     print("Updating yt-dlp to the latest version...")
     import subprocess
-    subprocess.run(["pip", "install", "-U", "yt-dlp"], capture_output=True, text=True, timeout=30)
+    subprocess.run(["pip", "install", "-U", "yt-dlp[default,curl-cffi]"], capture_output=True, text=True, timeout=30)
     print("yt-dlp updated successfully.")
 except Exception as e:
     print("Failed to self-update yt-dlp at startup:", e)
