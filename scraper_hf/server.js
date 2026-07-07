@@ -37,6 +37,9 @@ app.get('/debug-links', async (req, res) => {
     });
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
     
+    // Wait 6 seconds for client-side API requests to complete and render the DOM
+    await new Promise(resolve => setTimeout(resolve, 6000));
+    
     const pageTitle = await page.title();
     const bodyExcerpt = await page.evaluate(() => document.body.innerText.substring(0, 1000));
     const links = await page.evaluate(() => {
