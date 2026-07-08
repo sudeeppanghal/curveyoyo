@@ -39,3 +39,7 @@ Thumbs.db
 # Android APK builds
 *.apk
 .env*
+
+.vercel
+/scratch
+.vercelignore

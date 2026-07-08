@@ -1,22 +1,55 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-// Handles Supabase OAuth callback (Google sign-in redirect)
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") ?? "/dashboard";
+
+  // Create a response object first to receive the cookies correctly
+  const response = NextResponse.redirect(`${requestUrl.origin}${next}`);
 
   if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    
-    if (!error) {
-      // Fetch authenticated user info
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            // Parse headers directly from the incoming request to ensure stability
+            const cookieHeader = request.headers.get("cookie") || "";
+            const list: Record<string, string> = {};
+            cookieHeader.split(";").forEach((cookie) => {
+              const parts = cookie.split("=");
+              const name = parts.shift();
+              if (name) {
+                list[name.trim()] = decodeURI(parts.join("="));
+              }
+            });
+            return Object.entries(list).map(([name, value]) => ({ name, value }));
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Apply the auth cookies directly to the redirection response
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+
+    try {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        console.error("Supabase code exchange failed:", error);
+        const errMsg = `Name: ${error.name || 'Unknown'}, Status: ${error.status || 'None'}, Msg: ${error.message || 'None'}`;
+        return NextResponse.redirect(`${requestUrl.origin}/login?error=auth-callback-failed&msg=${encodeURIComponent(errMsg)}`);
+      }
+
+      // Sync user to PostgreSQL database if missing
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Sync user to PostgreSQL database if missing
         const dbUser = await prisma.user.findUnique({
           where: { supabaseId: user.id }
         });
@@ -35,11 +68,13 @@ export async function GET(request: Request) {
           });
         }
       }
-
-      return NextResponse.redirect(`${origin}${next}`);
+      
+      return response;
+    } catch (e: any) {
+      console.error("Callback exception:", e);
+      return NextResponse.redirect(`${requestUrl.origin}/login?error=auth-callback-failed&msg=${encodeURIComponent(e.message || String(e))}`);
     }
   }
 
-  // Auth failed — redirect to login with error
-  return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
+  return NextResponse.redirect(`${requestUrl.origin}/login?error=auth-callback-failed&msg=no-code-provided`);
 }
