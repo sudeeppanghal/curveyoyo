@@ -7,15 +7,15 @@
   "crons": [
     {
       "path": "/api/cron/auto-sync",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 1 * * *"
     },
     {
       "path": "/api/cron/auto-orders",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 2 * * *"
     }
   ],
   "headers": [
