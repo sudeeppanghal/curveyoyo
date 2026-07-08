@@ -20,7 +20,16 @@ export default function SignupPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name:"", email:"", password:"" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Check for oauth error redirects
+  const [error, setError] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("error") 
+        ? "Google signup failed. Please try registering by typing your Name, Email, and Password below."
+        : "";
+    }
+    return "";
+  });
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

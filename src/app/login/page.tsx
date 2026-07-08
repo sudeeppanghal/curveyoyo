@@ -33,7 +33,11 @@ function LoginForm() {
   const next = searchParams.get("next") || "/dashboard";
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(searchParams.get("error") ? "Authentication failed. Please try again." : "");
+  const [error, setError] = useState(
+    searchParams.get("error")
+      ? "Google login failed. Please try signing in by typing your Email and Password below."
+      : ""
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
