@@ -78,10 +78,10 @@ function scoreCandidateService(svc: PanelServiceItem): number {
 import { NOT_GHOST_USER } from "@/lib/ghost";
 
 export async function runAutoSync() {
+  // Query all active panels, even if they are currently marked OFFLINE
   const activePanels = await prisma.panel.findMany({
     where: {
       isActive: true,
-      status: { not: "OFFLINE" },
       OR: [
         { userId: null },
         { user: NOT_GHOST_USER }
@@ -93,12 +93,28 @@ export async function runAutoSync() {
   const logs: any[] = [];
 
   for (const panel of activePanels) {
+    const startMs = Date.now();
     const res = await getPanelServices(panel.apiUrl, panel.apiKeyEncrypted);
+    const responseMs = Date.now() - startMs;
+
     if (!res.ok || !res.services) {
       const msg = `⚠️ *AutoSync Alert*\nFailed to fetch live services for Panel: ${panel.name || panel.id}\nError: ${res.error || "Unknown"}`;
       console.error(msg);
       await sendTelegramAlert(msg);
       continue;
+    }
+
+    // Auto-restore OFFLINE panels if the API responded successfully
+    if (panel.status === "OFFLINE") {
+      await prisma.panel.update({
+        where: { id: panel.id },
+        data: {
+          status: responseMs > 5000 ? "SLOW" : "ONLINE",
+          lastCheckedAt: new Date(),
+          lastResponseMs: responseMs,
+        }
+      });
+      await sendTelegramAlert(`🟢 *AutoSync Reconnected*\nPanel *${panel.name || panel.id}* is healthy again and has been automatically set to ONLINE.`);
     }
 
     const liveServices = res.services;
@@ -113,10 +129,72 @@ export async function runAutoSync() {
     const priceChanges: string[] = [];
 
     for (const configuredService of panel.adminServices) {
-      const liveMatch = liveServiceMap.get(configuredService.serviceId);
-      const isDead = !liveMatch ||
+      let liveMatch = liveServiceMap.get(configuredService.serviceId);
+      let isDead = !liveMatch ||
         liveMatch.name.toLowerCase().includes("disabled") ||
         liveMatch.name.toLowerCase().includes("stop");
+
+      // ── AUTO-HEAL DEAD PRIMARY SERVICE ───────────────────────────────
+      if (isDead) {
+        console.warn(`AutoSync: Primary service ID ${configuredService.serviceId} for ${configuredService.platform} ${configuredService.type} is offline. Attempting to heal...`);
+        
+        const keywords = getKeywords(configuredService.platform, configuredService.type);
+        const candidates = liveServices.filter(s => {
+          const nameLower = s.name.toLowerCase();
+          return keywords.every(kw => nameLower.includes(kw)) &&
+            !nameLower.includes("disabled") &&
+            !nameLower.includes("stop");
+        });
+
+        if (candidates.length > 0) {
+          candidates.sort((a, b) => scoreCandidateService(b) - scoreCandidateService(a));
+          const bestMatch = candidates[0];
+          const bestMatchId = String(bestMatch.service);
+
+          // Update active match references
+          liveMatch = bestMatch;
+          isDead = false;
+          mappingChanged = true;
+
+          // Save the healed ID to database
+          const liveRateUSD = parseFloat(bestMatch.rate) || 0;
+          const liveRateINR = parseFloat((liveRateUSD * USD_TO_INR).toFixed(6));
+          const newCustomRate = parseFloat((liveRateINR * PRICE_MULTIPLIER).toFixed(6));
+
+          await prisma.adminService.update({
+            where: { id: configuredService.id },
+            data: {
+              serviceId: bestMatchId,
+              name: bestMatch.name,
+              originalRate: liveRateINR,
+              customRate: newCustomRate,
+            }
+          });
+
+          // Update panels mapping object
+          if (!serviceIdsObj[configuredService.platform.toLowerCase()]) {
+            serviceIdsObj[configuredService.platform.toLowerCase()] = {};
+          }
+          serviceIdsObj[configuredService.platform.toLowerCase()][configuredService.type.toLowerCase()] = bestMatchId;
+
+          await sendTelegramAlert(
+            `🔄 *AutoSync Healed Service*\n` +
+            `Panel: *${panel.name || panel.id}*\n` +
+            `Platform: *${configuredService.platform}* | Type: *${configuredService.type}*\n` +
+            `✅ Replaced dead ID *${configuredService.serviceId}* with new matching service ID *${bestMatchId}*\n` +
+            `Service Name: _${bestMatch.name}_\n` +
+            `New Rate: ₹${liveRateINR.toFixed(4)}/1k (Auto-applied 5x markup: ₹${newCustomRate.toFixed(4)})`
+          );
+        } else {
+          // Send warning alert if matching failed
+          await sendTelegramAlert(
+            `⚠️ *AutoSync Warning: Primary Service Offline*\n` +
+            `Panel: ${panel.name || panel.id}\n` +
+            `Platform: *${configuredService.platform}* | Type: *${configuredService.type}*\n` +
+            `❌ Configured Primary ID *${configuredService.serviceId}* is dead, and no suitable replacement service could be found automatically on the panel.`
+          );
+        }
+      }
 
       // ── A. CHECK FOR PRICE CHANGES (auto-apply 5x) ───────────────────
       if (!isDead && liveMatch) {
@@ -176,19 +254,6 @@ export async function runAutoSync() {
           data: { fallbackServiceIds: updatedFallbacks }
         });
       }
-
-      // ── C. DETECT DEAD PRIMARY SERVICE (alert only, do not auto-overwrite) ──
-      if (isDead) {
-        console.warn(`AutoSync: Primary service ID ${configuredService.serviceId} for ${configuredService.platform} ${configuredService.type} is offline.`);
-        
-        await sendTelegramAlert(
-          `⚠️ *AutoSync Warning: Primary Service Offline*\n` +
-          `Panel: ${panel.name || panel.id}\n` +
-          `Platform: *${configuredService.platform}* | Type: *${configuredService.type}*\n` +
-          `❌ Configured Primary ID *${configuredService.serviceId}* went offline or is disabled.\n` +
-          `ℹ️ Delivery will automatically use your configured fallbacks, but please update the primary ID in the Admin Panel ASAP.`
-        );
-      }
     }
 
     // ── D. SEND PRICE CHANGE SUMMARY ─────────────────────────────────
@@ -209,6 +274,8 @@ export async function runAutoSync() {
         });
       }
     }
+    
+    logs.push({ panel: panel.name || panel.id, success: true });
   }
 
   return logs;
