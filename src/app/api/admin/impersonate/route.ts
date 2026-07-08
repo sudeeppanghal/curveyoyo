@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +41,9 @@ export async function POST(req: NextRequest) {
       throw new Error("No OTP found in generated link");
     }
 
-    // 2. Verify the OTP on the server. Since supabase ssr client has cookie access,
-    // this will set the session cookies on the user's browser domain directly!
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    // 2. Verify the OTP on the server using standard client (cookie-enabled)
+    const clientSupabase = await createClient();
+    const { error: verifyError } = await clientSupabase.auth.verifyOtp({
       email: user.email,
       token: otp,
       type: "magiclink",
