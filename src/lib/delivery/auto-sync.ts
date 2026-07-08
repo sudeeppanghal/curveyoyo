@@ -181,9 +181,11 @@ export async function runAutoSync() {
             `🔄 *AutoSync Healed Service*\n` +
             `Panel: *${panel.name || panel.id}*\n` +
             `Platform: *${configuredService.platform}* | Type: *${configuredService.type}*\n` +
-            `✅ Replaced dead ID *${configuredService.serviceId}* with new matching service ID *${bestMatchId}*\n` +
-            `Service Name: _${bestMatch.name}_\n` +
-            `New Rate: ₹${liveRateINR.toFixed(4)}/1k (Auto-applied 5x markup: ₹${newCustomRate.toFixed(4)})`
+            `• Old Service ID: *${configuredService.serviceId}*\n` +
+            `• New Service ID: *${bestMatchId}*\n` +
+            `• SMM Panel Cost: *$${liveRateUSD.toFixed(4)}* (₹${liveRateINR.toFixed(4)} / 1k)\n` +
+            `• Our Custom Charge: *₹${newCustomRate.toFixed(4)} / 1k* (5x Markup)\n` +
+            `• New Service Name: _${bestMatch.name}_`
           );
         } else {
           // Send warning alert if matching failed

@@ -396,50 +396,104 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Promotion Announcement Banner */}
-      {announcement && announcement.offerEnabled && announcement.endsAt && new Date(announcement.endsAt).getTime() > Date.now() && (
-        <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-          <Link href={announcement.targetLink || "/dashboard/billing"} style={{ textDecoration: "none", width: "100%", maxWidth: 1025 }}>
-            <div className="promo-card-animated" style={{
+      {/* Telegram Join Banner */}
+      <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+        <a
+          href="https://t.me/yoyosmmonline"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: "none", width: "100%", maxWidth: 1025 }}
+        >
+          <div
+            style={{
               borderRadius: 24,
-              background: "linear-gradient(135deg, #0f0c1b 0%, #08010f 100%)",
-              border: "1.5px solid rgba(168, 85, 247, 0.2)",
-              boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
+              background: "linear-gradient(135deg, #0c1a2e 0%, #0a1628 50%, #051224 100%)",
+              border: "1.5px solid rgba(34, 158, 217, 0.3)",
+              boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 60px rgba(34, 158, 217, 0.08)",
               overflow: "hidden",
               display: "flex",
-              flexDirection: "column",
               alignItems: "center",
+              gap: 20,
               cursor: "pointer",
-              transition: "transform 0.2s ease, border-color 0.2s ease",
+              padding: "22px 28px",
               marginBottom: 28,
-              width: "100%"
+              width: "100%",
+              boxSizing: "border-box",
+              transition: "transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease",
             }}
             onMouseEnter={e => {
               e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)";
+              e.currentTarget.style.borderColor = "rgba(34, 158, 217, 0.55)";
+              e.currentTarget.style.boxShadow = "0 18px 44px rgba(0,0,0,0.6), 0 0 80px rgba(34, 158, 217, 0.14)";
             }}
             onMouseLeave={e => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.2)";
+              e.currentTarget.style.borderColor = "rgba(34, 158, 217, 0.3)";
+              e.currentTarget.style.boxShadow = "0 12px 36px rgba(0,0,0,0.5), 0 0 60px rgba(34, 158, 217, 0.08)";
             }}
-            >
-              {announcement.imageUrl && (
-                <div style={{ width: "100%", height: 247, display: "flex", background: "#06070a", borderBottom: "1.5px solid rgba(168, 85, 247, 0.2)", overflow: "hidden" }}>
-                  <img src={announcement.imageUrl} alt="Offer Announcement" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                </div>
-              )}
-              <div style={{ width: "100%", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 4, alignItems: "center", textAlign: "center", boxSizing: "border-box" }}>
-                <h3 style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.5px" }}>{announcement.title}</h3>
-                <p style={{ fontSize: 13, color: N.muted, margin: 0, fontWeight: 600 }}>{announcement.description}</p>
-                
-                <div style={{ width: "100%", height: "1px", background: `linear-gradient(90deg, transparent, ${N.border}, transparent)`, margin: "12px 0 4px" }} />
-                
-                <AnnouncementCountdown targetDate={announcement.endsAt} />
-              </div>
+          >
+            {/* Telegram Icon */}
+            <div style={{
+              width: 56,
+              height: 56,
+              minWidth: 56,
+              borderRadius: 18,
+              background: "linear-gradient(135deg, #229ED9 0%, #0088cc 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 8px 24px rgba(34, 158, 217, 0.4)",
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21.944 3.49101C21.874 3.32801 21.737 3.20401 21.567 3.14901C21.397 3.09401 21.21 3.11501 21.056 3.20401L2.43503 13.967C2.25703 14.07 2.14803 14.257 2.14403 14.464C2.14003 14.671 2.24203 14.863 2.41603 14.972L7.33603 18.04C7.48703 18.134 7.67603 18.141 7.83403 18.058L13.118 15.289L9.77103 19.349C9.64503 19.502 9.60503 19.71 9.66403 19.901C9.72303 20.092 9.87103 20.235 10.059 20.282C10.106 20.294 10.154 20.3 10.201 20.3C10.342 20.3 10.48 20.244 10.581 20.143L13.791 16.933L17.72 19.383C17.854 19.467 18.012 19.501 18.169 19.481C18.326 19.461 18.469 19.388 18.567 19.273L21.967 4.27301C22.012 4.07501 22.014 3.65401 21.944 3.49101Z" fill="white"/>
+              </svg>
             </div>
-          </Link>
-        </div>
-      )}
+
+            {/* Text Content */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: "#ffffff", letterSpacing: "-0.3px" }}>
+                  Join Our Official Telegram Channel
+                </span>
+                <span style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: "#22d3ee",
+                  background: "rgba(34, 211, 238, 0.12)",
+                  border: "1px solid rgba(34, 211, 238, 0.25)",
+                  borderRadius: 6,
+                  padding: "2px 8px",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}>LIVE UPDATES</span>
+              </div>
+              <p style={{ fontSize: 13, color: "#94a3b8", margin: 0, fontWeight: 500, lineHeight: 1.5 }}>
+                Get <strong style={{ color: "#38bdf8" }}>instant service updates</strong>, exclusive discount coupons, server status alerts & secret viral pacing tips — all in real time.
+              </p>
+            </div>
+
+            {/* CTA Button */}
+            <div style={{
+              minWidth: "fit-content",
+              padding: "12px 22px",
+              borderRadius: 14,
+              background: "linear-gradient(135deg, #229ED9 0%, #0088cc 100%)",
+              color: "#ffffff",
+              fontSize: 14,
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              boxShadow: "0 6px 18px rgba(34, 158, 217, 0.35)",
+              whiteSpace: "nowrap",
+            }}>
+              <span>🚀</span>
+              <span>Join Now</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
 
       {/* Live Campaign Tracker Widget */}
       {runningCampaign && (
