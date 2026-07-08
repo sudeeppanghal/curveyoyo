@@ -6,6 +6,7 @@ import { calculateEngagementDue, applyJitter } from "@/lib/delivery/curve";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
 import { triggerMidwayRefund } from "@/lib/delivery/refund";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { isGhostEmail } from "@/lib/ghost";
 
 // Force dynamic so Next.js never tries to statically analyse this route
 export const dynamic = "force-dynamic";
@@ -204,9 +205,11 @@ async function handler(request: NextRequest) {
           errorMessage: `Rescheduled: ${result.error}`,
         }
       });
-      await sendTelegramAlert(
-        `⏳ *Batch Rescheduled*\nOrder ID: \`${orderId}\`\nReason: Concurrent active order block. Retrying in 20 minutes.`
-      ).catch(() => {});
+      if (!isGhostEmail(order.user.email)) {
+        await sendTelegramAlert(
+          `⏳ *Batch Rescheduled*\nOrder ID: \`${orderId}\`\nReason: Concurrent active order block. Retrying in 20 minutes.`
+        ).catch(() => {});
+      }
       return NextResponse.json({ ok: false, error: `Rescheduled due to concurrent order block: ${result.error}` });
     }
 
@@ -222,9 +225,11 @@ async function handler(request: NextRequest) {
     });
     await triggerMidwayRefund(orderId);
     // Telegram alert so admin knows immediately
-    await sendTelegramAlert(
-      `❌ *Order Failed*\nOrder ID: \`${orderId}\`\nPlatform: ${platform.toUpperCase()}\nError: ${failReason}\nAll fallbacks exhausted.`
-    ).catch(() => {}); // non-fatal
+    if (!isGhostEmail(order.user.email)) {
+      await sendTelegramAlert(
+        `❌ *Order Failed*\nOrder ID: \`${orderId}\`\nPlatform: ${platform.toUpperCase()}\nError: ${failReason}\nAll fallbacks exhausted.`
+      ).catch(() => {}); // non-fatal
+    }
     return NextResponse.json({ ok: false, error: failReason }, { status: 500 });
   }
 

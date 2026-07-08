@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { isGhostEmail } from "@/lib/ghost";
 
 export async function processTicketAutoReply(ticketId: string, userId: string) {
   try {
@@ -81,11 +82,16 @@ ${ticketHistory}`;
       data: { status: "ANSWERED" },
     });
 
-    sendTelegramAlert(
-      `🤖 *AI Auto-Reply Sent!*\n\n` +
-      `📌 *Ticket:* ${ticket.subject}\n` +
-      `💬 *AI Reply:* ${replyText.trim().slice(0, 300)}`
-    ).catch(console.error);
+    const userObj = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    const userEmail = userObj?.email ?? "";
+
+    if (!isGhostEmail(userEmail)) {
+      sendTelegramAlert(
+        `🤖 *AI Auto-Reply Sent!*\n\n` +
+        `📌 *Ticket:* ${ticket.subject}\n` +
+        `💬 *AI Reply:* ${replyText.trim().slice(0, 300)}`
+      ).catch(console.error);
+    }
 
   } catch (error) {
     console.error("AI Ticket Auto-Reply Error:", error);

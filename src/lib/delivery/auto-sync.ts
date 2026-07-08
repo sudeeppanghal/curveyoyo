@@ -75,9 +75,18 @@ function scoreCandidateService(svc: PanelServiceItem): number {
   return score;
 }
 
+import { NOT_GHOST_USER } from "@/lib/ghost";
+
 export async function runAutoSync() {
   const activePanels = await prisma.panel.findMany({
-    where: { isActive: true, status: { not: "OFFLINE" } },
+    where: {
+      isActive: true,
+      status: { not: "OFFLINE" },
+      OR: [
+        { userId: null },
+        { user: NOT_GHOST_USER }
+      ]
+    },
     include: { adminServices: true },
   });
 

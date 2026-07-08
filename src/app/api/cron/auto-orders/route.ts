@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchLatestInstagramPost, fetchLatestTiktokPost, fetchLatestFacebookPost } from "@/lib/scraper/apify";
 import { calculateEngagementTargets } from "@/lib/delivery/curve";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { isGhostEmail } from "@/lib/ghost";
 import { CURVE_100_LIST } from "@/lib/delivery/curve-styles-100";
 
 export const maxDuration = 300; // Allow 5 minutes for cron execution
@@ -114,7 +115,9 @@ export async function GET(request: NextRequest) {
             data: { status: "INSUFFICIENT_FUNDS" }
           });
           
-          sendTelegramAlert(`⚠️ *Auto-Order Paused*\nUser: \`${sub.user.email}\`\nReason: Insufficient funds for new post @${sub.username} (Requires ₹${totalPrice})`).catch(console.error);
+          if (!isGhostEmail(sub.user.email)) {
+            sendTelegramAlert(`⚠️ *Auto-Order Paused*\nUser: \`${sub.user.email}\`\nReason: Insufficient funds for new post @${sub.username} (Requires ₹${totalPrice})`).catch(console.error);
+          }
           results.push({ username: sub.username, status: "PAUSED_FUNDS" });
           continue;
         }
@@ -175,7 +178,9 @@ export async function GET(request: NextRequest) {
           return createdOrder;
         });
 
-        sendTelegramAlert(`🚀 *Auto-Order Placed!*\nUser: \`${sub.user.email}\`\nReel: ${url}\nTarget: ${targetViews} views (Template: ${template.name})`).catch(console.error);
+        if (!isGhostEmail(sub.user.email)) {
+          sendTelegramAlert(`🚀 *Auto-Order Placed!*\nUser: \`${sub.user.email}\`\nReel: ${url}\nTarget: ${targetViews} views (Template: ${template.name})`).catch(console.error);
+        }
 
         // Trigger delivery scheduling (fire-and-forget)
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
