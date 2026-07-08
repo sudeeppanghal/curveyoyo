@@ -157,6 +157,9 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
   // Calculate shift so the first batch starts at t=0 and subsequent batches are relative to it
   const firstBatchDelayMs = batches.length > 0 ? batches[0].scheduledDelayMs : 0;
 
+  // Calculate the base interval between batches to apply proportional time jitter
+  const baseIntervalMs = batches.length > 1 ? batches[1].scheduledDelayMs - batches[0].scheduledDelayMs : 30 * 60 * 1000;
+
   // Persist all delivery events to DB with randomized panel assignment
   const now = new Date();
   const data = batches.map((batch, index) => {
@@ -164,8 +167,9 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     if (index === 0) {
       delayMs = 0; // First batch starts instantly!
     } else if (index < batches.length - 1) {
-      // Add ±2 minutes of random time jitter (±120,000 ms)
-      const jitterMs = (Math.random() * 2 - 1) * 2 * 60 * 1000;
+      // Add up to ±15% of the base interval as random time jitter to make scheduling look completely organic
+      const maxJitterMs = baseIntervalMs * 0.15;
+      const jitterMs = (Math.random() * 2 - 1) * maxJitterMs;
       delayMs = Math.max(2 * 60 * 1000, delayMs + jitterMs); // keep at least 2 minutes delay
     }
     const randomPanel = panelPool[Math.floor(Math.random() * panelPool.length)];

@@ -130,32 +130,40 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
   const stepsPerHour = 60 / intervalMins;
   const totalSteps = Math.max(1, durationHours * stepsPerHour);
 
-  // 1. Evaluate the raw curve values at each step
   const config = CURVE_100_MAP[style];
+
+  // 1. Evaluate baseline at p = 0
+  const baseline = config && config.evalCurve ? config.evalCurve(0, 0, totalSteps) : 1 / (1 + Math.exp(-6 * (-0.45)));
+
+  // 2. Evaluate the raw curve values at each step using progress at the end of the step interval
   const curveVals = Array.from({ length: totalSteps }, (_, t) => {
-    const progress = t / totalSteps;
+    const progress = (t + 1) / totalSteps;
     if (config && config.evalCurve) {
-      return config.evalCurve(t, progress, totalSteps);
+      return config.evalCurve(t + 1, progress, totalSteps);
     }
     return 1 / (1 + Math.exp(-6 * (progress - 0.45)));
   });
 
-  // 2. Check if the curve is cumulative (strictly or mostly rising)
+  // 3. Check if the curve is cumulative (strictly or mostly rising) by counting drops
   let isCumulative = true;
+  let decreases = 0;
   for (let t = 1; t < totalSteps; t++) {
-    if (curveVals[t] < curveVals[t - 1] - 0.05) { // allow tiny fluctuations
-      isCumulative = false;
-      break;
+    if (curveVals[t] < curveVals[t - 1]) {
+      decreases++;
+      if (decreases > 2) { // allow minor noise/fluctuations, but classify smooth descents as non-cumulative
+        isCumulative = false;
+        break;
+      }
     }
   }
 
-  // 3. Calculate batch weights based on curve type
+  // 4. Calculate batch weights based on curve type
   const raw = Array.from({ length: totalSteps }, (_, t) => {
     const hourTime = t / stepsPerHour;
     let val = 1.0;
 
     if (isCumulative) {
-      const prevVal = t > 0 ? curveVals[t - 1] : 0;
+      const prevVal = t > 0 ? curveVals[t - 1] : baseline;
       val = Math.max(0, curveVals[t] - prevVal);
     } else {
       val = curveVals[t];

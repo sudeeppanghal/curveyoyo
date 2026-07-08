@@ -248,7 +248,11 @@ export async function POST(request: NextRequest) {
     });
 
     const firstBatchDelayMs = sortedSchedule.length > 0 ? (sortedSchedule[0].hour * 60 * 60 * 1000) : 0;
-    
+
+    const baseIntervalMs = sortedSchedule.length > 1
+      ? (sortedSchedule[1].hour - sortedSchedule[0].hour) * 60 * 60 * 1000
+      : 30 * 60 * 1000;
+
     const deliveryEventsData = sortedSchedule.map((batch, index) => {
       let scheduledAt: Date;
       if (batch.scheduledTime) {
@@ -261,8 +265,9 @@ export async function POST(request: NextRequest) {
         if (index === 0) {
           delayMs = 0; // First batch starts instantly
         } else if (index < sortedSchedule.length - 1) {
-          // Add ±2 minutes of random time jitter (±120,000 ms)
-          const jitterMs = (Math.random() * 2 - 1) * 2 * 60 * 1000;
+          // Add up to ±15% of the base interval as random time jitter to make custom pacing organic
+          const maxJitterMs = baseIntervalMs * 0.15;
+          const jitterMs = (Math.random() * 2 - 1) * maxJitterMs;
           delayMs = Math.max(2 * 60 * 1000, delayMs + jitterMs);
         }
         scheduledAt = new Date(now.getTime() + delayMs);
