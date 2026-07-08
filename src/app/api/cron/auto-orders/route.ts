@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic'; // Prevent caching
 
 export async function GET(request: NextRequest) {
   // Simple cron authentication
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV !== "development") {
+  const secret = request.nextUrl.searchParams.get("secret") || request.headers.get("authorization")?.replace("Bearer ", "");
+  if (secret !== process.env.CRON_SECRET && process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
