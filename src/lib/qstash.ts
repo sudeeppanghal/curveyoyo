@@ -22,7 +22,10 @@ export async function scheduleDeliveryTick(payload: {
 }, delaySeconds: number): Promise<{ messageId: string }> {
   const client = getQStashClient();
   let appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  if (process.env.RENDER_EXTERNAL_URL && (!appUrl || appUrl.includes("localhost"))) {
+  if (process.env.SPACE_ID && (!appUrl || appUrl.includes("localhost"))) {
+    const parts = process.env.SPACE_ID.split("/");
+    appUrl = `https://${parts[0]}-${parts[1].replace(/_/g, "-")}.hf.space`;
+  } else if (process.env.RENDER_EXTERNAL_URL && (!appUrl || appUrl.includes("localhost"))) {
     appUrl = process.env.RENDER_EXTERNAL_URL;
   }
 
