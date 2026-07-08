@@ -8,6 +8,14 @@ function getResend() {
 
 const FROM = "YoyoSMM <noreply@yoyosmm.online>";
 
+function getAppUrl() {
+  let appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  if (process.env.RENDER_EXTERNAL_URL && (!appUrl || appUrl.includes("localhost"))) {
+    appUrl = process.env.RENDER_EXTERNAL_URL;
+  }
+  return appUrl;
+}
+
 export async function sendWelcomeEmail(to: string, name: string) {
   return getResend().emails.send({
     from: FROM, to,
@@ -21,7 +29,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
         <div style="padding:32px">
           <p style="color:#e5e7eb">Hey ${name} 👋</p>
           <p style="color:#9ca3af">Your account is active and ready. Add balance to your wallet via UPI or Crypto to start delivering views and engagement with organic S-curve pacing.</p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/billing" style="display:inline-block;margin:24px 0;padding:14px 28px;background:#F59E0B;color:#0B0B0F;border-radius:12px;font-weight:700;text-decoration:none">
+          <a href="${getAppUrl()}/billing" style="display:inline-block;margin:24px 0;padding:14px 28px;background:#F59E0B;color:#0B0B0F;border-radius:12px;font-weight:700;text-decoration:none">
             Deposit Funds →
           </a>
         </div>
@@ -46,7 +54,7 @@ export async function sendPaymentConfirmedEmail(to: string, name: string, txHash
             <p style="margin:0">Network/Method: <strong style="color:#fff">${network}</strong></p>
             <p style="margin:8px 0 0">Ref/TXID: <code style="color:#F59E0B;word-break:break-all">${txHash}</code></p>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/reels/new" style="display:inline-block;margin:16px 0;padding:14px 28px;background:#F59E0B;color:#0B0B0F;border-radius:12px;font-weight:700;text-decoration:none">
+          <a href="${getAppUrl()}/reels/new" style="display:inline-block;margin:16px 0;padding:14px 28px;background:#F59E0B;color:#0B0B0F;border-radius:12px;font-weight:700;text-decoration:none">
             Create Order →
           </a>
         </div>
@@ -71,7 +79,7 @@ export async function sendOrderCompletedEmail(to: string, name: string, views: n
         <div style="padding:32px">
           <p style="color:#e5e7eb">Hey ${name},</p>
           <p style="color:#9ca3af">Your ${platform} campaign completed successfully. All <strong style="color:#F59E0B">${views.toLocaleString()} views</strong> were delivered via organic S-curve.</p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/orders" style="display:inline-block;margin:24px 0;padding:14px 28px;background:#F59E0B;color:#0B0B0F;border-radius:12px;font-weight:700;text-decoration:none">
+          <a href="${getAppUrl()}/orders" style="display:inline-block;margin:24px 0;padding:14px 28px;background:#F59E0B;color:#0B0B0F;border-radius:12px;font-weight:700;text-decoration:none">
             View Analytics →
           </a>
         </div>

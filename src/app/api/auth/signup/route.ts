@@ -17,12 +17,13 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     // 1. Create Supabase auth user
+    const requestOrigin = request.nextUrl.origin;
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
+        emailRedirectTo: `${requestOrigin}/api/auth/callback`,
       },
     });
 

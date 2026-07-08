@@ -21,7 +21,10 @@ export async function scheduleDeliveryTick(payload: {
   reelUrl: string;
 }, delaySeconds: number): Promise<{ messageId: string }> {
   const client = getQStashClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  let appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  if (process.env.RENDER_EXTERNAL_URL && (!appUrl || appUrl.includes("localhost"))) {
+    appUrl = process.env.RENDER_EXTERNAL_URL;
+  }
 
   const result = await client.publishJSON({
     url: `${appUrl}/api/delivery/tick`,
