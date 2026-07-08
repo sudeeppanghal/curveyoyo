@@ -18,6 +18,7 @@ model User {
   supabaseId      String   @unique @map("supabase_id")
   email           String   @unique
   name            String?
+  phone           String?
   avatarUrl       String?  @map("avatar_url")
   plan            Plan     @default(FREE)
   trialEndsAt     DateTime? @map("trial_ends_at")

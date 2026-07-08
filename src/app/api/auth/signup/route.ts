@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, name, referredBy } = body;
+    const { email, password, name, phone, referredBy } = body;
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       options: {
-        data: { name },
+        data: { name, phone },
         emailRedirectTo: `${requestOrigin}/api/auth/callback`,
       },
     });
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         supabaseId: authData.user.id,
         email: authData.user.email!,
         name,
+        phone: phone || null,
         plan: "FREE",
         trialEndsAt: null,
         walletMode: true,

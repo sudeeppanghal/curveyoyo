@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import dns from "node:dns";
+
+// Force IPv4 resolution to prevent serverless container fetch timeouts to Supabase Auth
+dns.setDefaultResultOrder("ipv4first");
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -60,6 +64,7 @@ export async function GET(request: Request) {
               supabaseId: user.id,
               email: user.email!,
               name: user.user_metadata?.name || user.email?.split("@")[0] || "User",
+              phone: user.user_metadata?.phone || null,
               plan: "FREE",
               trialEndsAt: null,
               walletMode: true,

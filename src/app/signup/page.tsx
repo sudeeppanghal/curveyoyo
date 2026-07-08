@@ -18,7 +18,7 @@ function NeoInput({ type, placeholder, value, onChange, required }: { type:strin
 
 export default function SignupPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name:"", email:"", password:"" });
+  const [form, setForm] = useState({ name:"", email:"", phone:"", password:"" });
   const [loading, setLoading] = useState(false);
   // Check for oauth error redirects
   const [error, setError] = useState(() => {
@@ -111,6 +111,10 @@ export default function SignupPage() {
                 <div>
                   <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Email</label>
                   <NeoInput type="email" placeholder="you@example.com" value={form.email} onChange={v=>setForm({...form,email:v})} required />
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Phone Number</label>
+                  <NeoInput type="tel" placeholder="Your phone number" value={form.phone} onChange={v=>setForm({...form,phone:v})} required />
                 </div>
                 <div>
                   <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Password</label>
