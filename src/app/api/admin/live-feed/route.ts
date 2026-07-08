@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notGhostWhere, NOT_GHOST_USER } from "@/lib/ghost";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,21 +33,21 @@ export async function GET(request: NextRequest) {
       pendingUpiCount, pendingCryptoCount,
       recentUpi, recentCrypto, recentOrdersRaw, activeOrdersRaw, recentTicketsRaw
     ] = await Promise.all([
-      prisma.upiPayment.aggregate({ where: { status: "CONFIRMED" }, _sum: { amount: true } }),
-      prisma.upiPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfToday } }, _sum: { amount: true } }),
-      prisma.upiPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfMonth } }, _sum: { amount: true } }),
-      prisma.cryptoPayment.aggregate({ where: { status: "CONFIRMED" }, _sum: { amountUsdt: true } }),
-      prisma.cryptoPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfToday } }, _sum: { amountUsdt: true } }),
-      prisma.cryptoPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfMonth } }, _sum: { amountUsdt: true } }),
-      prisma.order.count({ where: { status: { in: ["PENDING", "QUEUED", "DELIVERING"] } } }),
-      prisma.supportTicket.count({ where: { status: { in: ["OPEN", "IN_PROGRESS", "WAITING"] } } }),
-      prisma.upiPayment.count({ where: { status: "PENDING" } }),
-      prisma.cryptoPayment.count({ where: { status: "PENDING" } }),
-      prisma.upiPayment.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
-      prisma.cryptoPayment.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
-      prisma.order.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } }, reel: { select: { url: true, platform: true } } } }),
-      prisma.order.findMany({ where: { status: { in: ["PENDING", "QUEUED", "DELIVERING"] } }, take: 50, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } }, reel: { select: { url: true, platform: true } } } }),
-      prisma.supportTicket.findMany({ take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
+      prisma.upiPayment.aggregate({ where: { status: "CONFIRMED", ...notGhostWhere() }, _sum: { amount: true } }),
+      prisma.upiPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfToday }, ...notGhostWhere() }, _sum: { amount: true } }),
+      prisma.upiPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfMonth }, ...notGhostWhere() }, _sum: { amount: true } }),
+      prisma.cryptoPayment.aggregate({ where: { status: "CONFIRMED", ...notGhostWhere() }, _sum: { amountUsdt: true } }),
+      prisma.cryptoPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfToday }, ...notGhostWhere() }, _sum: { amountUsdt: true } }),
+      prisma.cryptoPayment.aggregate({ where: { status: "CONFIRMED", createdAt: { gte: startOfMonth }, ...notGhostWhere() }, _sum: { amountUsdt: true } }),
+      prisma.order.count({ where: { status: { in: ["PENDING", "QUEUED", "DELIVERING"] }, ...notGhostWhere() } }),
+      prisma.supportTicket.count({ where: { status: { in: ["OPEN", "IN_PROGRESS", "WAITING"] }, ...notGhostWhere() } }),
+      prisma.upiPayment.count({ where: { status: "PENDING", ...notGhostWhere() } }),
+      prisma.cryptoPayment.count({ where: { status: "PENDING", ...notGhostWhere() } }),
+      prisma.upiPayment.findMany({ where: notGhostWhere(), take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
+      prisma.cryptoPayment.findMany({ where: notGhostWhere(), take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
+      prisma.order.findMany({ where: notGhostWhere(), take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } }, reel: { select: { url: true, platform: true } } } }),
+      prisma.order.findMany({ where: { status: { in: ["PENDING", "QUEUED", "DELIVERING"] }, ...notGhostWhere() }, take: 50, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } }, reel: { select: { url: true, platform: true } } } }),
+      prisma.supportTicket.findMany({ where: notGhostWhere(), take: 15, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true, name: true } } } }),
     ]);
 
     const totalInrLifetime = (upiAll._sum.amount || 0) + (cryptoAll._sum.amountUsdt || 0) * 90;

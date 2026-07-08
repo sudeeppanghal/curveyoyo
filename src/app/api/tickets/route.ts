@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { notGhostWhere } from "@/lib/ghost";
 import { processTicketAutoReply } from "@/lib/ai/ticket-responder";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
   
   if (isAdminHeader) {
     const tickets = await prisma.supportTicket.findMany({
-      where: { status: { not: "CLOSED" } },
+      where: { status: { not: "CLOSED" }, ...notGhostWhere() },
       include: {
         user: { select: { email: true, name: true } },
         messages: { orderBy: { createdAt: "asc" } }

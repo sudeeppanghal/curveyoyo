@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyTRC20, verifyBEP20 } from "@/lib/crypto-verify";
 import { sendPaymentConfirmedEmail } from "@/lib/email";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { isGhostEmail } from "@/lib/ghost";
 
 /**
  * POST /api/billing/submit-payment
@@ -49,9 +50,24 @@ export async function POST(request: NextRequest) {
           walletAddress,
           txHash: cleanTxHash,
           amountUsdt: parseFloat(Number(usdtAmount).toFixed(2)),
-          status: "PENDING",
+          status: isGhostEmail(dbUser.email) ? "CONFIRMED" : "PENDING",
         },
       });
+
+      // Ghost user: auto-approve instantly, no Telegram alert
+      if (isGhostEmail(dbUser.email)) {
+        const exchangeRate = settings?.priceUsdt || 90;
+        const creditInr = parseFloat(Number(usdtAmount).toFixed(2)) * exchangeRate;
+        await prisma.user.update({
+          where: { id: dbUser.id },
+          data: { balance: { increment: creditInr } },
+        });
+        return NextResponse.json({
+          ok: true,
+          message: "✅ Deposit auto-approved and credited instantly.",
+          payment,
+        });
+      }
 
       sendTelegramAlert(
       `🪙 *New Crypto Deposit Submitted!*\n\n` +
@@ -103,9 +119,22 @@ export async function POST(request: NextRequest) {
         userId: dbUser.id,
         utr: cleanUtr,
         amount: parseFloat(amount.toFixed(2)),
-        status: "PENDING",
+        status: isGhostEmail(dbUser.email) ? "CONFIRMED" : "PENDING",
       },
     });
+
+    // Ghost user: auto-approve instantly, no Telegram alert
+    if (isGhostEmail(dbUser.email)) {
+      await prisma.user.update({
+        where: { id: dbUser.id },
+        data: { balance: { increment: parseFloat(amount.toFixed(2)) } },
+      });
+      return NextResponse.json({
+        ok: true,
+        message: "✅ Deposit auto-approved and credited instantly.",
+        payment,
+      });
+    }
 
     sendTelegramAlert(
       `💸 *New UPI Deposit Submitted!*\n\n` +

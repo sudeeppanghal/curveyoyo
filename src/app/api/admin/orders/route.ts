@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkAndRefillOrder } from "@/lib/delivery/refill";
 import { OrderStatus } from "@prisma/client";
 import { triggerMidwayRefund } from "@/lib/delivery/refund";
+import { notGhostWhere } from "@/lib/ghost";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const orders = await prisma.order.findMany({
+    where: notGhostWhere(),
     orderBy: { createdAt: "desc" },
     include: {
       user: { select: { email: true, name: true } },

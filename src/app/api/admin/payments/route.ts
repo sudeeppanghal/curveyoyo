@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { processAffiliateCommission } from "@/lib/affiliate";
 import { processProfitSplit } from "@/lib/profit-split";
+import { notGhostWhere } from "@/lib/ghost";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -11,6 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   const payments = await prisma.cryptoPayment.findMany({
+    where: notGhostWhere(),
     orderBy: { createdAt: "desc" },
     include: {
       user: {

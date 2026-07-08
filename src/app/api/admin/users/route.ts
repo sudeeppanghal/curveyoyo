@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Plan } from "@prisma/client";
+import { NOT_GHOST_USER } from "@/lib/ghost";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const users = await prisma.user.findMany({
+    where: NOT_GHOST_USER,
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { orders: true, panels: true } },

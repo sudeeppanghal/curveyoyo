@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // Excluded admin accounts from revenue/profit calculations
-  const EXCLUDED_ADMIN_EMAILS = ["arpitasumanekka@gmail.com"];
+  const EXCLUDED_ADMIN_EMAILS = ["arpitasumanekka@gmail.com", "kg44314@gmail.com"];
 
   // 1. Fetch recent delivery events
   const events = await prisma.deliveryEvent.findMany({
