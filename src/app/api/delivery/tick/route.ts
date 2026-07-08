@@ -308,12 +308,16 @@ async function handler(request: NextRequest) {
       ] as { type: keyof typeof engagementDelivered; qty: number }[]
     ).filter(({ qty, type }) => qty > 0 && engServiceMap[type]);
 
-    // Fire all in parallel — zero impact on views delivery timing
+    // Fire all with staggered organic lag (15–45 seconds) to prevent simultaneous views+engagement logs footprint
     await Promise.allSettled(
       engTasks.map(async ({ type, qty }) => {
         const cfg = engServiceMap[type];
         if (!cfg) return;
         try {
+          // Stagger engagement order execution with a random delay (15 to 45 seconds)
+          const delayMs = Math.floor(15000 + Math.random() * 30000);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+
           const actualQty = Math.max(cfg.minQty, qty);
           const r = await placeOrderWithFallback({
             apiUrl: activePanel.apiUrl,

@@ -679,8 +679,56 @@ export const CURVE_100_LIST: CurveStyleConfig[] = [
     warmup: 3, peak: 9, icon: "✨", category: "Pearpop",
     stroke: "#f43f5e", glow: "rgba(244, 63, 94, 0.45)", stop: "#be123c",
     evalCurve: (t, p) => p + 0.15 * Math.sin(p * Math.PI * 4) + 0.1
+  },
+  // ── Payout & Clipping Platform Optimization Curves ──
+  {
+    id: "FYP_SEED_PUSH", num: 108, label: "FYP Seed & Push", desc: "Simulates initial seed test, review plateau, and subsequent viral push.",
+    warmup: 4, peak: 10, icon: "🌱", category: "Clipping Special",
+    stroke: "#a855f7", glow: "rgba(168, 85, 247, 0.45)", stop: "#7e22ce",
+    evalCurve: (t, p) => p < 0.15 ? (p * 4) : (p < 0.3 ? 0.6 : 0.6 + 0.45 * (1 / (1 + Math.exp(-6 * ((p - 0.3) / 0.7 - 0.45)))))
+  },
+  {
+    id: "VIRAL_BREAKOUT", num: 109, label: "Viral Breakout", desc: "Slow early traction followed by an explosive vertical rise and long decay.",
+    warmup: 6, peak: 12, icon: "💥", category: "Clipping Special",
+    stroke: "#f43f5e", glow: "rgba(244, 63, 94, 0.45)", stop: "#be123c",
+    evalCurve: (t, p) => p < 0.2 ? p * 0.5 : Math.pow((p - 0.2) / 0.8, 1.8) * 0.9 + 0.1
+  },
+  {
+    id: "DUET_WAVE", num: 110, label: "Duet/Share Wave", desc: "Initial minor peak followed by a massive secondary viral push wave.",
+    warmup: 4, peak: 14, icon: "👥", category: "Clipping Special",
+    stroke: "#3b82f6", glow: "rgba(59, 130, 246, 0.45)", stop: "#1d4ed8",
+    evalCurve: (t, p) => 0.45 * Math.exp(-Math.pow((p - 0.15) / 0.08, 2)) + 0.9 * Math.exp(-Math.pow((p - 0.6) / 0.15, 2)) + 0.1
+  },
+  {
+    id: "BATCH_TEST", num: 111, label: "Batch Testing", desc: "Pulsing multi-wave delivery matching TikTok's tier-based testing.",
+    warmup: 3, peak: 8, icon: "📦", category: "Clipping Special",
+    stroke: "#06b6d4", glow: "rgba(6, 182, 212, 0.45)", stop: "#0e7490",
+    evalCurve: (t, p) => 0.6 * Math.exp(-Math.pow((p - 0.25) / 0.06, 2)) + 0.9 * Math.exp(-Math.pow((p - 0.55) / 0.06, 2)) + 0.4 * Math.exp(-Math.pow((p - 0.85) / 0.06, 2)) + 0.1
+  },
+  {
+    id: "PRIME_TIME", num: 112, label: "Prime-Time Rush", desc: "Diurnal wave matching peak morning/evening scrolling hours.",
+    warmup: 4, peak: 12, icon: "⏰", category: "Clipping Special",
+    stroke: "#eab308", glow: "rgba(234, 179, 8, 0.45)", stop: "#a16207",
+    evalCurve: (t, p) => 0.45 + 0.45 * Math.sin(p * 2 * Math.PI - Math.PI / 2)
+  },
+  {
+    id: "RETENTION_BOOSTER", num: 113, label: "Retention Booster", desc: "Rapid opening climb holding a high-retention plateau with smooth decay.",
+    warmup: 2, peak: 10, icon: "🔥", category: "Clipping Special",
+    stroke: "#10b981", glow: "rgba(16, 185, 129, 0.45)", stop: "#047857",
+    evalCurve: (t, p) => p < 0.15 ? p / 0.15 * 0.9 + 0.1 : (p < 0.75 ? 1.0 : 1.0 - (p - 0.75) / 0.25 * 0.9)
+  },
+  {
+    id: "DISCORD_SURGE", num: 114, label: "Discord/Reddit Surge", desc: "Step-wise staircase jumps representing manual share spikes.",
+    warmup: 3, peak: 8, icon: "🪜", category: "Clipping Special",
+    stroke: "#f97316", glow: "rgba(249, 115, 22, 0.45)", stop: "#c2410c",
+    evalCurve: (t, p) => Math.floor(p * 3) / 3 * 0.85 + 0.15
+  },
+  {
+    id: "NOISY_WALK", num: 115, label: "Noisy Organic Walk", desc: "Smooth growth trend overlaid with organic micro-oscillations.",
+    warmup: 4, peak: 12, icon: "🌀", category: "Clipping Special",
+    stroke: "#6366f1", glow: "rgba(99, 102, 241, 0.45)", stop: "#4338ca",
+    evalCurve: (t, p) => (1 / (1 + Math.exp(-6 * (p - 0.45)))) * (0.85 + 0.15 * Math.sin(p * 30))
   }
-
 ];
 
 // Helper dictionaries for lightning-fast lookup

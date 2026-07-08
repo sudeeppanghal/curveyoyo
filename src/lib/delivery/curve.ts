@@ -216,62 +216,82 @@ export function generateRawSchedule(params: CurveParams): DeliveryBatch[] {
     viewsAccumulated += roundedViews;
     distributedViews.push(roundedViews);
 
-    // 2. Calculate engagement targets for this step using fraction-based accumulation
-    const fraction = totalViews > 0 ? viewsAccumulated / totalViews : 0;
-
-    // Overall targets
+    // 2. Calculate engagement targets for this step using randomized step-level ratios for organic fluctuation
     const overallLikesTarget = engagementEnabled ? Math.round((likesRatioPct / 100) * totalViews) : 0;
     const overallSavesTarget = engagementEnabled ? Math.round((savesRatioPct / 100) * totalViews) : 0;
     const overallSharesTarget = engagementEnabled ? Math.round((sharesRatioPct / 100) * totalViews) : 0;
     const overallCommentsTarget = engagementEnabled ? Math.round((commentsRatioPct / 100) * totalViews) : 0;
     const overallRepostsTarget = engagementEnabled ? Math.round((repostsRatioPct / 100) * totalViews) : 0;
 
-    // Owed (theoretical perfect amount by this point)
-    const owedLikes = Math.round(overallLikesTarget * fraction);
-    const owedSaves = Math.round(overallSavesTarget * fraction);
-    const owedShares = Math.round(overallSharesTarget * fraction);
-    const owedComments = Math.round(overallCommentsTarget * fraction);
-    const owedReposts = Math.round(overallRepostsTarget * fraction);
+    // Apply up to ±25% random ratio jitter on this batch to make engagement look completely organic
+    const stepLikesRatio = likesRatioPct * (1 + (Math.random() * 2 - 1) * 0.25);
+    const stepSavesRatio = savesRatioPct * (1 + (Math.random() * 2 - 1) * 0.25);
+    const stepSharesRatio = sharesRatioPct * (1 + (Math.random() * 2 - 1) * 0.25);
+    const stepCommentsRatio = commentsRatioPct * (1 + (Math.random() * 2 - 1) * 0.25);
+    const stepRepostsRatio = repostsRatioPct * (1 + (Math.random() * 2 - 1) * 0.25);
 
-    // Due (what we need to send to catch up)
-    const dueLikes = Math.max(0, owedLikes - likesAccumulated);
-    const dueSaves = Math.max(0, owedSaves - savesAccumulated);
-    const dueShares = Math.max(0, owedShares - sharesAccumulated);
-    const dueComments = Math.max(0, owedComments - commentsAccumulated);
-    const dueReposts = Math.max(0, owedReposts - repostsAccumulated);
+    const stepLikes = engagementEnabled ? Math.round((stepLikesRatio / 100) * roundedViews) : 0;
+    const stepSaves = engagementEnabled ? Math.round((stepSavesRatio / 100) * roundedViews) : 0;
+    const stepShares = engagementEnabled ? Math.round((stepSharesRatio / 100) * roundedViews) : 0;
+    const stepComments = engagementEnabled ? Math.round((stepCommentsRatio / 100) * roundedViews) : 0;
+    const stepReposts = engagementEnabled ? Math.round((stepRepostsRatio / 100) * roundedViews) : 0;
 
-    // Apply jitter and round, then add to accumulated
     // Likes
-    let roundedLikes = Math.round(dueLikes * (1 + (Math.random() * 2 - 1) * 0.15));
-    if (t === totalSteps - 1) roundedLikes = overallLikesTarget - likesAccumulated;
+    let roundedLikes = stepLikes;
+    const remainingLikes = overallLikesTarget - likesAccumulated;
+    if (t === totalSteps - 1) {
+      roundedLikes = remainingLikes;
+    } else {
+      roundedLikes = Math.min(remainingLikes, roundedLikes);
+    }
     roundedLikes = Math.max(0, roundedLikes);
     likesAccumulated += roundedLikes;
     distributedLikes.push(roundedLikes);
 
     // Saves
-    let roundedSaves = Math.round(dueSaves * (1 + (Math.random() * 2 - 1) * 0.15));
-    if (t === totalSteps - 1) roundedSaves = overallSavesTarget - savesAccumulated;
+    let roundedSaves = stepSaves;
+    const remainingSaves = overallSavesTarget - savesAccumulated;
+    if (t === totalSteps - 1) {
+      roundedSaves = remainingSaves;
+    } else {
+      roundedSaves = Math.min(remainingSaves, roundedSaves);
+    }
     roundedSaves = Math.max(0, roundedSaves);
     savesAccumulated += roundedSaves;
     distributedSaves.push(roundedSaves);
 
     // Shares
-    let roundedShares = Math.round(dueShares * (1 + (Math.random() * 2 - 1) * 0.15));
-    if (t === totalSteps - 1) roundedShares = overallSharesTarget - sharesAccumulated;
+    let roundedShares = stepShares;
+    const remainingShares = overallSharesTarget - sharesAccumulated;
+    if (t === totalSteps - 1) {
+      roundedShares = remainingShares;
+    } else {
+      roundedShares = Math.min(remainingShares, roundedShares);
+    }
     roundedShares = Math.max(0, roundedShares);
     sharesAccumulated += roundedShares;
     distributedShares.push(roundedShares);
 
     // Comments
-    let roundedComments = Math.round(dueComments * (1 + (Math.random() * 2 - 1) * 0.15));
-    if (t === totalSteps - 1) roundedComments = overallCommentsTarget - commentsAccumulated;
+    let roundedComments = stepComments;
+    const remainingComments = overallCommentsTarget - commentsAccumulated;
+    if (t === totalSteps - 1) {
+      roundedComments = remainingComments;
+    } else {
+      roundedComments = Math.min(remainingComments, roundedComments);
+    }
     roundedComments = Math.max(0, roundedComments);
     commentsAccumulated += roundedComments;
     distributedComments.push(roundedComments);
 
     // Reposts
-    let roundedReposts = Math.round(dueReposts * (1 + (Math.random() * 2 - 1) * 0.15));
-    if (t === totalSteps - 1) roundedReposts = overallRepostsTarget - repostsAccumulated;
+    let roundedReposts = stepReposts;
+    const remainingReposts = overallRepostsTarget - repostsAccumulated;
+    if (t === totalSteps - 1) {
+      roundedReposts = remainingReposts;
+    } else {
+      roundedReposts = Math.min(remainingReposts, roundedReposts);
+    }
     roundedReposts = Math.max(0, roundedReposts);
     repostsAccumulated += roundedReposts;
     distributedReposts.push(roundedReposts);
