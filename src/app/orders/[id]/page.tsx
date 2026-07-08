@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { N } from "@/lib/theme";
 
 /* ── Types ── */
-interface ChartPoint { hour: number; planned: number; actual: number; likes?: number; saves?: number; shares?: number; comments?: number; reposts?: number; status: string; scheduledAt?: string; responseData?: any }
+interface ChartPoint { hour: number; planned: number; actual: number; likes?: number | null; saves?: number | null; shares?: number | null; comments?: number | null; reposts?: number | null; isPlanned?: boolean; status: string; scheduledAt?: string; responseData?: any }
 interface OrderStatus {
   order: {
     id: string; status: string; viewsTarget: number; viewsDelivered: number;
@@ -443,11 +443,20 @@ export default function OrderDetailPage() {
                       })
                     : `+${row.hour}h`;
 
-                const bLikes = row.likes ?? 0;
-                const bSaves = row.saves ?? 0;
-                const bShares = row.shares ?? 0;
-                const bComments = row.comments ?? 0;
-                const bReposts = row.reposts ?? 0;
+                const bLikes    = row.likes    ?? null;
+                const bSaves    = row.saves    ?? null;
+                const bShares   = row.shares   ?? null;
+                const bComments = row.comments ?? null;
+                const bReposts  = row.reposts  ?? null;
+                const isPlanned = row.isPlanned ?? false;
+
+                // Helper: render engagement cell
+                const engCell = (val: number | null) => {
+                  if (val === null || val === undefined) return <span style={{ color: N.muted }}>—</span>;
+                  if (isPlanned && val === 0) return <span style={{ color: N.muted }}>—</span>;
+                  if (isPlanned) return <span style={{ color: "#d97706", fontWeight: 700 }}>~{val}</span>;
+                  return <span style={{ color: val > 0 ? "#16a34a" : N.muted, fontWeight: val > 0 ? 800 : 500 }}>{val > 0 ? val.toLocaleString() : "—"}</span>;
+                };
 
                 return (
                   <tr key={i} style={{ borderBottom:`1px solid ${N.border}`, transition:"background 0.2s" }}>
@@ -458,21 +467,11 @@ export default function OrderDetailPage() {
                     </td>
                     {order.engagementEnabled && (
                       <>
-                        <td style={{ padding:"12px 16px", textAlign:"right", color: bLikes > 0 ? "#16a34a" : N.muted, fontWeight: bLikes > 0 ? 800 : 500 }}>
-                          {bLikes > 0 ? bLikes.toLocaleString() : "—"}
-                        </td>
-                        <td style={{ padding:"12px 16px", textAlign:"right", color: bSaves > 0 ? "#16a34a" : N.muted, fontWeight: bSaves > 0 ? 800 : 500 }}>
-                          {bSaves > 0 ? bSaves.toLocaleString() : "—"}
-                        </td>
-                        <td style={{ padding:"12px 16px", textAlign:"right", color: bShares > 0 ? "#16a34a" : N.muted, fontWeight: bShares > 0 ? 800 : 500 }}>
-                          {bShares > 0 ? bShares.toLocaleString() : "—"}
-                        </td>
-                        <td style={{ padding:"12px 16px", textAlign:"right", color: bComments > 0 ? "#16a34a" : N.muted, fontWeight: bComments > 0 ? 800 : 500 }}>
-                          {bComments > 0 ? bComments.toLocaleString() : "—"}
-                        </td>
-                        <td style={{ padding:"12px 16px", textAlign:"right", color: bReposts > 0 ? "#16a34a" : N.muted, fontWeight: bReposts > 0 ? 800 : 500 }}>
-                          {bReposts > 0 ? bReposts.toLocaleString() : "—"}
-                        </td>
+                        <td style={{ padding:"12px 16px", textAlign:"right" }}>{engCell(bLikes)}</td>
+                        <td style={{ padding:"12px 16px", textAlign:"right" }}>{engCell(bSaves)}</td>
+                        <td style={{ padding:"12px 16px", textAlign:"right" }}>{engCell(bShares)}</td>
+                        <td style={{ padding:"12px 16px", textAlign:"right" }}>{engCell(bComments)}</td>
+                        <td style={{ padding:"12px 16px", textAlign:"right" }}>{engCell(bReposts)}</td>
                       </>
                     )}
                     <td style={{ padding:"12px 16px", textAlign:"center" }}>
@@ -486,9 +485,10 @@ export default function OrderDetailPage() {
             </tbody>
           </table>
         </div>
-        {!chartData.some(row => row.responseData?.customEngagement) && order.engagementEnabled && (
-          <div style={{ padding: "12px 16px", borderTop: `1px solid ${N.border}`, background: "rgba(200, 208, 231, 0.05)", fontSize: 11, color: N.muted, fontWeight: 600 }}>
-            * Note: For standard pacing campaigns, small engagements (e.g. less than 10) are accumulated and fired in organic-timed bursts once they reach the minimum panel limit.
+        {order.engagementEnabled && (
+          <div style={{ padding: "12px 16px", borderTop: `1px solid ${N.border}`, background: "rgba(200, 208, 231, 0.05)", fontSize: 11, color: N.muted, fontWeight: 600, display:"flex", gap:16, flexWrap:"wrap" }}>
+            <span><span style={{ color:"#16a34a", fontWeight:800 }}>■</span> Green = actually delivered</span>
+            <span><span style={{ color:"#d97706", fontWeight:800 }}>~</span> Orange ≈ estimated (fires when accumulated ≥ panel minimum)</span>
           </div>
         )}
       </div>

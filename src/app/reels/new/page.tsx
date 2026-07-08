@@ -1139,7 +1139,7 @@ export default function NewReelPage() {
           rowObj.viewsVal = parseInt(rowObj.views) || 0;
           rowObj.durDays = parseInt(rowObj.duration_days) || 7;
           rowObj.styleVal = (rowObj.curve_style || "ORGANIC").toUpperCase();
-          rowObj.isValid = rowObj.url && ["INSTAGRAM", "TIKTOK", "FACEBOOK"].includes((rowObj.platform || "").toUpperCase()) && rowObj.viewsVal >= 100 && rowObj.durDays >= 1;
+          rowObj.isValid = rowObj.url && ["INSTAGRAM", "TIKTOK", "FACEBOOK"].includes((rowObj.platform || "").toUpperCase()) && rowObj.viewsVal >= 1000 && rowObj.durDays >= 1;
           return rowObj;
         });
 
@@ -1253,7 +1253,7 @@ export default function NewReelPage() {
   const hasInsufficientBalance = pricingInfo?.walletMode ? (pricingInfo.balance < totalCost) : false;
 
   const canProceed1 = reelUrl.trim().length > 10;
-  const minViewsRequired = smmLimits.views?.min ?? 100;
+  const minViewsRequired = Math.max(1000, smmLimits.views?.min ?? 1000);
   const maxViewsRequired = smmLimits.views?.max ?? 10000000;
   const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1 && (!isCustomMode || !hasCustomScheduleErrors);
 

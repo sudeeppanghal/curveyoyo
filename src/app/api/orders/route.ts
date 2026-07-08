@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
   if (!reelUrl || !platform || !views) {
     return NextResponse.json({ error: "reelUrl, platform, and viewsTarget are required" }, { status: 400 });
   }
-  if (views < 100 || views > 10_000_000) {
-    return NextResponse.json({ error: "Views must be between 100 and 10,000,000" }, { status: 400 });
+  if (views < 1000 || views > 10_000_000) {
+    return NextResponse.json({ error: "Minimum order is 1,000 views. Please increase your views count." }, { status: 400 });
   }
 
   // Prevent duplicate concurrent orders on the same URL
@@ -166,8 +166,8 @@ export async function POST(request: NextRequest) {
       if (typeof batch.hour !== "number" || typeof batch.views !== "number") {
         return NextResponse.json({ error: "Each batch must contain numeric hour and views properties" }, { status: 400 });
       }
-      if (batch.views > 0 && batch.views < 100) {
-        return NextResponse.json({ error: "Each batch must have at least 100 views, or 0 to skip" }, { status: 400 });
+      if (batch.views > 0 && batch.views < 1000) {
+        return NextResponse.json({ error: "Each batch must have at least 1,000 views, or 0 to skip" }, { status: 400 });
       }
 
     }

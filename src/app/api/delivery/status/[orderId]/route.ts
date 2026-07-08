@@ -48,6 +48,7 @@ export async function GET(
     : 0;
 
   // Build chart data: planned vs actual per hour
+  const totalViews = order.viewsTarget || 1;
   const chartData = order.deliveryEvents.map((e) => {
     const firstEventTime = order.deliveryEvents[0]?.scheduledAt.getTime() ?? new Date().getTime();
     const hourOffset = Math.round((e.scheduledAt.getTime() - firstEventTime) / (1000 * 60 * 60));
@@ -57,15 +58,25 @@ export async function GET(
     const fired = resData?.engagementFired;
     const custom = resData?.customEngagement;
 
+    // Planned engagement = proportional share of total targets for this batch
+    const batchFraction = e.viewsBatch / totalViews;
+    const plannedLikes    = order.likesTarget    > 0 ? Math.round(order.likesTarget    * batchFraction) : null;
+    const plannedSaves    = order.savesTarget    > 0 ? Math.round(order.savesTarget    * batchFraction) : null;
+    const plannedShares   = order.sharesTarget   > 0 ? Math.round(order.sharesTarget   * batchFraction) : null;
+    const plannedComments = order.commentsTarget > 0 ? Math.round(order.commentsTarget * batchFraction) : null;
+    const plannedReposts  = (order as any).repostsTarget > 0 ? Math.round((order as any).repostsTarget * batchFraction) : null;
+
     return {
       hour: hourOffset,
       planned: e.viewsBatch,
       actual: e.status === "DONE" ? e.viewsBatch : 0,
-      likes: isExecuted ? (fired?.likes ?? custom?.likes ?? 0) : 0,
-      saves: isExecuted ? (fired?.saves ?? custom?.saves ?? 0) : 0,
-      shares: isExecuted ? (fired?.shares ?? custom?.shares ?? 0) : 0,
-      comments: isExecuted ? (fired?.comments ?? custom?.comments ?? 0) : 0,
-      reposts: isExecuted ? (fired?.reposts ?? custom?.reposts ?? 0) : 0,
+      // Actual fired values for completed batches, planned estimate for future
+      likes:    isExecuted ? (fired?.likes    ?? custom?.likes    ?? 0) : plannedLikes,
+      saves:    isExecuted ? (fired?.saves    ?? custom?.saves    ?? 0) : plannedSaves,
+      shares:   isExecuted ? (fired?.shares   ?? custom?.shares   ?? 0) : plannedShares,
+      comments: isExecuted ? (fired?.comments ?? custom?.comments ?? 0) : plannedComments,
+      reposts:  isExecuted ? (fired?.reposts  ?? custom?.reposts  ?? 0) : plannedReposts,
+      isPlanned: !isExecuted, // flag so UI can show "~" prefix for estimates
       status: e.status,
       scheduledAt: e.scheduledAt,
       responseData: e.responseData,
