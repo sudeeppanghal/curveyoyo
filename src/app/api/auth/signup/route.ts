@@ -28,10 +28,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      if (authError.message.includes("already registered")) {
-        return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+      // Safely extract message — Supabase errors are sometimes objects, not plain strings
+      const errMsg = typeof authError.message === "string" && authError.message
+        ? authError.message
+        : JSON.stringify(authError);
+      console.error("[signup:supabase-error]", JSON.stringify(authError));
+      if (errMsg.toLowerCase().includes("already registered") || errMsg.toLowerCase().includes("already been registered")) {
+        return NextResponse.json({ error: "An account with this email already exists. Please sign in instead." }, { status: 409 });
       }
-      return NextResponse.json({ error: authError.message }, { status: 400 });
+      if (errMsg.toLowerCase().includes("email rate limit") || errMsg.toLowerCase().includes("over_email_send_rate_limit")) {
+        return NextResponse.json({ error: "Too many signups attempted. Please wait a few minutes and try again." }, { status: 429 });
+      }
+      if (errMsg.toLowerCase().includes("email signups are disabled")) {
+        return NextResponse.json({ error: "Email signup is currently disabled. Please contact support." }, { status: 403 });
+      }
+      return NextResponse.json({ error: errMsg || "Signup failed. Please try again." }, { status: 400 });
     }
 
     if (!authData.user) {
@@ -87,8 +98,9 @@ export async function POST(request: NextRequest) {
       message: "Account created. Check your email to confirm.",
       user: { id: authData.user.id, email: authData.user.email },
     });
-  } catch (err) {
-    console.error("[signup]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[signup:catch]", message);
+    return NextResponse.json({ error: "Something went wrong. Please try again later." }, { status: 500 });
   }
 }

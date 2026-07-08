@@ -42,9 +42,11 @@ export default function SignupPage() {
         body: JSON.stringify({ ...form, referredBy: refCode }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Signup failed"); return; }
+      if (!res.ok) { setError(data.error || "Signup failed. Please try again."); return; }
       setSuccess(true);
-    } catch { setError("Something went wrong. Try again."); }
+      // Auto-confirm is ON — redirect to login after 2 seconds
+      setTimeout(() => { router.push("/login?registered=1"); }, 2000);
+    } catch { setError("Network error. Please check your connection and try again."); }
     finally { setLoading(false); }
   };
 
@@ -70,11 +72,11 @@ export default function SignupPage() {
 
         {success ? (
           <div style={{ borderRadius:24, padding:"40px 28px", background:N.bg, boxShadow:N.raised, textAlign:"center" }}>
-            <div style={{ width:64, height:64, borderRadius:20, background:"rgba(22,163,74,0.1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 20px", boxShadow:N.raised }}>className="text-emerald-600"✅</div>
-            <h2 style={{ fontSize:22, fontWeight:800, color:N.text, margin:"0 0 10px" }}>Check your inbox!</h2>
-            <p style={{ fontSize:14, color:N.muted, margin:"0 0 24px", fontWeight:500 }}>We sent a confirmation email to <strong style={{ color:N.text }}>{form.email}</strong>. Click the link to activate your account.</p>
+            <div style={{ width:64, height:64, borderRadius:20, background:"rgba(22,163,74,0.1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 20px", boxShadow:N.raised }}>✅</div>
+            <h2 style={{ fontSize:22, fontWeight:800, color:N.text, margin:"0 0 10px" }}>Account Created!</h2>
+            <p style={{ fontSize:14, color:N.muted, margin:"0 0 24px", fontWeight:500 }}>Welcome to YoyoSMM! Your account for <strong style={{ color:N.text }}>{form.email}</strong> is ready. Redirecting you to sign in…</p>
             <Link href="/login" style={{ display:"inline-block", padding:"12px 28px", borderRadius:12, fontSize:14, fontWeight:800, textDecoration:"none", color:"#ffffff", background:"linear-gradient(135deg,#d97706,#ea580c)", boxShadow:N.raisedSm }} className="neo-btn">
-              Go to Sign In →
+              Sign In Now →
             </Link>
           </div>
         ) : (
