@@ -22,18 +22,18 @@ function NeoCard({ children, style }: { children: React.ReactNode; style?: React
 
 function StatCard({ label, value, sub, icon }: { label:string; value:string|number; sub:string; icon:string }) {
   return (
-    <NeoCard>
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:16 }}>
-        <div style={{ width:44, height:44, borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, background:N.bg, boxShadow:N.raisedSm }}>
+    <NeoCard style={{ padding:"16px 14px" }}>
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
+        <div style={{ width:38, height:38, borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, background:N.bg, boxShadow:N.raisedSm }}>
           {icon}
         </div>
-        <div style={{ fontSize:10, fontWeight:800, color:"#16a34a", background:"rgba(22,163,74,0.1)", padding:"3px 8px", borderRadius:6, boxShadow:N.inset }}>LIVE</div>
+        <div style={{ fontSize:9, fontWeight:800, color:"#16a34a", background:"rgba(22,163,74,0.1)", padding:"2px 6px", borderRadius:5 }}>LIVE</div>
       </div>
-      <div style={{ fontSize:28, fontWeight:900, color:N.text, letterSpacing:"-1px", marginBottom:4 }}>
+      <div style={{ fontSize:22, fontWeight:900, color:N.text, letterSpacing:"-0.5px", marginBottom:2 }}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </div>
-      <div style={{ fontSize:12, fontWeight:800, color:N.muted, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4 }}>{label}</div>
-      <div style={{ fontSize:11, color:N.muted, fontWeight:600 }}>{sub}</div>
+      <div style={{ fontSize:10, fontWeight:800, color:N.muted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:2 }}>{label}</div>
+      <div style={{ fontSize:10, color:N.muted, fontWeight:600 }}>{sub}</div>
     </NeoCard>
   );
 }
@@ -295,70 +295,56 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:28 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
       <style>{`
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
         .neo-qa:hover{box-shadow:10px 10px 24px #c8d0e7,-5px -5px 14px #ffffff !important;transform:translateY(-2px)}
         .neo-qa:active{box-shadow:inset 4px 4px 10px #c8d0e7,inset -2px -2px 6px #ffffff !important;transform:none}
         .neo-step:hover{box-shadow:6px 6px 16px #c8d0e7,-3px -3px 10px #ffffff !important}
-        
-        .promo-card-animated {
-          position: relative;
-          overflow: hidden;
-          animation: neonGlow 4s infinite ease-in-out, fadeUp 0.3s ease;
+        .promo-card-animated{position:relative;overflow:hidden;animation:neonGlow 4s infinite ease-in-out}
+        .promo-card-animated::after{content:'';position:absolute;top:0;left:-150%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12) 50%,transparent);transform:skewX(-20deg);pointer-events:none;animation:shimmerSweep 5s infinite ease-in-out}
+        .digit-box-pulse{animation:digitBreathe 3s infinite ease-in-out}
+        @keyframes neonGlow{0%,100%{border-color:rgba(168,85,247,.25);box-shadow:0 12px 36px rgba(0,0,0,.6),0 0 15px rgba(168,85,247,.1)}50%{border-color:rgba(236,72,153,.55);box-shadow:0 12px 40px rgba(0,0,0,.65),0 0 25px rgba(236,72,153,.25)}}
+        @keyframes shimmerSweep{0%{left:-150%}30%{left:150%}100%{left:150%}}
+        @keyframes digitBreathe{0%,100%{transform:scale(1);border-color:rgba(168,85,247,.35);box-shadow:0 4px 12px rgba(168,85,247,.2)}50%{transform:scale(1.04);border-color:rgba(168,85,247,.65);box-shadow:0 6px 18px rgba(168,85,247,.45);color:#fff}}
+
+        /* ── Mobile stats 2-col grid ── */
+        .stats-grid-mob {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
         }
-        
-        .promo-card-animated::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -150%;
-          width: 60%;
-          height: 100%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.12) 50%,
-            transparent
-          );
-          transform: skewX(-20deg);
-          pointer-events: none;
-          animation: shimmerSweep 5s infinite ease-in-out;
+        @media (min-width:600px) {
+          .stats-grid-mob { grid-template-columns: repeat(4, 1fr); gap:16px; }
         }
 
-        .digit-box-pulse {
-          animation: digitBreathe 3s infinite ease-in-out;
+        /* ── Quick Actions horizontal scroll on mobile ── */
+        .qa-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 16px;
+        }
+        @media (max-width:599px) {
+          .qa-grid {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+          }
+          .qa-grid::-webkit-scrollbar { display:none; }
+          .qa-grid > * { flex-shrink:0; width:140px; }
         }
 
-        @keyframes neonGlow {
-          0%, 100% {
-            border-color: rgba(168, 85, 247, 0.25);
-            box-shadow: 0 12px 36px rgba(0,0,0,0.6), 0 0 15px rgba(168, 85, 247, 0.1);
-          }
-          50% {
-            border-color: rgba(236, 72, 153, 0.55);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.65), 0 0 25px rgba(236, 72, 153, 0.25);
-          }
+        /* ── Campaign tracker mobile stack ── */
+        .tracker-cols {
+          display: grid;
+          grid-template-columns: 1.2fr 1fr;
+          gap: 24px;
         }
-
-        @keyframes shimmerSweep {
-          0% { left: -150%; }
-          30% { left: 150%; }
-          100% { left: 150%; }
-        }
-
-        @keyframes digitBreathe {
-          0%, 100% {
-            transform: scale(1);
-            border-color: rgba(168, 85, 247, 0.35);
-            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
-          }
-          50% {
-            transform: scale(1.04);
-            border-color: rgba(168, 85, 247, 0.65);
-            box-shadow: 0 6px 18px rgba(168, 85, 247, 0.45);
-            color: #fff;
-          }
+        @media (max-width:599px) {
+          .tracker-cols { grid-template-columns: 1fr; gap:16px; }
         }
       `}</style>
 
@@ -552,7 +538,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 24 }}>
+          <div className="tracker-cols">
             {/* Left Column: Progress & Next Batch info */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Target reel URL */}
@@ -641,38 +627,38 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       {loading ? (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:16 }}>
+        <div className="stats-grid-mob">
           {[...Array(4)].map((_,i) => (
-            <div key={i} style={{ borderRadius:20, height:130, background:N.bg, boxShadow:N.inset, animation:"pulse 2s infinite" }} />
+            <div key={i} style={{ borderRadius:20, height:110, background:N.bg, boxShadow:N.inset, animation:"pulse 2s infinite" }} />
           ))}
         </div>
       ) : (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:16 }}>
-          <StatCard label="Total Orders"    value={stats.totalOrders ?? 0}     sub="All time campaigns"           icon="📋" />
-          <StatCard label="Live Now"        value={stats.activeOrders ?? stats.deliveringOrders ?? 0}    sub="Currently delivering"         icon="⚡" />
-          <StatCard label="Views Sent"      value={(stats.viewsDelivered ?? stats.totalViewsDelivered ?? 0).toLocaleString()}  sub="Total organic views"          icon="👁" />
-          <StatCard label="Active Routes"   value={activeRoutes}               sub="Delivery paths online"        icon="🛡️" />
+        <div className="stats-grid-mob">
+          <StatCard label="Total Orders"    value={stats.totalOrders ?? 0}     sub="All time campaigns"     icon="📋" />
+          <StatCard label="Live Now"        value={stats.activeOrders ?? stats.deliveringOrders ?? 0}    sub="Currently delivering" icon="⚡" />
+          <StatCard label="Views Sent"      value={(stats.viewsDelivered ?? stats.totalViewsDelivered ?? 0).toLocaleString()}  sub="Total organic views"  icon="👁" />
+          <StatCard label="Active Routes"   value={activeRoutes}               sub="Delivery paths online"  icon="🛡️" />
         </div>
       )}
 
       {/* Quick Actions */}
       <div>
-        <p style={{ fontSize:11, fontWeight:800, color:N.muted, textTransform:"uppercase", letterSpacing:"0.12em", margin:"0 0 14px" }}>Quick Actions</p>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:16 }}>
+        <p style={{ fontSize:11, fontWeight:800, color:N.muted, textTransform:"uppercase", letterSpacing:"0.12em", margin:"0 0 12px" }}>Quick Actions</p>
+        <div className="qa-grid">
           {quickActions.map((a, i) => (
             <Link key={i} href={a.href} className="neo-qa"
               style={{
-                textDecoration:"none", borderRadius:18, padding:"20px 18px",
+                textDecoration:"none", borderRadius:16, padding:"16px 14px",
                 background:N.bg, boxShadow:N.raised,
-                display:"flex", flexDirection:"column", gap:10,
+                display:"flex", flexDirection:"column", gap:8,
                 cursor:"pointer", transition:"all 0.2s",
               }}>
-              <div style={{ width:42, height:42, borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, background:N.bg, boxShadow:N.raisedSm }}>
+              <div style={{ width:38, height:38, borderRadius:11, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, background:N.bg, boxShadow:N.raisedSm }}>
                 {a.icon}
               </div>
               <div>
-                <div style={{ fontSize:13, fontWeight:800, color:N.text, marginBottom:3 }}>{a.label}</div>
-                <div style={{ fontSize:11, color:N.muted, fontWeight:600 }}>{a.desc}</div>
+                <div style={{ fontSize:12, fontWeight:800, color:N.text, marginBottom:2 }}>{a.label}</div>
+                <div style={{ fontSize:10, color:N.muted, fontWeight:600, lineHeight:1.4 }}>{a.desc}</div>
               </div>
             </Link>
           ))}

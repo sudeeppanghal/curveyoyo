@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { prisma } from "@/lib/prisma";
 import MaintenanceGate from "./MaintenanceGate";
 import ReferralTracker from "@/components/ReferralTracker";
+import MobileNav from "@/components/MobileNav";
 import "./global.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -79,6 +80,10 @@ export default async function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+        <meta name="theme-color" content="#eef2f7" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
@@ -87,6 +92,7 @@ export default async function RootLayout({
         <ThemeProvider />
         <MaintenanceGate initialMaintenance={isMaintenance} supportEmail={supportEmail}>
           <ReferralTracker />
+          <MobileNav />
           {children}
         </MaintenanceGate>
       </body>
