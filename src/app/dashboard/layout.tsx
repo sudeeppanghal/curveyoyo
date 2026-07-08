@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { N } from "@/lib/theme";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
   { href: "/dashboard", label: "Overview",
@@ -80,7 +81,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .neo-qa:hover   { box-shadow:8px 8px 20px #c8d0e7,-4px -4px 12px #ffffff !important; transform:translateY(-2px); }
         .neo-qa:active  { box-shadow:inset 3px 3px 8px #c8d0e7,inset -2px -2px 5px #ffffff !important; transform:none; }
         .neo-step:hover { box-shadow:6px 6px 16px #c8d0e7,-3px -3px 10px #ffffff !important; }
-        .neo-input:focus { box-shadow:inset 5px 5px 12px #c8d0e7,inset -3px -3px 8px #ffffff,0 0 0 2px rgba(217,119,6,.25) !important; outline:none; }
+        /* No glow ring on focus — just deepen the inset shadow subtly */
+        .neo-input:focus { box-shadow:inset 6px 6px 14px #c0c8e0,inset -6px -6px 14px #ffffff !important; outline:none !important; }
+        input:focus, select:focus, textarea:focus { outline: none !important; box-shadow: inset 4px 4px 10px #c8d0e7, inset -4px -4px 10px #ffffff !important; }
         .promo-card-animated { position:relative; overflow:hidden; }
         .promo-card-animated::after { content:''; position:absolute; top:0; left:-150%; width:60%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.12) 50%,transparent); transform:skewX(-20deg); pointer-events:none; animation:shimmerSweep 5s infinite ease-in-out; }
         @keyframes shimmerSweep { 0%{left:-150%} 30%{left:150%} 100%{left:150%} }
@@ -220,15 +223,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </Link>
 
-          {/* Right: balance pill + avatar */}
+          {/* Right: theme toggle + balance pill + avatar */}
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <ThemeToggle />
             <Link href="/billing" style={{
               display:"flex", alignItems:"center", gap:5,
-              padding:"6px 12px", borderRadius:20,
+              padding:"6px 11px", borderRadius:20,
               background:N.bg, boxShadow:N.inset, textDecoration:"none",
             }}>
               <span style={{ fontSize:11, color:N.muted, fontWeight:700 }}>₹</span>
-              <span style={{ fontSize:14, fontWeight:900, color:"#16a34a" }}>
+              <span style={{ fontSize:13, fontWeight:900, color:"#16a34a" }}>
                 {balance >= 1000 ? `${(balance/1000).toFixed(1)}k` : balance.toLocaleString(undefined, { minimumFractionDigits:0 })}
               </span>
             </Link>
@@ -236,9 +240,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={handleLogout}
               title="Sign out"
               style={{
-                width:38, height:38, borderRadius:"50%",
+                width:36, height:36, borderRadius:"50%",
                 display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:15, fontWeight:900, color:"#fff",
+                fontSize:14, fontWeight:900, color:"#fff",
                 background:"linear-gradient(135deg,#d97706,#ea580c)",
                 boxShadow:N.raisedSm, border:"none", cursor:"pointer",
                 WebkitTapHighlightColor:"transparent",

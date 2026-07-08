@@ -1302,6 +1302,62 @@ export default function NewReelPage() {
         .neo-btn:hover{transform:translateY(-1px);box-shadow:8px 8px 22px #c8d0e7,-8px -8px 22px #ffffff !important}
         .neo-btn:active{transform:none;box-shadow:inset 3px 3px 8px #c8d0e7,inset -1px -1px 4px #ffffff !important}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* ══ MOBILE FIXES for reels/new ══ */
+        @media (max-width: 767px) {
+          /* Main wrapper */
+          .order-form-wrap { max-width: 100% !important; padding: 0 !important; }
+
+          /* Step 2 two-column layout → single column */
+          .order-step2-cols { grid-template-columns: 1fr !important; gap: 16px !important; }
+
+          /* Left panel dark card */
+          .order-dark-panel { padding: 14px 12px !important; border-radius: 16px !important; }
+
+          /* Category filter tabs → horizontal scroll */
+          .order-cat-tabs {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+            gap: 6px !important;
+            padding-bottom: 4px !important;
+          }
+          .order-cat-tabs::-webkit-scrollbar { display: none !important; }
+          .order-cat-tabs > button { flex-shrink: 0 !important; }
+
+          /* Curve grid → 2 col on mobile */
+          .curve-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+
+          /* Graph canvas → scroll horizontally */
+          .graph-scroll-wrap {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+
+          /* Engagement grid → single col */
+          .eng-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+
+          /* Stats pairs → single col */
+          .stats-pair { grid-template-columns: 1fr 1fr !important; }
+
+          /* Schedule table → scroll */
+          .schedule-table-wrap { overflow-x: auto !important; border-radius: 12px !important; }
+
+          /* Reduce gap on all sections */
+          .order-section-gap { gap: 16px !important; }
+
+          /* Platform selector → all in row with scroll */
+          .platform-row { flex-wrap: nowrap !important; overflow-x: auto !important; }
+
+          /* Input font size iOS fix */
+          input, select, textarea { font-size: 16px !important; }
+
+          /* Buttons full width on mobile */
+          .order-submit-btn { font-size: 15px !important; padding: 16px !important; }
+        }
       `}</style>
 
       {/* Header */}

@@ -14,6 +14,17 @@ body {
   text-size-adjust: 100%;
 }
 
+/* ─── Remove ALL focus glows globally ───────────────────── */
+*:focus { outline: none !important; }
+input:focus,
+select:focus,
+textarea:focus,
+.neo-input:focus {
+  outline: none !important;
+  /* Subtle deeper inset only — no glow ring */
+  box-shadow: inset 5px 5px 12px #c0c8df, inset -5px -5px 12px #ffffff !important;
+}
+
 /* ─── Scrollbar ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }

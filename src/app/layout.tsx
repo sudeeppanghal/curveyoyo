@@ -5,6 +5,7 @@ import MaintenanceGate from "./MaintenanceGate";
 import ReferralTracker from "@/components/ReferralTracker";
 import MobileNav from "@/components/MobileNav";
 import "./global.css";
+import "./mobile-fix.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const dynamic = "force-dynamic";

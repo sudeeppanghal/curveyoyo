@@ -1,0 +1,148 @@
+/* ══════════════════════════════════════════════════════
+   GLOBAL MOBILE FIX — Applied to EVERY page automatically
+   Fixes all hardcoded 2-column grid layouts on mobile
+   ══════════════════════════════════════════════════════ */
+
+/* ─── Prevent all horizontal overflow ──────────────────── */
+html, body { overflow-x: hidden !important; }
+* { max-width: 100%; }
+
+/* ─── Mobile viewport reset ─────────────────────────────── */
+@media (max-width: 767px) {
+
+  /* Fix ALL inline 2-column grids that break on small screens */
+  /* These target the exact pattern used in reels/new/page.tsx  */
+  [style*="gridTemplateColumns: \"1fr 1fr\""],
+  [style*="gridTemplateColumns:'1fr 1fr'"],
+  [style*="gridTemplateColumns: '1fr 1fr'"],
+  [style*="gridTemplateColumns:\"1fr 1fr\""] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Fix 3-col grids */
+  [style*="gridTemplateColumns: \"repeat(3"],
+  [style*="gridTemplateColumns:'repeat(3"],
+  [style*="gridTemplateColumns: repeat(3"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Fix the main 2-col order form layout (1.2fr 1fr) */
+  [style*="gridTemplateColumns:'1.2fr 1fr'"],
+  [style*="gridTemplateColumns: '1.2fr 1fr'"],
+  [style*="gridTemplateColumns:\"1.2fr 1fr\""],
+  [style*="gridTemplateColumns: \"1.2fr 1fr\""] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Fix 4-column table grids */
+  [style*="gridTemplateColumns: \"1fr 1.5fr 1fr 2.5fr\""],
+  [style*="gridTemplateColumns:\"1fr 1.5fr 1fr 2.5fr\""] {
+    grid-template-columns: 1fr 1fr !important;
+    font-size: 11px !important;
+  }
+
+  /* Campaign tracker two columns */
+  .tracker-cols {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Fix SVG canvas overflows in custom graph designer */
+  svg { max-width: 100% !important; height: auto !important; }
+
+  /* Fix tables overflow */
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+
+  /* All cards: reduce padding on mobile */
+  [style*="padding: 24px"],
+  [style*="padding:24px"],
+  [style*="padding: \"24px 28px\""],
+  [style*="padding:\"24px 28px\""] {
+    padding: 14px 12px !important;
+  }
+
+  /* Reduce large font sizes */
+  [style*="fontSize: 28"],
+  [style*="fontSize:28"] { font-size: 22px !important; }
+  [style*="fontSize: 32"],
+  [style*="fontSize:32"] { font-size: 24px !important; }
+  [style*="fontSize: 36"],
+  [style*="fontSize:36"] { font-size: 26px !important; }
+
+  /* Reduce gap on large grid gaps */
+  [style*="gap: 32"],
+  [style*="gap:32"] { gap: 14px !important; }
+  [style*="gap: 28"],
+  [style*="gap:28"] { gap: 14px !important; }
+
+  /* Prevent width overflow from minmax grids */
+  [style*="minmax(200px"],
+  [style*="minmax(180px"],
+  [style*="minmax(130px"],
+  [style*="minmax(150px"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Fix button rows that overflow */
+  [style*="display: \"flex\""][style*="gap: 12"],
+  [style*="display:\"flex\""][style*="gap:12"] {
+    flex-wrap: wrap;
+  }
+
+  /* Fix the order form dark panels */
+  [style*="background: \"#08010f\""],
+  [style*="background:'#08010f'"] {
+    border-radius: 16px !important;
+    padding: 14px 12px !important;
+  }
+
+  /* Input font size — prevents iOS zoom */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Minimum touch targets */
+  button, a { min-height: 44px; }
+
+  /* Horizontal scroll for tab/chip rows */
+  [style*="flexWrap: \"wrap\""] {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+}
+
+/* ─── Bottom Nav Safe Spacing ───────────────────────────── */
+@media (max-width: 767px) {
+  /* Any page that has the bottom nav needs this */
+  .dash-content {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* ─── Landing Page Mobile ───────────────────────────────── */
+@media (max-width: 640px) {
+  /* Hero section buttons stack */
+  .hero-cta-row {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .hero-cta-row > * {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+}
+
+/* ─── Orders page table fix ─────────────────────────────── */
+@media (max-width: 767px) {
+  .orders-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+  }
+  .orders-table-wrap table {
+    min-width: 600px;
+  }
+}
