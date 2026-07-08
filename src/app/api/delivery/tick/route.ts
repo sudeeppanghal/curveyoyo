@@ -214,6 +214,23 @@ async function handler(request: NextRequest) {
     }
 
     const failReason = result.error ?? "Unknown delivery failure";
+    
+    // Proactive Auto-Heal: If the failure is due to a dead or incorrect service ID,
+    // trigger runAutoSync() immediately to find a replacement service and notify the admin.
+    const isServiceIdError = result.errorClass === "next_service" || 
+      failReason.toLowerCase().includes("service") || 
+      failReason.toLowerCase().includes("incorrect service id") ||
+      failReason.toLowerCase().includes("invalid service");
+      
+    if (isServiceIdError) {
+      try {
+        const { runAutoSync } = await import("@/lib/delivery/auto-sync");
+        await runAutoSync();
+      } catch (autoSyncErr) {
+        console.error("Proactive Auto-Heal failed:", autoSyncErr);
+      }
+    }
+
     await prisma.deliveryEvent.update({ where: { id: eventId }, data: { status: "FAILED", errorMessage: failReason } });
     await prisma.deliveryEvent.updateMany({
       where: { orderId, status: "SCHEDULED" },
@@ -227,7 +244,7 @@ async function handler(request: NextRequest) {
     // Telegram alert so admin knows immediately
     if (!isGhostEmail(order.user.email)) {
       await sendTelegramAlert(
-        `❌ *Order Failed*\nOrder ID: \`${orderId}\`\nPlatform: ${platform.toUpperCase()}\nError: ${failReason}\nAll fallbacks exhausted.`
+        `❌ *Order Failed*\nOrder ID: \`${orderId}\`\nPlatform: ${platform.toUpperCase()}\nError: ${failReason}\nAll fallbacks exhausted.${isServiceIdError ? " Auto-heal triggered." : ""}`
       ).catch(() => {}); // non-fatal
     }
     return NextResponse.json({ ok: false, error: failReason }, { status: 500 });

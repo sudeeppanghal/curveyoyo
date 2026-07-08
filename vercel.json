@@ -4,6 +4,20 @@
   "outputDirectory": ".next",
   "installCommand": "npm ci",
   "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron/auto-sync",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/auto-orders",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
