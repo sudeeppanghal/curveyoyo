@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { CurveStyle } from "@prisma/client";
 
 // DELETE a curve template
 export async function DELETE(
@@ -58,7 +57,7 @@ export async function PATCH(
     where: { id },
     data: {
       ...(name !== undefined && { name }),
-      ...(style !== undefined && { style: style as CurveStyle }),
+      ...(style !== undefined && { style }),
       ...(durationHours !== undefined && { durationHours: parseInt(durationHours) }),
       ...(warmupHours !== undefined && { warmupHours: parseInt(warmupHours) }),
       ...(peakHours !== undefined && { peakHours: parseInt(peakHours) }),

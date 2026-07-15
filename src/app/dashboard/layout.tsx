@@ -223,7 +223,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </Link>
 
-          {/* Right: theme toggle + balance pill + avatar */}
+          {/* Right: theme toggle + balance pill + avatar + logout */}
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <ThemeToggle />
             <Link href="/billing" style={{
@@ -236,18 +236,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {balance >= 1000 ? `${(balance/1000).toFixed(1)}k` : balance.toLocaleString(undefined, { minimumFractionDigits:0 })}
               </span>
             </Link>
-            <button
-              onClick={handleLogout}
-              title="Sign out"
+            {/* Avatar (Links to Settings page) */}
+            <Link
+              href="/settings"
+              title="Settings"
               style={{
-                width:36, height:36, borderRadius:"50%",
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:14, fontWeight:900, color:"#fff",
+                width:36,
+                height:36,
+                borderRadius:"50%",
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"center",
+                fontSize:14,
+                fontWeight:900,
+                color:"#fff",
                 background:"linear-gradient(135deg,#d97706,#ea580c)",
-                boxShadow:N.raisedSm, border:"none", cursor:"pointer",
+                boxShadow:N.raisedSm,
+                textDecoration:"none",
                 WebkitTapHighlightColor:"transparent",
               }}
-            >{userName}</button>
+            >{userName}</Link>
+            {/* Dedicated Logout Icon Button */}
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              title="Sign out"
+              style={{
+                width:36,
+                height:36,
+                borderRadius:"50%",
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"center",
+                background:N.bg,
+                cursor:"pointer",
+                color:"#b91c1c",
+                boxShadow:N.raisedSm,
+                border:"none",
+                WebkitTapHighlightColor:"transparent",
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
           </div>
         </header>
 

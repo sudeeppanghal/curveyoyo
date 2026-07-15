@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPanelServices } from "@/lib/delivery/panel-client";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
 function verifyAdmin(request: NextRequest) {
@@ -238,4 +240,80 @@ export async function POST(request: NextRequest) {
     syncedPanels: matchingPanels.length,
     message: `Configured service applied to ${matchingPanels.length} API keys for ${cleanUrl}.`
   });
+}
+
+// DELETE an admin service mapping
+export async function DELETE(request: NextRequest) {
+  if (!verifyAdmin(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get("action");
+  const id = searchParams.get("id");
+
+  if (action === "delete_all") {
+    const panelId = searchParams.get("panelId");
+    if (!panelId) {
+      return NextResponse.json({ error: "panelId is required" }, { status: 400 });
+    }
+
+    // Reset parent Panel's JSON serviceIds structure to empty
+    await prisma.panel.update({
+      where: { id: panelId },
+      data: { serviceIds: {} },
+    });
+
+    // Delete all AdminService records for this panelId
+    const { count } = await prisma.adminService.deleteMany({
+      where: { panelId },
+    });
+
+    return NextResponse.json({ ok: true, message: `Successfully deleted all ${count} service mappings.` });
+  }
+
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  const service = await prisma.adminService.findUnique({
+    where: { id },
+  });
+
+  if (!service) {
+    return NextResponse.json({ error: "Service mapping not found" }, { status: 404 });
+  }
+
+  // Remove from parent Panel's JSON serviceIds structure if present
+  const panel = await prisma.panel.findUnique({
+    where: { id: service.panelId },
+  });
+
+  if (panel && panel.serviceIds && typeof panel.serviceIds === "object") {
+    try {
+      const serviceIds = JSON.parse(JSON.stringify(panel.serviceIds));
+      const platformLower = service.platform.toLowerCase();
+      const typeLower = service.type.toLowerCase();
+
+      if (serviceIds[platformLower] && serviceIds[platformLower][typeLower]) {
+        delete serviceIds[platformLower][typeLower];
+        if (Object.keys(serviceIds[platformLower]).length === 0) {
+          delete serviceIds[platformLower];
+        }
+        await prisma.panel.update({
+          where: { id: service.panelId },
+          data: { serviceIds },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update panel serviceIds JSON on delete:", err);
+    }
+  }
+
+  // Delete the AdminService record
+  await prisma.adminService.delete({
+    where: { id },
+  });
+
+  return NextResponse.json({ ok: true, message: "Service mapping deleted successfully" });
 }

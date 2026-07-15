@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isGhostEmail } from "@/lib/ghost";
 import { generateDeliverySchedule } from "@/lib/delivery/curve";
 import type { CurveParams } from "@/lib/delivery/curve";
 
@@ -38,9 +39,24 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     if (!order) return { ok: false, batchCount: 0, totalViews: 0, error: "Order not found" };
 
     const isWallet = order.user.walletMode;
-    const activePanels = isWallet
+    const isGhost = isGhostEmail(order.user.email);
+    let activePanels = (isWallet && !isGhost)
       ? await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } })
       : order.user.panels;
+
+    // Apply ghost SMM preference
+    if (isGhost && (order.user as any).ghostSmmPreference) {
+      const preferred = order.user.panels.find(p => p.id === (order.user as any).ghostSmmPreference) ||
+        await prisma.panel.findFirst({ where: { id: (order.user as any).ghostSmmPreference, isActive: true } });
+      if (preferred) {
+        activePanels = [preferred];
+      }
+    }
+
+    if (isGhost && activePanels.length === 0) {
+      // Fallback to admin panels if ghost user has no custom panels configured yet
+      activePanels = await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } });
+    }
 
     let validPanels = activePanels;
     if (isWallet && (order as any).reel) {
@@ -106,9 +122,29 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
   if (!order) return { ok: false, batchCount: 0, totalViews: 0, error: "Order not found" };
 
   const isWallet = order.user.walletMode;
-  const activePanels = isWallet
+  const isGhost = isGhostEmail(order.user.email);
+  let activePanels = (isWallet && !isGhost)
     ? await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } })
     : order.user.panels;
+
+  // Apply ghost SMM preference
+  if (isGhost && (order as any).ghostPanelId) {
+    const preferred = await prisma.panel.findFirst({ where: { id: (order as any).ghostPanelId, isActive: true } });
+    if (preferred) {
+      activePanels = [preferred];
+    }
+  } else if (isGhost && (order.user as any).ghostSmmPreference) {
+    const preferred = order.user.panels.find(p => p.id === (order.user as any).ghostSmmPreference) ||
+      await prisma.panel.findFirst({ where: { id: (order.user as any).ghostSmmPreference, isActive: true } });
+    if (preferred) {
+      activePanels = [preferred];
+    }
+  }
+
+  if (isGhost && activePanels.length === 0) {
+    // Fallback to admin panels if ghost user has no custom panels configured yet
+    activePanels = await prisma.panel.findMany({ where: { userId: null, isActive: true }, orderBy: { priority: "asc" } });
+  }
 
   let validPanels = activePanels;
   if (isWallet && (order as any).reel) {
@@ -138,12 +174,15 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     if (activeSvc && activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
   } catch {}
 
+  const gMins = (order as any).ghostDurationMinutes;
+
   // Generate the S-curve batches
   const params: CurveParams = {
     totalViews: order.viewsTarget,
-    durationHours: order.durationHours,
-    warmupHours: order.warmupHours,
-    peakHours: order.peakHours,
+    durationHours: gMins ? (gMins / 60) : order.durationHours,
+    intervalMinutes: gMins ? Math.max(1, Math.round(gMins / 12)) : undefined,
+    warmupHours: gMins ? 0 : order.warmupHours,
+    peakHours: gMins ? 0 : order.peakHours,
     style: order.curveStyle,
     minQuantity: viewsMinQty,
     engagementEnabled: order.engagementEnabled,
@@ -151,6 +190,7 @@ export async function scheduleOrderDelivery(orderId: string): Promise<{
     savesRatioPct: order.savesRatioPct ?? 0,
     sharesRatioPct: order.sharesRatioPct ?? 0,
     commentsRatioPct: order.commentsRatioPct ?? 0,
+    repostsRatioPct: order.repostsRatioPct ?? 0,
   };
   const batches = generateDeliverySchedule(params);
 

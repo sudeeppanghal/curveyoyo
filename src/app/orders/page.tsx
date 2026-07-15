@@ -41,20 +41,31 @@ const CURVE_LABELS: Record<string, string> = {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [userEmail, setUserEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<OrderStatus>("All");
 
   const load = () => {
     fetch("/api/orders")
       .then(r => r.json())
-      .then(d => { setOrders(d.orders ?? []); setLoading(false); })
+      .then(d => {
+        setOrders(d.orders ?? []);
+        setUserEmail(d.email || "");
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   };
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const handleAction = async (id: string, action: "pause" | "cancel" | "resume") => {
-    if (!confirm(`Are you sure you want to ${action} this campaign?${action === "cancel" ? " You will receive a partial refund for the remaining views." : ""}`)) return;
+  const handleAction = async (id: string, action: "pause" | "cancel" | "resume" | "refill") => {
+    let confirmMessage = `Are you sure you want to ${action} this campaign?`;
+    if (action === "cancel") {
+      confirmMessage = "Are you sure you want to cancel this campaign? You will receive a partial refund for the remaining views.";
+    } else if (action === "refill") {
+      confirmMessage = "Are you sure you want to refill this campaign? You will be charged only for the remaining portion of views and engagement based on current panel rates.";
+    }
+    if (!confirm(confirmMessage)) return;
     setActionLoading(id);
     try {
       const res = await fetch(`/api/orders/${id}`, {
@@ -65,8 +76,12 @@ export default function OrdersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to perform action");
       
-      // Update local state instead of doing a full reload for better UX
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: data.status } : o));
+      // Reload the page on refill to update all displayed values (targets, delivered)
+      if (action === "refill") {
+        load();
+      } else {
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: data.status } : o));
+      }
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -254,6 +269,21 @@ export default function OrdersPage() {
                           Cancel
                         </button>
                       )}
+
+                      {(o.status === "CANCELLED" || o.status === "FAILED") && (o.viewsTarget - o.viewsDelivered >= 100) && (
+                        <button
+                          disabled={actionLoading === o.id}
+                          onClick={() => handleAction(o.id, "refill")}
+                          style={{
+                            background: N.bg, border: "none", boxShadow: N.raisedSm, color: "#a855f7",
+                            padding: "4px 10px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                            opacity: actionLoading === o.id ? 0.5 : 1
+                          }}
+                          title={`Refill remaining ${o.viewsTarget - o.viewsDelivered} views`}
+                        >
+                          🔄 Refill Remaining
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -268,7 +298,7 @@ export default function OrdersPage() {
                     fontSize: 12,
                     fontWeight: 700
                   }}>
-                    ⚠️ Campaign Delivery Failed (Please check if your profile/post is public, or contact support if the problem persists)
+                    ⚠️ Campaign Stopped: {o.failReason}
                   </div>
                 )}
 

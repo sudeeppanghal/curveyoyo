@@ -31,6 +31,7 @@ interface AdminSettings {
 
   minDeposit: number;
   apifyKeys: string | null;
+  instagramCookies: string | null;
 
 }
 
@@ -123,6 +124,7 @@ export default function AdminPage() {
 
     minDeposit: 500,
     apifyKeys: "",
+    instagramCookies: "",
 
   });
 
@@ -740,8 +742,10 @@ export default function AdminPage() {
 
       setTimeout(() => setError(""), 3000);
 
-      return;
+    }
 
+    if (!confirm(`Are you sure you want to save/update this service mapping for Service #${pricingServiceId}?`)) {
+      return;
     }
 
     setSavingService(true);
@@ -801,6 +805,70 @@ export default function AdminPage() {
 
     }
 
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this mapped service?")) return;
+    try {
+      const res = await fetch(`/api/admin/services?id=${id}`, {
+        method: "DELETE",
+        headers
+      });
+      if (res.ok) {
+        setSaved("✅ Service mapping deleted successfully!");
+        setTimeout(() => setSaved(""), 2000);
+        
+        // Refresh saved services config
+        if (selectedPanelId) {
+          const savedRes = await fetch(`/api/admin/services?panelId=${selectedPanelId}`, { headers });
+          if (savedRes.ok) {
+            const savedJson = await savedRes.json();
+            setSavedServices(savedJson.services ?? []);
+          }
+        }
+      } else {
+        const d = await res.json();
+        setError(d.error ?? "Failed to delete service");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  const handleDeleteAllServices = async () => {
+    if (!selectedPanelId) return;
+    const confirm1 = confirm("⚠️ WARNING: This will delete ALL mapped services for this SMM provider! Are you sure?");
+    if (!confirm1) return;
+    const confirm2 = confirm("❌ DOUBLE CONFIRMATION: Type 'DELETE ALL' to proceed. This action is permanent and cannot be undone.");
+    if (!confirm2) return;
+    
+    setSaved("Deleting all services...");
+    try {
+      const res = await fetch(`/api/admin/services?action=delete_all&panelId=${selectedPanelId}`, {
+        method: "DELETE",
+        headers
+      });
+      if (res.ok) {
+        setSaved("✅ All service mappings deleted successfully!");
+        setTimeout(() => setSaved(""), 2000);
+        
+        // Refresh saved services config
+        const savedRes = await fetch(`/api/admin/services?panelId=${selectedPanelId}`, { headers });
+        if (savedRes.ok) {
+          const savedJson = await savedRes.json();
+          setSavedServices(savedJson.services ?? []);
+        }
+      } else {
+        const d = await res.json();
+        setError(d.error ?? "Failed to delete services");
+        setTimeout(() => setError(""), 3000);
+      }
+    } catch (e) {
+      setError(String(e));
+      setTimeout(() => setError(""), 3000);
+    }
   };
 
   const userAction = async (userId: string, action: string, extra?: any) => {
@@ -1721,6 +1789,22 @@ export default function AdminPage() {
 
                 <div>
 
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>📸 Instagram Session Cookies (for 100% Free Scraper)</label>
+
+                  <textarea value={settings.instagramCookies ?? ""} onChange={(e) => setSettings((p) => ({ ...p, instagramCookies: e.target.value }))}
+
+                    placeholder="sessionid=xxxx; ds_user_id=xxxx;"
+
+                    className="neo-input"
+
+                    rows={2}
+
+                    style={{ width: "100%", padding: "14px 18px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: N.text, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", boxSizing: "border-box", resize: "vertical" }} />
+
+                </div>
+
+                <div>
+
                   <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: N.muted, marginBottom: 8 }}>💎 USDT (TRC20) Wallet Address</label>
 
                   <input value={settings.trc20Address ?? ""} onChange={(e) => setSettings((p) => ({ ...p, trc20Address: e.target.value }))}
@@ -2417,23 +2501,41 @@ export default function AdminPage() {
                         Setting default service IDs and markup prices here automatically applies to all linked API keys for this SMM provider!
                       </p>
                     </div>
-                    <button
-                      onClick={handleSyncAllServices}
-                      disabled={syncingAll}
-                      style={{
-                        padding: "10px 18px",
-                        borderRadius: 12,
-                        background: N.accent,
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        border: "none",
-                        cursor: syncingAll ? "not-allowed" : "pointer",
-                        boxShadow: "0 4px 12px rgba(168, 85, 247, 0.3)"
-                      }}
-                    >
-                      {syncingAll ? "Syncing..." : "🔄 Sync All API Keys Now"}
-                    </button>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <button
+                        onClick={handleSyncAllServices}
+                        disabled={syncingAll}
+                        style={{
+                          padding: "10px 18px",
+                          borderRadius: 12,
+                          background: N.accent,
+                          color: "#fff",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          border: "none",
+                          cursor: syncingAll ? "not-allowed" : "pointer",
+                          boxShadow: "0 4px 12px rgba(168, 85, 247, 0.3)"
+                        }}
+                      >
+                        {syncingAll ? "Syncing..." : "🔄 Sync All API Keys Now"}
+                      </button>
+                      <button
+                        onClick={handleDeleteAllServices}
+                        style={{
+                          padding: "10px 18px",
+                          borderRadius: 12,
+                          background: "rgba(239, 68, 68, 0.1)",
+                          color: "#ef4444",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          cursor: "pointer",
+                        }}
+                        title="Delete all service mappings for this SMM provider panel"
+                      >
+                        🗑️ Delete All Services
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
@@ -2457,6 +2559,8 @@ export default function AdminPage() {
                           <option value="TIKTOK">TikTok</option>
 
                           <option value="FACEBOOK">Facebook</option>
+
+                          <option value="YOUTUBE">YouTube (Crosswave Yt)</option>
 
                         </select>
 
@@ -2920,9 +3024,30 @@ export default function AdminPage() {
 
                               </div>
 
-                              <div style={{ textAlign: "right" }}>
+                              <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
 
                                 <span style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>₹ {s.customRate}/1k</span>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteService(s.id);
+                                  }}
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: 6,
+                                    border: "none",
+                                    background: "rgba(239, 68, 68, 0.1)",
+                                    color: "#ef4444",
+                                    fontSize: 10,
+                                    fontWeight: 800,
+                                    cursor: "pointer"
+                                  }}
+                                  title="Delete this service mapping"
+                                >
+                                  ✗ Delete
+                                </button>
 
                               </div>
 
@@ -3294,16 +3419,23 @@ export default function AdminPage() {
                           <tr key={o.id} className="hover-row" style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
 
                             <td style={{ padding: "10px 8px", maxWidth: 180 }}>
-
                               <p style={{ fontSize: 12, fontWeight: 700, color: N.text, margin: 0, wordBreak: "break-all" }}>{o.user?.email}</p>
-
                               <p style={{ fontSize: 9, fontFamily: "monospace", color: N.muted, margin: "2px 0" }}>ID: {o.id}</p>
-                               <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: N.accent, fontWeight: 700, textDecoration: "none", wordBreak: "break-all" }}>
-
+                              <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: N.accent, fontWeight: 700, textDecoration: "none", wordBreak: "break-all" }}>
                                 {o.reel?.url?.length > 30 ? `${o.reel.url.slice(0, 30)}…` : o.reel?.url}
-
                               </a>
-
+                              <div style={{ marginTop: 6, fontSize: 10, lineHeight: "1.4", borderTop: `1px dashed ${N.border}`, paddingTop: 4 }}>
+                                <p style={{ margin: 0, fontWeight: 700, color: "#16a34a" }}>💳 Deposit: ₹{o.user?.totalDeposited?.toFixed(2) || "0.00"}</p>
+                                <p style={{ margin: 0, fontWeight: 700, color: N.text }}>💵 Retail Price: ₹{o.priceCharged?.toFixed(2)}</p>
+                                <p style={{ margin: 0, fontWeight: 700, color: "#d97706" }}>⚙️ Panel Cost: ₹{(o.priceCharged / 5).toFixed(2)}</p>
+                                <p style={{ margin: 0, fontWeight: 700, color: N.muted }}>⏱️ Runtime: {(() => {
+                                  const created = new Date(o.createdAt);
+                                  const diff = Date.now() - created.getTime();
+                                  const hrs = Math.floor(diff / 3600000);
+                                  const mins = Math.floor((diff % 3600000) / 60000);
+                                  return hrs > 0 ? `${hrs}h ${mins}m ago` : `${mins}m ago`;
+                                })()}</p>
+                              </div>
                             </td>
 
                             <td style={{ padding: "10px 8px" }}>
@@ -3473,7 +3605,7 @@ export default function AdminPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
-                    {["Order ID & Reel", "User", "Error Reason", "Status", "Actions"].map((h) => (
+                    {["Order ID & Reel", "User", "Timing", "Completed / Target", "Error Reason", "Status", "Actions"].map((h) => (
                       <th key={h} style={{ padding: "10px 12px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
                     ))}
                   </tr>
@@ -3492,6 +3624,36 @@ export default function AdminPage() {
                         <div style={{ fontSize: 11, color: N.muted }}>{o.user.email}</div>
                       </td>
                       <td style={{ padding: "10px 12px" }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: N.text }}>
+                          Created: <span style={{ color: N.muted, fontWeight: 500 }}>{new Date(o.createdAt).toLocaleString()}</span>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: N.text, marginTop: 4 }}>
+                          Failed: <span style={{ color: N.muted, fontWeight: 500 }}>{new Date(o.updatedAt).toLocaleString()}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <div style={{ fontSize: 12, color: N.text, fontWeight: 700 }}>
+                            👁️ Views: <span style={{ color: N.accent }}>{o.viewsDelivered}</span> / {o.viewsTarget}
+                          </div>
+                          {o.likesTarget > 0 && (
+                            <div style={{ fontSize: 11, color: N.muted }}>
+                              ❤️ Likes: <strong style={{ color: N.text }}>{o.likesDelivered}</strong> / {o.likesTarget}
+                            </div>
+                          )}
+                          {o.savesTarget > 0 && (
+                            <div style={{ fontSize: 11, color: N.muted }}>
+                              💾 Saves: <strong style={{ color: N.text }}>{o.savesDelivered}</strong> / {o.savesTarget}
+                            </div>
+                          )}
+                          {o.commentsTarget > 0 && (
+                            <div style={{ fontSize: 11, color: N.muted }}>
+                              💬 Comments: <strong style={{ color: N.text }}>{o.commentsDelivered}</strong> / {o.commentsTarget}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 12px" }}>
                         <div style={{ padding: "8px 12px", background: "rgba(220,38,38,0.1)", color: "#dc2626", borderRadius: 8, fontSize: 12, fontWeight: 700, wordBreak: "break-word" }}>
                           {o.failReason || "No specific reason logged (check panel)"}
                         </div>
@@ -3508,7 +3670,7 @@ export default function AdminPage() {
                   ))}
                   {orders.filter(o => o.status === "FAILED").length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ padding: 40, textAlign: "center", color: N.muted, fontSize: 14, fontWeight: 700 }}>
+                      <td colSpan={7} style={{ padding: 40, textAlign: "center", color: N.muted, fontSize: 14, fontWeight: 700 }}>
                         No failed orders found
                       </td>
                     </tr>
@@ -4107,18 +4269,21 @@ export default function AdminPage() {
                             const msgCount = t.messages?.length || 1;
                             return (
                               <tr key={t.id} style={{ borderBottom: `1px solid ${N.border}`, transition: "background 0.2s" }}>
-                                <td style={{ padding: "14px 16px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text }}>{t.id}</td>
-                                <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 700, color: N.text }}>{t.user?.email || "Unknown"}</td>
-                                <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 800, color: N.text }}>{t.subject}</td>
-                                <td style={{ padding: "14px 16px", fontSize: 12, color: N.muted, maxWidth: 200, wordBreak: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                  {t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1].message : t.message}
-                                </td>
-                                <td style={{ padding: "14px 16px" }}>
-                                  <span style={{ fontSize: 10, fontWeight: 800, color: badgeColor, background: `${badgeColor}10`, padding: "4px 8px", borderRadius: 12, border: `1px solid ${badgeColor}20` }}>
-                                    {t.status}
-                                  </span>
-                                </td>
-                                <td style={{ padding: "14px 16px" }}>
+                                <td style={{ padding: "14px 16px", fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: N.text, verticalAlign: "middle" }}>{t.id}</td>
+                                  <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 700, color: N.text, verticalAlign: "middle" }}>{t.user?.email || "Unknown"}</td>
+                                  <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 800, color: N.text, verticalAlign: "middle" }}>{t.subject}</td>
+                                  <td style={{ padding: "14px 16px", fontSize: 12, color: N.muted, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" }} title={t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1].message : t.message}>
+                                    {(() => {
+                                      const rawMsg = (t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1].message : t.message) || "";
+                                      return rawMsg.length > 50 ? rawMsg.substring(0, 50) + "..." : rawMsg;
+                                    })()}
+                                  </td>
+                                  <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
+                                    <span style={{ fontSize: 10, fontWeight: 800, color: badgeColor, background: `${badgeColor}10`, padding: "4px 8px", borderRadius: 12, border: `1px solid ${badgeColor}20` }}>
+                                      {t.status}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: "14px 16px", verticalAlign: "middle" }}>
                                   <div style={{ display: "flex", gap: 8 }}>
                                     <button
                                       onClick={() => setAdminChatTicketId(t.id)}

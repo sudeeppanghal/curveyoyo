@@ -146,3 +146,49 @@ html, body { overflow-x: hidden !important; }
     min-width: 600px;
   }
 }
+
+/* ─── Telegram Banner Mobile fix ────────────────────────── */
+.telegram-banner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 28px;
+}
+
+@media (max-width: 767px) {
+  .telegram-banner {
+    flex-direction: column !important;
+    text-align: center !important;
+    padding: 24px 20px !important;
+    gap: 18px !important;
+  }
+  
+  .telegram-icon-wrapper {
+    margin: 0 auto !important;
+  }
+  
+  .telegram-text-wrapper {
+    width: 100% !important;
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .telegram-title-row {
+    width: 100% !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .telegram-cta-button {
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    padding: 14px 22px !important;
+    margin-top: 4px !important;
+  }
+}
+

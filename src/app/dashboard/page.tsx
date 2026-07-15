@@ -193,6 +193,410 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState("");
   const [announcement, setAnnouncement] = useState<any | null>(null);
 
+  // Ghost user SMM states
+  const [ghostPref, setGhostPref] = useState<string | null>(null);
+  const [ghostPanels, setGhostPanels] = useState<any[]>([]);
+  const [savingGhostPref, setSavingGhostPref] = useState(false);
+  const [ghostSavedMsg, setGhostSavedMsg] = useState("");
+  const [ghostCustomServices, setGhostCustomServices] = useState<Record<string, Record<string, string>>>({});
+  const [activeOverrideTab, setActiveOverrideTab] = useState<string>("instagram");
+  const [activeConsoleTab, setActiveConsoleTab] = useState<"routing" | "balances">("routing");
+  const [panelStatuses, setPanelStatuses] = useState<any[]>([]);
+  const [loadingStatuses, setLoadingStatuses] = useState(false);
+
+  useEffect(() => {
+    if (userEmail.toLowerCase() === "kg44314@gmail.com") {
+      fetch("/api/settings/ghost-smm")
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            setGhostPref(data.ghostSmmPreference);
+            setGhostPanels(data.panels || []);
+            if (data.ghostCustomServices) {
+              try {
+                setGhostCustomServices(JSON.parse(data.ghostCustomServices));
+              } catch {}
+            }
+          }
+        })
+        .catch(console.error);
+    }
+  }, [userEmail]);
+
+  const handleGhostPrefChange = async (val: string) => {
+    setSavingGhostPref(true);
+    setGhostSavedMsg("");
+    try {
+      const res = await fetch("/api/settings/ghost-smm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ghostSmmPreference: val === "default" ? null : val })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGhostPref(data.ghostSmmPreference);
+        setGhostSavedMsg("✓ Provider preference saved");
+        setTimeout(() => setGhostSavedMsg(""), 3000);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setSavingGhostPref(false);
+  };
+
+  const handleGhostCustomServiceSave = async (platform: string, type: string, val: string) => {
+    setSavingGhostPref(true);
+    setGhostSavedMsg("");
+    
+    const updated = { ...ghostCustomServices };
+    if (!updated[platform]) {
+      updated[platform] = {};
+    }
+    updated[platform][type] = val.trim();
+
+    try {
+      const res = await fetch("/api/settings/ghost-smm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ghostCustomServices: JSON.stringify(updated) })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ghostCustomServices) {
+          setGhostCustomServices(JSON.parse(data.ghostCustomServices));
+        }
+        setGhostSavedMsg("✓ Service overrides saved");
+        setTimeout(() => setGhostSavedMsg(""), 3000);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setSavingGhostPref(false);
+  };
+
+  const fetchPanelStatuses = async () => {
+    setLoadingStatuses(true);
+    setGhostSavedMsg("");
+    try {
+      const res = await fetch("/api/settings/ghost-smm/balances");
+      if (res.ok) {
+        const data = await res.json();
+        setPanelStatuses(data.panels || []);
+        setGhostSavedMsg("✓ API Balances Refreshed");
+        setTimeout(() => setGhostSavedMsg(""), 3000);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setLoadingStatuses(false);
+  };
+
+  const renderGhostSmmSelector = () => {
+    const platforms = ["instagram", "youtube", "tiktok", "telegram", "facebook", "twitter"];
+    const serviceTypes = ["views", "likes", "saves", "shares", "comments", "reposts"];
+
+    return (
+      <div style={{
+        borderRadius: 24,
+        background: "linear-gradient(135deg, #170d24 0%, #0d0716 100%)",
+        border: "1.5px solid rgba(168, 85, 247, 0.35)",
+        boxShadow: "0 12px 36px rgba(0,0,0,0.6), 0 0 40px rgba(168, 85, 247, 0.1)",
+        padding: "24px 28px",
+        marginBottom: 24,
+        display: "flex",
+        flexDirection: "column",
+        gap: 20,
+        animation: "fadeUp 0.4s ease-out"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 28 }}>🕵️‍♂️</span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#fff", letterSpacing: "-0.3px" }}>Ghost SMM Router (Private Console)</div>
+              <div style={{ fontSize: 12, color: "#a78bfa", fontWeight: 600 }}>Decoupled custom API and service mapping settings for anonymous testing.</div>
+            </div>
+          </div>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {savingGhostPref && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid #a78bfa22", borderTopColor: "#a78bfa", animation: "spin 1s linear infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>Updating...</span>
+              </div>
+            )}
+            {loadingStatuses && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid #38bdf822", borderTopColor: "#38bdf8", animation: "spin 1s linear infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8" }}>Checking Balances...</span>
+              </div>
+            )}
+            {ghostSavedMsg && (
+              <span style={{ fontSize: 12, fontWeight: 800, color: "#22c55e", animation: "pulse 1s infinite" }}>{ghostSavedMsg}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Console Tab Navigation */}
+        <div style={{ display: "flex", gap: 8, borderBottom: "1px solid rgba(168, 85, 247, 0.15)", paddingBottom: 10 }}>
+          <button
+            onClick={() => setActiveConsoleTab("routing")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              fontSize: 12,
+              fontWeight: 800,
+              border: "none",
+              cursor: "pointer",
+              background: activeConsoleTab === "routing" ? "rgba(168, 85, 247, 0.25)" : "transparent",
+              color: activeConsoleTab === "routing" ? "#fff" : "#94a3b8",
+              transition: "all 0.2s"
+            }}
+          >
+            🔀 Router Settings
+          </button>
+          <button
+            onClick={() => {
+              setActiveConsoleTab("balances");
+              if (panelStatuses.length === 0) fetchPanelStatuses();
+            }}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              fontSize: 12,
+              fontWeight: 800,
+              border: "none",
+              cursor: "pointer",
+              background: activeConsoleTab === "balances" ? "rgba(168, 85, 247, 0.25)" : "transparent",
+              color: activeConsoleTab === "balances" ? "#fff" : "#94a3b8",
+              transition: "all 0.2s"
+            }}
+          >
+            💰 API Keys & Balances
+          </button>
+        </div>
+
+        {/* Tab Content 1: SMM Router & Overrides */}
+        {activeConsoleTab === "routing" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* 1. Select SMM Panel Provider */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Select Default Provider / API Key</label>
+              <select
+                value={ghostPref || "default"}
+                onChange={(e) => handleGhostPrefChange(e.target.value)}
+                disabled={savingGhostPref}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 14,
+                  background: "#0c0612",
+                  border: "1px solid rgba(168, 85, 247, 0.25)",
+                  color: "#f8fafc",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  outline: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <option value="default">Use Global Fallbacks / Priorities (Default)</option>
+                {ghostPanels.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.apiUrl.replace("https://", "")})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: "1px", background: "rgba(168, 85, 247, 0.15)" }} />
+
+            {/* 2. Custom Service ID Overrides */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", marginBottom: 4 }}>Custom Service ID Overrides</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Specify exact SMM panel Service IDs to force route your campaigns. Leave empty to use default panel configurations.</div>
+              </div>
+
+              {/* Platform Tabs */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", background: "#0c0612", padding: 6, borderRadius: 14, border: "1px solid rgba(168, 85, 247, 0.1)" }}>
+                {platforms.map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setActiveOverrideTab(p)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 10,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      border: "none",
+                      cursor: "pointer",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.02em",
+                      background: activeOverrideTab === p ? "rgba(168, 85, 247, 0.2)" : "transparent",
+                      color: activeOverrideTab === p ? "#d8b4fe" : "#94a3b8",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Overrides Grid */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                gap: 16,
+                background: "#0c0612",
+                padding: 20,
+                borderRadius: 16,
+                border: "1px solid rgba(168, 85, 247, 0.15)"
+              }}>
+                {serviceTypes.map(type => {
+                  const currentVal = ghostCustomServices[activeOverrideTab]?.[type] || "";
+                  return (
+                    <div key={type} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", textTransform: "capitalize" }}>{type} Service ID</label>
+                      <input
+                        type="text"
+                        placeholder="Panel default"
+                        value={currentVal}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setGhostCustomServices(prev => {
+                            const updated = { ...prev };
+                            if (!updated[activeOverrideTab]) updated[activeOverrideTab] = {};
+                            updated[activeOverrideTab][type] = val;
+                            return updated;
+                          });
+                        }}
+                        onBlur={(e) => handleGhostCustomServiceSave(activeOverrideTab, type, e.target.value)}
+                        disabled={savingGhostPref}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: 10,
+                          background: "#140a1d",
+                          border: "1px solid rgba(168, 85, 247, 0.15)",
+                          color: "#fff",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          outline: "none",
+                          transition: "all 0.2s"
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content 2: API Keys & Balance Monitor */}
+        {activeConsoleTab === "balances" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", marginBottom: 2 }}>API Live Connection Status & Balances</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Real-time status of all provider credentials configured in the system.</div>
+              </div>
+              <button
+                onClick={fetchPanelStatuses}
+                disabled={loadingStatuses}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  border: "none",
+                  cursor: "pointer",
+                  background: "rgba(56, 189, 248, 0.15)",
+                  color: "#38bdf8",
+                  transition: "all 0.2s"
+                }}
+              >
+                🔄 Refresh Balances
+              </button>
+            </div>
+
+            {/* Balances List */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {panelStatuses.map((p: any) => {
+                const isSelected = ghostPref === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      background: isSelected ? "rgba(168, 85, 247, 0.08)" : "#0c0612",
+                      padding: "16px 20px",
+                      borderRadius: 16,
+                      border: isSelected ? "1.5px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(168, 85, 247, 0.1)",
+                      flexWrap: "wrap",
+                      gap: 16
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 14, fontWeight: 900, color: "#fff" }}>{p.name}</span>
+                        {isSelected && (
+                          <span style={{ fontSize: 9, fontWeight: 900, background: "rgba(168, 85, 247, 0.25)", color: "#c084fc", padding: "2px 6px", borderRadius: 6 }}>ACTIVE DEFAULT</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, color: "#94a3b8", fontFamily: "monospace" }}>{p.apiUrl}</div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
+                      {/* Connection status */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                        <span style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, textTransform: "uppercase" }}>Connection</span>
+                        {p.status === "LIVE" ? (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#22c55e" }}>🟢 LIVE</span>
+                        ) : p.status === "INVALID_KEY" ? (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#ef4444" }}>🔴 INVALID KEY</span>
+                        ) : p.status === "OFFLINE" ? (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#ef4444" }}>🔴 OFFLINE</span>
+                        ) : (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b" }}>🟡 {p.status}</span>
+                        )}
+                      </div>
+
+                      {/* API Balance */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                        <span style={{ fontSize: 9, color: "#94a3b8", fontWeight: 800, textTransform: "uppercase" }}>API Balance</span>
+                        <span style={{ fontSize: 13, fontWeight: 900, color: p.status === "LIVE" ? "#fff" : "#64748b" }}>{p.balance}</span>
+                      </div>
+
+                      {/* Select preferred panel */}
+                      <button
+                        onClick={() => handleGhostPrefChange(isSelected ? "default" : p.id)}
+                        disabled={savingGhostPref}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: 10,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          border: "none",
+                          cursor: "pointer",
+                          background: isSelected ? "rgba(239, 68, 68, 0.15)" : "rgba(168, 85, 247, 0.15)",
+                          color: isSelected ? "#ef4444" : "#c084fc",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {isSelected ? "Deselect" : "Use As Default"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   useEffect(() => {
     setActiveRoutes(Math.floor(Math.random() * (1000 - 300 + 1)) + 300);
     const timer = setInterval(() => {
@@ -364,6 +768,9 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Ghost User SMM Selector */}
+      {userEmail.toLowerCase() === "kg44314@gmail.com" && renderGhostSmmSelector()}
+
       {/* Header */}
       <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
         <div>
@@ -382,6 +789,146 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Announcement Banner */}
+      {announcement && (announcement.title || announcement.description) && (
+        <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+          <a
+            href={announcement.targetLink || undefined}
+            onClick={(e) => {
+              if (!announcement.targetLink) {
+                e.preventDefault();
+              }
+            }}
+            style={{ textDecoration: "none", width: "100%", maxWidth: 1025, cursor: announcement.targetLink ? "pointer" : "default" }}
+          >
+            <div
+              style={{
+                borderRadius: 24,
+                background: "linear-gradient(135deg, #1e1b4b 0%, #111827 50%, #030712 100%)",
+                border: "1.5px solid rgba(168, 85, 247, 0.3)",
+                boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 60px rgba(168, 85, 247, 0.08)",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 20,
+                padding: "24px 32px",
+                marginBottom: 20,
+                width: "100%",
+                boxSizing: "border-box",
+                flexWrap: "wrap",
+                transition: "transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease",
+              }}
+              onMouseEnter={e => {
+                if (announcement.targetLink) {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.55)";
+                  e.currentTarget.style.boxShadow = "0 18px 44px rgba(0,0,0,0.6), 0 0 80px rgba(168, 85, 247, 0.14)";
+                }
+              }}
+              onMouseLeave={e => {
+                if (announcement.targetLink) {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.3)";
+                  e.currentTarget.style.boxShadow = "0 12px 36px rgba(0,0,0,0.5), 0 0 60px rgba(168, 85, 247, 0.08)";
+                }
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flex: 1, minWidth: 280 }}>
+                {/* Image or Icon */}
+                {announcement.imageUrl ? (
+                  <img
+                    src={announcement.imageUrl}
+                    alt="Promo"
+                    style={{
+                      width: 80,
+                      height: 80,
+                      minWidth: 80,
+                      borderRadius: 16,
+                      objectFit: "cover",
+                      boxShadow: "0 8px 24px rgba(168, 85, 247, 0.3)",
+                      border: "1px solid rgba(168, 85, 247, 0.2)",
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 56,
+                    height: 56,
+                    minWidth: 56,
+                    borderRadius: 18,
+                    background: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 8px 24px rgba(168, 85, 247, 0.4)",
+                  }}>
+                    <span style={{ fontSize: 28 }}>📢</span>
+                  </div>
+                )}
+
+                {/* Text Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                    {announcement.title && (
+                      <span style={{ fontSize: 18, fontWeight: 900, color: "#ffffff", letterSpacing: "-0.3px" }}>
+                        {announcement.title}
+                      </span>
+                    )}
+                    {announcement.offerEnabled && (
+                      <span style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        color: "#f472b6",
+                        background: "rgba(244, 114, 182, 0.12)",
+                        border: "1px solid rgba(244, 114, 182, 0.25)",
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}>
+                        Active Offer
+                      </span>
+                    )}
+                  </div>
+                  {announcement.description && (
+                    <p style={{ fontSize: 13, color: "#9ca3af", margin: 0, lineHeight: 1.5, fontWeight: 500 }}>
+                      {announcement.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Countdown or Arrow CTA */}
+              {announcement.offerEnabled && announcement.endsAt ? (
+                <div style={{ minWidth: 260, display: "flex", justifyContent: "center" }}>
+                  <AnnouncementCountdown targetDate={announcement.endsAt} />
+                </div>
+              ) : (
+                announcement.targetLink && (
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    background: "rgba(168, 85, 247, 0.1)",
+                    border: "1.5px solid rgba(168, 85, 247, 0.25)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#a855f7",
+                    fontWeight: 900,
+                    fontSize: 18,
+                    transition: "all 0.2s"
+                  }}>
+                    →
+                  </div>
+                )
+              )}
+            </div>
+          </a>
+        </div>
+      )}
+
       {/* Telegram Join Banner */}
       <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
         <a
@@ -391,17 +938,14 @@ export default function DashboardPage() {
           style={{ textDecoration: "none", width: "100%", maxWidth: 1025 }}
         >
           <div
+            className="telegram-banner"
             style={{
               borderRadius: 24,
               background: "linear-gradient(135deg, #0c1a2e 0%, #0a1628 50%, #051224 100%)",
               border: "1.5px solid rgba(34, 158, 217, 0.3)",
               boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 60px rgba(34, 158, 217, 0.08)",
               overflow: "hidden",
-              display: "flex",
-              alignItems: "center",
-              gap: 20,
               cursor: "pointer",
-              padding: "22px 28px",
               marginBottom: 28,
               width: "100%",
               boxSizing: "border-box",
@@ -419,25 +963,31 @@ export default function DashboardPage() {
             }}
           >
             {/* Telegram Icon */}
-            <div style={{
-              width: 56,
-              height: 56,
-              minWidth: 56,
-              borderRadius: 18,
-              background: "linear-gradient(135deg, #229ED9 0%, #0088cc 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 8px 24px rgba(34, 158, 217, 0.4)",
-            }}>
+            <div 
+              className="telegram-icon-wrapper"
+              style={{
+                width: 56,
+                height: 56,
+                minWidth: 56,
+                borderRadius: 18,
+                background: "linear-gradient(135deg, #229ED9 0%, #0088cc 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 8px 24px rgba(34, 158, 217, 0.4)",
+              }}
+            >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21.944 3.49101C21.874 3.32801 21.737 3.20401 21.567 3.14901C21.397 3.09401 21.21 3.11501 21.056 3.20401L2.43503 13.967C2.25703 14.07 2.14803 14.257 2.14403 14.464C2.14003 14.671 2.24203 14.863 2.41603 14.972L7.33603 18.04C7.48703 18.134 7.67603 18.141 7.83403 18.058L13.118 15.289L9.77103 19.349C9.64503 19.502 9.60503 19.71 9.66403 19.901C9.72303 20.092 9.87103 20.235 10.059 20.282C10.106 20.294 10.154 20.3 10.201 20.3C10.342 20.3 10.48 20.244 10.581 20.143L13.791 16.933L17.72 19.383C17.854 19.467 18.012 19.501 18.169 19.481C18.326 19.461 18.469 19.388 18.567 19.273L21.967 4.27301C22.012 4.07501 22.014 3.65401 21.944 3.49101Z" fill="white"/>
               </svg>
             </div>
 
             {/* Text Content */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <div className="telegram-text-wrapper" style={{ flex: 1, minWidth: 0 }}>
+              <div 
+                className="telegram-title-row"
+                style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}
+              >
                 <span style={{ fontSize: 16, fontWeight: 900, color: "#ffffff", letterSpacing: "-0.3px" }}>
                   Join Our Official Telegram Channel
                 </span>
@@ -459,20 +1009,23 @@ export default function DashboardPage() {
             </div>
 
             {/* CTA Button */}
-            <div style={{
-              minWidth: "fit-content",
-              padding: "12px 22px",
-              borderRadius: 14,
-              background: "linear-gradient(135deg, #229ED9 0%, #0088cc 100%)",
-              color: "#ffffff",
-              fontSize: 14,
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              boxShadow: "0 6px 18px rgba(34, 158, 217, 0.35)",
-              whiteSpace: "nowrap",
-            }}>
+            <div 
+              className="telegram-cta-button"
+              style={{
+                minWidth: "fit-content",
+                padding: "12px 22px",
+                borderRadius: 14,
+                background: "linear-gradient(135deg, #229ED9 0%, #0088cc 100%)",
+                color: "#ffffff",
+                fontSize: 14,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                boxShadow: "0 6px 18px rgba(34, 158, 217, 0.35)",
+                whiteSpace: "nowrap",
+              }}
+            >
               <span>🚀</span>
               <span>Join Now</span>
             </div>
@@ -571,6 +1124,74 @@ export default function DashboardPage() {
                   <span>{runningCampaign.completedBatches} / {runningCampaign.totalBatches} batches complete</span>
                 </div>
               </div>
+
+              {/* Intelligent Verification Queue UI display */}
+              {runningCampaign.verificationQueueItems && runningCampaign.verificationQueueItems.length > 0 && (
+                <div style={{
+                  padding: 16,
+                  borderRadius: 16,
+                  background: "rgba(168, 85, 247, 0.04)",
+                  border: "1px solid rgba(168, 85, 247, 0.12)",
+                  boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.02)"
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: "#d946ef", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    🛡️ Intelligent View Verification Pacing
+                  </div>
+                  <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                    {runningCampaign.verificationQueueItems.map((item: any) => {
+                      const isPassed = item.verifyStatus === "PASSED";
+                      const isFailed = item.verifyStatus === "FAILED";
+                      const isVerifying = item.verifyStatus === "VERIFYING";
+                      const isProcessing = item.providerStatus === "PROCESSING";
+                      
+                      let color = "#a78bfa";
+                      let bg = "rgba(168, 85, 247, 0.05)";
+                      let border = "1px dashed rgba(168, 85, 247, 0.2)";
+                      let statusText = "Pending";
+
+                      if (isPassed) {
+                        color = "#22c55e";
+                        bg = "rgba(34, 197, 94, 0.08)";
+                        border = "1px solid rgba(34, 197, 94, 0.25)";
+                        statusText = "Passed";
+                      } else if (isFailed) {
+                        color = "#ef4444";
+                        bg = "rgba(239, 68, 68, 0.08)";
+                        border = "1px solid rgba(239, 68, 68, 0.25)";
+                        statusText = "Failed";
+                      } else if (isVerifying) {
+                        color = "#3b82f6";
+                        bg = "rgba(59, 130, 246, 0.08)";
+                        border = "1px solid rgba(59, 130, 246, 0.25)";
+                        statusText = "Verifying";
+                      } else if (isProcessing) {
+                        color = "#f59e0b";
+                        bg = "rgba(245, 158, 11, 0.08)";
+                        border = "1px solid rgba(245, 158, 11, 0.25)";
+                        statusText = "Delivering";
+                      }
+
+                      return (
+                        <div key={item.id} style={{
+                          flex: "0 0 105px",
+                          borderRadius: 12,
+                          padding: "10px",
+                          background: bg,
+                          border: border,
+                          fontSize: 11,
+                          color: color,
+                          fontWeight: 700,
+                          textAlign: "center"
+                        }}>
+                          <div style={{ whiteSpace: "nowrap" }}>Part #{item.partNumber}</div>
+                          <div style={{ fontSize: 10, opacity: 0.9, marginTop: 2 }}>{item.requestedViews.toLocaleString()}</div>
+                          <div style={{ fontSize: 9, opacity: 0.7, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{statusText}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Next Batch Box */}
               {(() => {

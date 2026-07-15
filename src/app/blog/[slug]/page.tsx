@@ -7,9 +7,11 @@ import { N } from "@/lib/theme";
 
 
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const blog = await prisma.blog.findUnique({
-    where: { slug: params.slug },
+    where: { slug: decodedSlug },
   });
   if (!blog) return { title: "Not Found" };
   return {
@@ -18,9 +20,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const blog = await prisma.blog.findUnique({
-    where: { slug: params.slug },
+    where: { slug: decodedSlug },
   });
 
   if (!blog || !blog.published) {

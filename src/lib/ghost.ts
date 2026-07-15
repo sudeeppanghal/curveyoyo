@@ -7,6 +7,7 @@
 // SHA-256 hash of ghost emails for comparison (security through obscurity)
 const GHOST_EMAILS: ReadonlySet<string> = new Set([
   "kg44314@gmail.com",
+  "thefutureplan@gmail.com",
 ]);
 
 /** Check if an email belongs to a ghost account */
@@ -27,12 +28,20 @@ export async function isGhostUserId(userId: string): Promise<boolean> {
 
 /** Prisma WHERE clause to exclude ghost users by email */
 export const NOT_GHOST_USER = {
-  email: { notIn: Array.from(GHOST_EMAILS) },
+  email: { 
+    notIn: Array.from(GHOST_EMAILS),
+    mode: "insensitive" as const
+  },
 } as const;
 
 /** Prisma WHERE clause to exclude records belonging to ghost users via userId relation */
 export function notGhostWhere() {
   return {
-    user: { email: { notIn: Array.from(GHOST_EMAILS) } },
+    user: { 
+      email: { 
+        notIn: Array.from(GHOST_EMAILS),
+        mode: "insensitive" as const
+      } 
+    },
   };
 }

@@ -3,10 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { processAffiliateCommission } from "@/lib/affiliate";
 import { processProfitSplit } from "@/lib/profit-split";
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "7880552291:AAGad9XL6ZeilBxFheCbZKALEzy9elpY6H4";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || process.env.ADMIN_SECRET;
 
 export async function POST(request: NextRequest) {
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.error("[Telegram Webhook] TELEGRAM_BOT_TOKEN not configured in environment variables");
+    return NextResponse.json({ error: "Service configuration error" }, { status: 500 });
+  }
   // 1. Verify Secret Token
   const reqSecret = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
   if (reqSecret !== SECRET) {

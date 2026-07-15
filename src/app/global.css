@@ -72,12 +72,20 @@ textarea:focus,
   min-height: 48px; /* Mobile touch target */
   padding: 0.75rem 1rem;
   background: var(--neo-bg);
-  box-shadow: var(--neo-inset);
-  border: none;
+  border: 1px solid #d1d5db !important;
   border-radius: 12px;
   color: var(--neo-text);
   outline: none;
-  box-shadow: inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff, 0 0 0 2px rgba(217, 119, 6, 0.3) !important;
+  box-shadow: inset 4px 4px 8px #c8d0e7, inset -4px -4px 8px #ffffff !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.neo-input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: inset 4px 4px 8px #c8d0e7, inset -4px -4px 8px #ffffff !important;
+  border-color: #ea580c !important;
+  outline: none !important;
 }
 .neo-link {
   text-decoration: none;

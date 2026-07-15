@@ -11,7 +11,6 @@ function isAdmin(request: NextRequest) {
   return request.headers.get("x-admin-secret") === ADMIN_SECRET;
 }
 
-// GET all campaigns (orders) on the platform
 export async function GET(request: NextRequest) {
   if (!isAdmin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -19,14 +18,36 @@ export async function GET(request: NextRequest) {
     where: notGhostWhere(),
     orderBy: { createdAt: "desc" },
     include: {
-      user: { select: { email: true, name: true } },
+      user: {
+        include: {
+          upiPayments: { where: { status: "CONFIRMED" } },
+          cryptoPayments: { where: { status: "CONFIRMED" } }
+        }
+      },
       reel: { select: { url: true, platform: true } },
       panel: { select: { name: true } },
     },
     take: 500, // Limit to recent 500
   });
 
-  return NextResponse.json({ orders });
+  const enrichedOrders = orders.map((o) => {
+    const upiSum = o.user.upiPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+    const cryptoSum = o.user.cryptoPayments.reduce((acc, p) => acc + (p.amountUsdt || 0) * 90, 0);
+    const totalDeposited = parseFloat((upiSum + cryptoSum).toFixed(2));
+    
+    // Create a user object without the full payment arrays
+    const { upiPayments, cryptoPayments, ...userWithoutPayments } = o.user;
+
+    return {
+      ...o,
+      user: {
+        ...userWithoutPayments,
+        totalDeposited
+      }
+    };
+  });
+
+  return NextResponse.json({ orders: enrichedOrders });
 }
 
 // PATCH admin-override campaign actions (pause/cancel/refill/resume)
@@ -77,7 +98,7 @@ export async function PATCH(request: NextRequest) {
       data: { status: "FAILED", errorMessage: `Order ${action}d by administrator` },
     });
     if (action === "cancel") {
-      await triggerMidwayRefund(orderId);
+      await triggerMidwayRefund(orderId, true);
     }
   } else if (action === "resume") {
     // Re-schedule failed/paused events that are scheduled for the future

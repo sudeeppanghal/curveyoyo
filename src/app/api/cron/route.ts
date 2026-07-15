@@ -37,6 +37,14 @@ export async function GET(req: NextRequest) {
 
   const now = new Date();
 
+  // Run the sequential views verification queue processing in the background
+  try {
+    const { processVerificationQueue } = await import("@/lib/delivery/queue-worker");
+    processVerificationQueue().catch(err => console.error("[Cron Verification Worker] Queue error:", err));
+  } catch (err) {
+    console.error("[Cron Verification Worker] Failed to load queue-worker:", err);
+  }
+
   // Find ALL due SCHEDULED events
   const dueEvents = await prisma.deliveryEvent.findMany({
     where: {

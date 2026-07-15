@@ -23,8 +23,10 @@ export async function GET() {
     plan: dbUser.plan,
     lifetimeUnlocked: dbUser.lifetimeUnlocked,
     walletMode: dbUser.walletMode,
-    balance: dbUser.balance,
-    bonusBalance: dbUser.bonusBalance,
+    balance: Math.max(0, dbUser.balance),
+    rawBalance: dbUser.balance,
+    email: dbUser.email,
+    bonusBalance: Math.max(0, dbUser.bonusBalance),
     payments,
     cryptoPayments,
     wallet: {

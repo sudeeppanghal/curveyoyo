@@ -40,6 +40,30 @@ function LoginForm() {
       : ""
   );
 
+  // Clear stale oauth state cookies on load to prevent header size overflow (Cloudflare 400 block)
+  useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cookies = document.cookie.split(";");
+        let count = 0;
+        for (const cookie of cookies) {
+          const name = cookie.split("=")[0].trim();
+          if (name.startsWith("sb-") && name.includes("oauth-state")) {
+            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.yoyosmm.online`;
+            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=www.yoyosmm.online`;
+            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+            count++;
+          }
+        }
+        if (count > 0) {
+          console.log(`[Cookie-Clean] Cleared ${count} stale Supabase OAuth state cookies.`);
+        }
+      } catch (e) {
+        console.error("[Cookie-Clean] Error clearing cookies:", e);
+      }
+    }
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); setError("");

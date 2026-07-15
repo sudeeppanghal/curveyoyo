@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     
     if (post && post.id && post.url && post.id !== sub.lastPostId) {
       // It's a new post! Place an order.
+      let totalPrice = 0;
       try {
         const url = post.url;
         
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
         }
 
         const getRate = (type: string, fallback: number) => {
-          const s = adminPanel.adminServices.find(x => x.type === type);
+          const s = adminPanel.adminServices.find(x => x.type === type && x.platform === sub.platform);
           return s ? s.customRate : fallback;
         };
 
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
         const sharesCost = (engTargets.sharesTarget / 1000) * getRate("shares", 8.0);
         const commentsCost = (engTargets.commentsTarget / 1000) * getRate("comments", 15.0);
         const repostsCost = (engTargets.repostsTarget / 1000) * getRate("reposts", 12.0);
-        const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
+        totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
         if (sub.user.balance + sub.user.bonusBalance < totalPrice) {
           // Pause subscription
@@ -123,17 +124,48 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Deduct balance and create order
-        let bonusDeduct = 0;
-        let realDeduct = 0;
-        if (sub.user.bonusBalance >= totalPrice) {
-          bonusDeduct = totalPrice;
-        } else {
-          bonusDeduct = sub.user.bonusBalance;
-          realDeduct = totalPrice - sub.user.bonusBalance;
-        }
+        let initialBalance = 0;
+        let initialBonusBalance = 0;
+        let finalBalance = 0;
+        let finalBonusBalance = 0;
 
         const txOrder = await prisma.$transaction(async (tx) => {
+          // 1. Fetch user record inside transaction with a pessimistic lock (FOR UPDATE)
+          const users = await tx.$queryRaw<any[]>`
+            SELECT id, balance, "bonus_balance" as "bonusBalance" FROM users WHERE id = ${sub.user.id} FOR UPDATE
+          `;
+          const userForUpdate = users[0];
+          if (!userForUpdate) {
+            throw new Error("USER_NOT_FOUND");
+          }
+
+          const currentBalance = parseFloat(userForUpdate.balance || 0);
+          const currentBonusBalance = parseFloat(userForUpdate.bonusBalance || 0);
+          
+          initialBalance = currentBalance;
+          initialBonusBalance = currentBonusBalance;
+
+          if (currentBalance + currentBonusBalance < totalPrice) {
+            // Update subscription status to INSUFFICIENT_FUNDS
+            await tx.autoSubscription.update({
+              where: { id: sub.id },
+              data: { status: "INSUFFICIENT_FUNDS" }
+            });
+            throw new Error("INSUFFICIENT_BALANCE");
+          }
+
+          let bonusDeduct = 0;
+          let realDeduct = 0;
+          if (currentBonusBalance >= totalPrice) {
+            bonusDeduct = totalPrice;
+          } else {
+            bonusDeduct = currentBonusBalance;
+            realDeduct = totalPrice - currentBonusBalance;
+          }
+
+          finalBalance = currentBalance - realDeduct;
+          finalBonusBalance = currentBonusBalance - bonusDeduct;
+
           await tx.user.update({
             where: { id: sub.user.id },
             data: { 
@@ -162,6 +194,11 @@ export async function GET(request: NextRequest) {
               sharesTarget: engTargets.sharesTarget,
               commentsTarget: engTargets.commentsTarget,
               repostsTarget: engTargets.repostsTarget,
+              likesRatioPct: targetViews > 0 ? parseFloat(((engTargets.likesTarget / targetViews) * 100).toFixed(4)) : 0,
+              savesRatioPct: targetViews > 0 ? parseFloat(((engTargets.savesTarget / targetViews) * 100).toFixed(4)) : 0,
+              sharesRatioPct: targetViews > 0 ? parseFloat(((engTargets.sharesTarget / targetViews) * 100).toFixed(4)) : 0,
+              commentsRatioPct: targetViews > 0 ? parseFloat(((engTargets.commentsTarget / targetViews) * 100).toFixed(4)) : 0,
+              repostsRatioPct: targetViews > 0 ? parseFloat(((engTargets.repostsTarget / targetViews) * 100).toFixed(4)) : 0,
               curveStyle: template.style,
               durationHours: template.durationHours,
               warmupHours: template.warmupHours,
@@ -180,7 +217,16 @@ export async function GET(request: NextRequest) {
         });
 
         if (!isGhostEmail(sub.user.email)) {
-          sendTelegramAlert(`🚀 *Auto-Order Placed!*\nUser: \`${sub.user.email}\`\nReel: ${url}\nTarget: ${targetViews} views (Template: ${template.name})`).catch(console.error);
+          sendTelegramAlert(
+            `🚀 *Auto-Order Placed!*\n\n` +
+            `👤 *User:* \`${sub.user.email}\`\n` +
+            `🎯 *Views Target:* \`${targetViews.toLocaleString()}\`\n` +
+            `📱 *Platform:* \`${sub.platform}\`\n` +
+            `💵 *Price Charged:* \`₹${totalPrice.toFixed(2)}\`\n` +
+            `💰 *Initial Balance:* \`₹${initialBalance.toFixed(2)}\` (Bonus: \`₹${initialBonusBalance.toFixed(2)}\`)\n` +
+            `💰 *Remaining Balance:* \`₹${finalBalance.toFixed(2)}\` (Bonus: \`₹${finalBonusBalance.toFixed(2)}\`)\n` +
+            `🔗 *Reel URL:* ${url}`
+          ).catch(console.error);
         }
 
         // Trigger delivery scheduling (fire-and-forget)
@@ -197,9 +243,16 @@ export async function GET(request: NextRequest) {
 
         results.push({ username: sub.username, status: "ORDER_PLACED", url });
 
-      } catch (err) {
-        console.error(`Failed to place auto order for ${sub.username}:`, err);
-        results.push({ username: sub.username, status: "ERROR" });
+      } catch (err: any) {
+        if (err.message === "INSUFFICIENT_BALANCE") {
+          if (!isGhostEmail(sub.user.email)) {
+            sendTelegramAlert(`⚠️ *Auto-Order Paused*\nUser: \`${sub.user.email}\`\nReason: Insufficient funds for new post @${sub.username} (Requires ₹${totalPrice})`).catch(console.error);
+          }
+          results.push({ username: sub.username, status: "PAUSED_FUNDS" });
+        } else {
+          console.error(`Failed to place auto order for ${sub.username}:`, err);
+          results.push({ username: sub.username, status: "ERROR" });
+        }
       }
     } else {
       results.push({ username: sub.username, status: "NO_NEW_POST" });

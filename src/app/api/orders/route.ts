@@ -33,7 +33,7 @@ export async function GET() {
       : 0,
   }));
 
-  return NextResponse.json({ orders: withProgress });
+  return NextResponse.json({ orders: withProgress, email: dbUser.email });
 }
 
 /* ── POST /api/orders ── */
@@ -58,6 +58,9 @@ export async function POST(request: NextRequest) {
     sharesTarget: bodyShares, commentsTarget: bodyComments, repostsTarget: bodyReposts,
     customSchedule, // <--- custom schedule parameter
     viewsType = "views",
+    ghostPanelId,
+    ghostCustomServices,
+    ghostDurationMinutes,
   } = body;
 
   const views = viewsTarget ?? totalViews;
@@ -87,6 +90,9 @@ export async function POST(request: NextRequest) {
     include: { panels: { where: { isActive: true }, orderBy: { priority: "asc" } } },
   });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (dbUser.plan === "SUSPENDED") {
+    return NextResponse.json({ error: "Your account has been suspended. Please contact support." }, { status: 403 });
+  }
 
   let primaryPanel: any = null;
   let totalPrice = 0.0;
@@ -100,21 +106,50 @@ export async function POST(request: NextRequest) {
     : { likesTarget: 0, savesTarget: 0, sharesTarget: 0, commentsTarget: 0, repostsTarget: 0 };
 
   // 1. Fetch active admin panels in priority order
-  const activeAdminPanels = await prisma.panel.findMany({
+  const isSpecialUser = dbUser.email.toLowerCase() === "arpitasumanekka@gmail.com";
+  const activeAdminPanels = (isSpecialUser && dbUser.panels.length > 0) ? dbUser.panels : await prisma.panel.findMany({
     where: { userId: null, isActive: true },
     orderBy: { priority: "asc" },
   });
-  if (activeAdminPanels.length === 0) {
-    return NextResponse.json({ error: "Service temporarily unavailable. Please try again later." }, { status: 503 });
+
+  // Strict SMM panel provider routing logic:
+  // - More Than SMM (morethanpanel.com) is ONLY for: YouTube views/likes, Facebook likes
+  // - YoyoMedia (yoyomedia.in) is strictly for everything else (Instagram, TikTok, other Facebook services)
+  const isMoreThanService = 
+    platform.toUpperCase() === "YOUTUBE" || 
+    (platform.toUpperCase() === "FACEBOOK" && (likesRatioPct > 0 || (bodyLikes !== undefined && bodyLikes > 0)));
+
+  const routedPanels = activeAdminPanels.filter(p => {
+    const url = p.apiUrl.toLowerCase();
+    const isMTP = url.includes("morethanpanel.com");
+    const isYoyo = url.includes("yoyomedia.in");
+
+    if (isMoreThanService) {
+      return isMTP;
+    } else {
+      return isYoyo;
+    }
+  });
+
+  if (routedPanels.length === 0) {
+    return NextResponse.json({ error: "Service temporarily unavailable for this platform. Please try again later." }, { status: 503 });
   }
 
   // Find all panels that have mapped admin services configured for this platform
   const validAdminPanels: { panel: any; services: any[] }[] = [];
-  for (const p of activeAdminPanels) {
-    const svcs = await prisma.adminService.findMany({
+  for (const p of routedPanels) {
+    let svcs = await prisma.adminService.findMany({
       where: { panelId: p.id, platform: (platform as string).toUpperCase() as any },
     });
-    if (svcs.length > 0) {
+    if (svcs.length === 0 && p.userId !== null) {
+      svcs = await prisma.adminService.findMany({
+        where: {
+          panel: { userId: null, isActive: true },
+          platform: (platform as string).toUpperCase() as any
+        }
+      });
+    }
+    if (svcs.length > 0 || p.userId !== null) {
       validAdminPanels.push({ panel: p, services: svcs });
     }
   }
@@ -147,8 +182,9 @@ export async function POST(request: NextRequest) {
   totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
   if (dbUser.balance + dbUser.bonusBalance < totalPrice) {
+    const visibleBalance = Math.max(0, dbUser.balance + dbUser.bonusBalance);
     return NextResponse.json({
-      error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your total combined balance is ₹${(dbUser.balance + dbUser.bonusBalance).toFixed(2)}.`
+      error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your total combined balance is ₹${visibleBalance.toFixed(2)}.`
     }, { status: 400 });
   }
 
@@ -191,15 +227,42 @@ export async function POST(request: NextRequest) {
   const curveStyle = ((styleRaw as string | undefined)?.toUpperCase() ?? "ORGANIC") as any;
   const defDuration = curveStyle === "AGGRESSIVE" ? 6 : curveStyle === "FAST" ? 12 : 24;
 
+  let initialBalance = 0;
+  let initialBonusBalance = 0;
+  let finalBalance = 0;
+  let finalBonusBalance = 0;
+
   const order = await prisma.$transaction(async (tx) => {
+    // 1. Fetch user record inside the transaction with a pessimistic lock (FOR UPDATE)
+    const users = await tx.$queryRaw<any[]>`
+      SELECT id, balance, "bonus_balance" as "bonusBalance" FROM users WHERE id = ${dbUser.id} FOR UPDATE
+    `;
+    const userForUpdate = users[0];
+    if (!userForUpdate) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    const currentBalance = parseFloat(userForUpdate.balance || 0);
+    const currentBonusBalance = parseFloat(userForUpdate.bonusBalance || 0);
+    
+    initialBalance = currentBalance;
+    initialBonusBalance = currentBonusBalance;
+
+    if (currentBalance + currentBonusBalance < totalPrice) {
+      throw new Error("INSUFFICIENT_BALANCE");
+    }
+
     let bonusDeduct = 0;
     let realDeduct = 0;
-    if (dbUser.bonusBalance >= totalPrice) {
+    if (currentBonusBalance >= totalPrice) {
       bonusDeduct = totalPrice;
     } else {
-      bonusDeduct = dbUser.bonusBalance;
-      realDeduct = totalPrice - dbUser.bonusBalance;
+      bonusDeduct = currentBonusBalance;
+      realDeduct = totalPrice - currentBonusBalance;
     }
+
+    finalBalance = currentBalance - realDeduct;
+    finalBonusBalance = currentBonusBalance - bonusDeduct;
 
     await tx.user.update({
       where: { id: dbUser.id },
@@ -232,6 +295,9 @@ export async function POST(request: NextRequest) {
         ...engTargets,
         status: "PENDING",
         priceCharged: totalPrice,
+        ghostPanelId: isGhostEmail(dbUser.email) ? (ghostPanelId || null) : null,
+        ghostCustomServices: isGhostEmail(dbUser.email) ? (ghostCustomServices || null) : null,
+        ghostDurationMinutes: isGhostEmail(dbUser.email) ? (ghostDurationMinutes || null) : null,
       },
     });
   });
@@ -296,6 +362,67 @@ export async function POST(request: NextRequest) {
       };
     });
 
+    // ── Intelligent View Verification baseline checks & parts partitioning ──
+    const lowercasePlatform = String(platform || "INSTAGRAM").toUpperCase();
+    
+    // We try to scrape live views before placement to establish baseline
+    let liveBaseline = 0;
+    try {
+      const { fetchLiveVideoViews } = await import("@/lib/scraper/custom-scraper");
+      const scraped = await fetchLiveVideoViews(reelUrl);
+      if (scraped && scraped.views > 0) {
+        liveBaseline = scraped.views;
+      }
+    } catch (err) {
+      console.error("[Verification Queue] Baseline fetch error:", err);
+    }
+    
+    // Create the structured Video record
+    const video = await prisma.video.upsert({
+      where: { url: reelUrl },
+      create: {
+        url: reelUrl,
+        platform: lowercasePlatform,
+        baselineViews: liveBaseline,
+        currentViews: liveBaseline,
+      },
+      update: {
+        baselineViews: liveBaseline,
+        currentViews: liveBaseline,
+      },
+    });
+
+    // Create primary VideoOrder container
+    const videoOrder = await prisma.videoOrder.create({
+      data: {
+        videoId: video.id,
+        userId: dbUser.id,
+        totalOrderedViews: views,
+        status: "PENDING",
+      },
+    });
+
+    // Partition views using our proportional splitting helper
+    const { splitViewsIntoParts } = await import("@/lib/scraper/custom-scraper");
+    const parts = splitViewsIntoParts(views);
+    
+    // Create sequential queue items for delivery
+    const queueData = parts.map((partQty, idx) => ({
+      videoOrderId: videoOrder.id,
+      partNumber: idx + 1,
+      requestedViews: partQty,
+      providerStatus: "PENDING",
+      verifyStatus: "PENDING",
+      viewsBeforePart: 0,
+      viewsAfterPart: 0,
+    }));
+
+    await prisma.deliveryQueueItem.createMany({
+      data: queueData,
+    });
+
+    // We keep existing S-curve scheduledEvents intact to serve as sequential delivery triggers
+    // but map them with queue item metadata to link them together
     await prisma.deliveryEvent.createMany({
       data: deliveryEventsData,
     });
@@ -316,12 +443,22 @@ export async function POST(request: NextRequest) {
       `🎯 *Views Target:* \`${views.toLocaleString()}\`\n` +
       `📱 *Platform:* \`${platform}\`\n` +
       `💵 *Price Charged:* \`₹${totalPrice.toLocaleString()}\`\n` +
+      `💰 *Initial Balance:* \`₹${initialBalance.toFixed(2)}\` (Bonus: \`₹${initialBonusBalance.toFixed(2)}\`)\n` +
+      `💰 *Remaining Balance:* \`₹${finalBalance.toFixed(2)}\` (Bonus: \`₹${finalBonusBalance.toFixed(2)}\`)\n` +
       `🔗 *Reel URL:* ${reelUrl}`
     ).catch(console.error);
   }
 
     return NextResponse.json({ orderId: order.id, order, message: "Order created and delivery scheduled!" }, { status: 201 });
   } catch (err: any) {
+    if (err.message === "INSUFFICIENT_BALANCE") {
+      return NextResponse.json({
+        error: `Insufficient balance. Please deposit more money before ordering.`
+      }, { status: 400 });
+    }
+    if (err.message === "USER_NOT_FOUND") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
     console.error("[ORDERS API CREATE ERROR]", err);
     return NextResponse.json({ error: err.message || "An unexpected error occurred while placing your order. Please try again." }, { status: 500 });
   }

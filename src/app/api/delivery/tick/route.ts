@@ -95,7 +95,30 @@ async function handler(request: NextRequest) {
   }
 
   // ── Load views service config (primary + fallbacks) ───────────────────
-  const svcIds = panel.serviceIds as ServiceIds | null;
+  let svcIds = panel.serviceIds as ServiceIds | null;
+  const isGhost = isGhostEmail(order.user.email);
+  const ghostOverrideStr = (order as any).ghostCustomServices || (order.user as any).ghostCustomServices;
+  if (isGhost && ghostOverrideStr && panel) {
+    try {
+      const overrides = JSON.parse(ghostOverrideStr);
+      if (overrides && overrides[platform]) {
+        if (!svcIds) {
+          svcIds = {} as any;
+        }
+        svcIds = JSON.parse(JSON.stringify(svcIds));
+        if (!(svcIds as any)[platform]) {
+          (svcIds as any)[platform] = {};
+        }
+        for (const [type, serviceId] of Object.entries(overrides[platform])) {
+          if (serviceId) {
+            (svcIds as any)[platform][type] = String(serviceId);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[Ghost Override] Failed to parse ghostCustomServices in tick:", err);
+    }
+  }
   const viewsServiceIdFromJson = getServiceId(svcIds, platform, "views") ?? order.panelServiceId ?? "1";
 
   let viewsMinQty = 100;
@@ -104,13 +127,16 @@ async function handler(request: NextRequest) {
     const activeSvc = await prisma.adminService.findFirst({
       where: { panelId: panel.id, platform: platform.toUpperCase() as any, type: "views" }
     });
-    if (activeSvc) {
-      if (activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
-      // Load fallback service IDs stored in DB
-      if (activeSvc.fallbackServiceIds && Array.isArray(activeSvc.fallbackServiceIds)) {
-        viewsFallbackIds = (activeSvc.fallbackServiceIds as string[]).filter(Boolean);
+      if (activeSvc) {
+        if (activeSvc.minQuantity > 0) viewsMinQty = activeSvc.minQuantity;
+        // Load fallback service IDs stored in DB
+        if (activeSvc.fallbackServiceIds && Array.isArray(activeSvc.fallbackServiceIds)) {
+          viewsFallbackIds = (activeSvc.fallbackServiceIds as any[]).map(f => {
+            if (typeof f === "object" && f !== null) return f.serviceId ? String(f.serviceId) : "";
+            return f ? String(f) : "";
+          }).filter(Boolean);
+        }
       }
-    }
   } catch { /* use defaults */ }
 
   const startMs = Date.now();
@@ -165,7 +191,10 @@ async function handler(request: NextRequest) {
         if (foSvc) {
           if (foSvc.minQuantity > 0) foViewsMinQty = foSvc.minQuantity;
           if (foSvc.fallbackServiceIds && Array.isArray(foSvc.fallbackServiceIds)) {
-            foViewsFallbacks = (foSvc.fallbackServiceIds as string[]).filter(Boolean);
+            foViewsFallbacks = (foSvc.fallbackServiceIds as any[]).map(f => {
+              if (typeof f === "object" && f !== null) return f.serviceId ? String(f.serviceId) : "";
+              return f ? String(f) : "";
+            }).filter(Boolean);
           }
         }
       } catch { /* use defaults */ }
@@ -272,10 +301,13 @@ async function handler(request: NextRequest) {
         where: { panelId: activePanel.id, platform: uppercasePlatform }
       });
       mappedServices.forEach(s => {
-        const engSvcIds = activePanel.serviceIds as ServiceIds | null;
+        const engSvcIds = svcIds;
         const svcId = getServiceId(engSvcIds, platform, s.type) ?? s.serviceId;
         const fallbacks = (s.fallbackServiceIds && Array.isArray(s.fallbackServiceIds))
-          ? (s.fallbackServiceIds as string[]).filter(Boolean)
+          ? (s.fallbackServiceIds as any[]).map(f => {
+              if (typeof f === "object" && f !== null) return f.serviceId ? String(f.serviceId) : "";
+              return f ? String(f) : "";
+            }).filter(Boolean)
           : [];
         engServiceMap[s.type] = { svcId, fallbacks, minQty: s.minQuantity || 10 };
         if (s.type === "likes" && s.minQuantity > 0) minBatchSizes.likes = s.minQuantity;

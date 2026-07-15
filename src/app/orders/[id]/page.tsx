@@ -199,6 +199,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState(false);
   const [error, setError] = useState("");
+  const [userEmail, setUserEmail] = useState("");
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -206,6 +207,7 @@ export default function OrderDetailPage() {
       if (!res.ok) { setError("Order not found"); return; }
       const json = await res.json();
       setData(json);
+      setUserEmail(json.email || "");
     } catch { setError("Failed to load order"); }
     finally { setLoading(false); }
   }, [id]);
@@ -285,20 +287,20 @@ export default function OrderDetailPage() {
           </div>
         </div>
         {/* Actions */}
-        {(order.status === "DELIVERING" || order.status === "QUEUED") && (
-          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+        <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+          {(order.status === "DELIVERING" || order.status === "QUEUED") && (
             <button onClick={() => handleAction("pause")} disabled={actioning} className="neo-btn"
               style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:800, border:"none", cursor:"pointer", background:N.bg, color:N.accent, boxShadow:N.raisedSm }}>⏸ Pause</button>
-            <button onClick={() => handleAction("cancel")} disabled={actioning} className="neo-btn"
-              style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:800, border:"none", cursor:"pointer", background:N.bg, color:"#dc2626", boxShadow:N.raisedSm }}>✕ Cancel</button>
-          </div>
-        )}
-        {(order.status === "PAUSED" || order.status === "FAILED") && (
-          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+          )}
+          {(order.status === "PAUSED" || order.status === "FAILED") && (
             <button onClick={() => handleAction("resume")} disabled={actioning} className="neo-btn"
               style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:800, border:"none", cursor:"pointer", background:N.bg, color:"#16a34a", boxShadow:N.raisedSm }}>▶ Resume</button>
-          </div>
-        )}
+          )}
+          {(order.status === "DELIVERING" || order.status === "QUEUED" || order.status === "PAUSED") && (
+            <button onClick={() => handleAction("cancel")} disabled={actioning} className="neo-btn"
+              style={{ padding:"8px 14px", borderRadius:10, fontSize:11, fontWeight:800, border:"none", cursor:"pointer", background:N.bg, color:"#dc2626", boxShadow:N.raisedSm }}>🛑 Cancel Order</button>
+          )}
+        </div>
       </div>
 
       {/* ── Top stats ── */}

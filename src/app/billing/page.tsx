@@ -70,6 +70,11 @@ export default function BillingPage() {
   const [usdtAmount, setUsdtAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    setIsMobileDevice(/Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent));
+  }, []);
 
   const fetchData = useCallback(async () => {
     const res = await fetch("/api/billing/status");
@@ -187,6 +192,32 @@ export default function BillingPage() {
           </div>
         </div>
 
+        {data.email !== "arpitasumanekka@gmail.com" && (data.rawBalance ?? 0) < 0 && (
+          <div style={{
+            padding: "16px 20px",
+            borderRadius: 16,
+            background: "rgba(220, 38, 38, 0.08)",
+            border: "1px solid rgba(220, 38, 38, 0.3)",
+            color: "#b91c1c",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            fontSize: 13,
+            boxShadow: N.raisedSm,
+            animation: "fadeUp 0.4s ease-out"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 900 }}>
+              <span>⚠️ Zero-Gravity Balance Reconciled!</span>
+            </div>
+            <div style={{ fontWeight: 600, lineHeight: 1.5 }}>
+              Our server's timing gears detected that your wallet previously received duplicate midway refunds. We have patch-reconciled your account. No infinite money glitch here! 😉
+            </div>
+            <div style={{ fontWeight: 800, marginTop: 4 }}>
+              Please deposit at least <strong>₹{Math.abs(data.rawBalance).toFixed(2)}</strong> to clear your negative balance and resume launching campaigns.
+            </div>
+          </div>
+        )}
+
         {/* Deposit Method Selector */}
         <div style={{ display: "flex", gap: 12, borderBottom: `2px solid ${N.border}`, paddingBottom: 16 }}>
           <button onClick={() => { setDepositMethod("upi"); setSubmitResult(null); }} className="neo-btn" style={{
@@ -226,6 +257,42 @@ export default function BillingPage() {
                     ) : (
                       <div style={{ padding:"24px", textAlign:"center", border:`1.5px dashed ${N.border}`, borderRadius:16 }}>
                         <p style={{ fontSize:12, color:N.muted, margin:0, fontWeight:600 }}>QR code not uploaded by admin.<br/>Please copy the UPI ID above to pay.</p>
+                      </div>
+                    )}
+
+                    {isMobileDevice && (
+                      <div style={{ marginTop: 14 }}>
+                        <a
+                          href={`upi://pay?pa=${upiId}&pn=YoyoSMM&am=${upiAmount}&cu=INR&tn=Deposit%20to%20YoyoSMM`}
+                          className="neo-btn"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+                            width: "100%",
+                            padding: "14px",
+                            borderRadius: 12,
+                            fontSize: 13,
+                            fontWeight: 850,
+                            textDecoration: "none",
+                            color: "#ffffff",
+                            background: "linear-gradient(135deg,#16a34a,#15803d)",
+                            boxShadow: N.raisedSm,
+                            cursor: "pointer",
+                            textAlign: "center"
+                          }}
+                          onClick={(e) => {
+                            const amt = parseFloat(upiAmount);
+                            if (isNaN(amt) || amt < minDeposit) {
+                              e.preventDefault();
+                              alert(`Please enter a valid deposit amount (Minimum ₹${minDeposit}) in the form first!`);
+                            }
+                          }}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                          Pay via UPI App Directly
+                        </a>
                       </div>
                     )}
                   </>

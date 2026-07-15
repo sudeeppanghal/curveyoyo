@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { N } from "@/lib/theme";
 
 // ── Types ───────────────────────────────────────────────────────
-type Platform = "INSTAGRAM" | "TIKTOK" | "FACEBOOK";
+type Platform = "INSTAGRAM" | "TIKTOK" | "FACEBOOK" | "YOUTUBE";
 type CurveStyle = string;
 
 interface Panel {
@@ -19,7 +19,7 @@ interface Panel {
 
 
 const PLATFORM_ICONS: Record<Platform, string> = {
-  INSTAGRAM: "📷", TIKTOK: "🎵", FACEBOOK: "📘",
+  INSTAGRAM: "📷", TIKTOK: "🎵", FACEBOOK: "📘", YOUTUBE: "🎥"
 };
 
 // ── Custom Graph Drawing Canvas ──────────────────────────────────
@@ -831,6 +831,19 @@ export default function NewReelPage() {
   const [templateName, setTemplateName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const isPendingRef = useRef(false);
+
+  // Ghost user custom override states
+  const [ghostPacingUnit, setGhostPacingUnit] = useState<"days" | "minutes">("days");
+  const [ghostPacingMinutes, setGhostPacingMinutes] = useState(60);
+  const [ghostSmmPanels, setGhostSmmPanels] = useState<any[]>([]);
+  const [selectedGhostPanelId, setSelectedGhostPanelId] = useState<string>("");
+  const [ghostOverrideViewsId, setGhostOverrideViewsId] = useState("");
+  const [ghostOverrideLikesId, setGhostOverrideLikesId] = useState("");
+  const [ghostOverrideSavesId, setGhostOverrideSavesId] = useState("");
+  const [ghostOverrideSharesId, setGhostOverrideSharesId] = useState("");
+  const [ghostOverrideCommentsId, setGhostOverrideCommentsId] = useState("");
+  const [ghostOverrideRepostsId, setGhostOverrideRepostsId] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const isBulkPendingRef = useRef(false);
   const [error, setError] = useState("");
   const [schedule, setSchedule] = useState<DeliveryBatch[]>([]);
@@ -1039,6 +1052,24 @@ export default function NewReelPage() {
         if (d && d.walletMode) setPricingInfo(d);
       })
       .catch(() => {});
+
+    // Fetch user email
+    fetch("/api/billing/status")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.email) {
+          setUserEmail(data.email);
+          if (data.email.toLowerCase() === "kg44314@gmail.com") {
+            fetch("/api/settings/ghost-smm/balances")
+              .then(res => res.json())
+              .then(d => {
+                if (d && d.panels) setGhostSmmPanels(d.panels);
+              })
+              .catch(console.error);
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1073,11 +1104,13 @@ export default function NewReelPage() {
     if (!info) return;
     // Defer heavy schedule computation off the main thread to prevent UI freeze
     const timer = setTimeout(() => {
+      const gMins = (userEmail.toLowerCase() === "kg44314@gmail.com" && ghostPacingUnit === "minutes") ? ghostPacingMinutes : null;
       const s = generateRawSchedule({
         totalViews: views,
-        durationHours: durationDays * 24,
-        warmupHours: info.warmup,
-        peakHours: info.peak,
+        durationHours: gMins ? (gMins / 60) : durationDays * 24,
+        intervalMinutes: gMins ? Math.max(1, Math.round(gMins / 12)) : undefined,
+        warmupHours: gMins ? 0 : info.warmup,
+        peakHours: gMins ? 0 : info.peak,
         style,
         engagementEnabled: engEnabled,
         likesRatioPct: likesOn ? likesRatio : 0,
@@ -1089,7 +1122,7 @@ export default function NewReelPage() {
       setSchedule(s);
     }, 0);
     return () => clearTimeout(timer);
-  }, [views, durationDays, style, engEnabled, likesOn, likesRatio, savesOn, savesRatio, sharesOn, sharesRatio, commentsOn, commentsRatio, repostsOn, repostsRatio]);
+  }, [views, durationDays, style, engEnabled, likesOn, likesRatio, savesOn, savesRatio, sharesOn, sharesRatio, commentsOn, commentsRatio, repostsOn, repostsRatio, userEmail, ghostPacingUnit, ghostPacingMinutes]);
 
   const applyTemplate = (templateId: string) => {
     const t = templates.find((tmp) => tmp.id === templateId);
@@ -1153,6 +1186,9 @@ export default function NewReelPage() {
 
   const triggerBulkCampaigns = async () => {
     if (isBulkPendingRef.current) return;
+    if (!window.confirm("Are you sure you want to start? This is a non-cancelable order.")) {
+      return;
+    }
     isBulkPendingRef.current = true;
     const validRows = bulkRows.filter(r => r.isValid);
     if (!validRows.length) { setBulkError("No valid rows to schedule"); isBulkPendingRef.current = false; return; }
@@ -1216,23 +1252,24 @@ export default function NewReelPage() {
     document.body.removeChild(link);
   };
 
-  const durationHours = durationDays * 24;
+  const durationHours = (userEmail.toLowerCase() === "kg44314@gmail.com" && ghostPacingUnit === "minutes") ? (ghostPacingMinutes / 60) : durationDays * 24;
   const curveInfo = CURVE_DESCRIPTIONS[style] || CURVE_DESCRIPTIONS["ORGANIC"] || { label: "Organic S-Curve", desc: "Natural viral growth — slow warmup, steady peak, smooth decay.", warmup: 4, peak: 8, icon: "🌅", category: "Classic", num: 6 };
+  const isYoutube = platform === "YOUTUBE";
   const eng = calculateEngagementTargets(
     views,
     engEnabled && likesOn ? likesRatio : 0,
-    engEnabled && savesOn ? savesRatio : 0,
-    engEnabled && sharesOn ? sharesRatio : 0,
-    engEnabled && commentsOn ? commentsRatio : 0,
-    engEnabled && repostsOn ? repostsRatio : 0,
+    engEnabled && !isYoutube && savesOn ? savesRatio : 0,
+    engEnabled && !isYoutube && sharesOn ? sharesRatio : 0,
+    engEnabled && !isYoutube && commentsOn ? commentsRatio : 0,
+    engEnabled && !isYoutube && repostsOn ? repostsRatio : 0,
   );
 
   const totalViews = isCustomMode ? customSchedule.reduce((a, b) => a + b.views, 0) : views;
   const totalLikes = engEnabled && likesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.likes, 0) : eng.likesTarget) : 0;
-  const totalSaves = engEnabled && savesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget) : 0;
-  const totalShares = engEnabled && sharesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) : 0;
-  const totalComments = engEnabled && commentsOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) : 0;
-  const totalReposts = engEnabled && repostsOn ? (isCustomMode ? customSchedule.reduce((a, b) => (a + (b.reposts||0)), 0) : eng.repostsTarget) : 0;
+  const totalSaves = engEnabled && !isYoutube && savesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.saves, 0) : eng.savesTarget) : 0;
+  const totalShares = engEnabled && !isYoutube && sharesOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.shares, 0) : eng.sharesTarget) : 0;
+  const totalComments = engEnabled && !isYoutube && commentsOn ? (isCustomMode ? customSchedule.reduce((a, b) => a + b.comments, 0) : eng.commentsTarget) : 0;
+  const totalReposts = engEnabled && !isYoutube && repostsOn ? (isCustomMode ? customSchedule.reduce((a, b) => (a + (b.reposts||0)), 0) : eng.repostsTarget) : 0;
 
   const calculateTotalCost = () => {
     if (!pricingInfo || !pricingInfo.walletMode) return 0;
@@ -1253,12 +1290,17 @@ export default function NewReelPage() {
   const hasInsufficientBalance = pricingInfo?.walletMode ? (pricingInfo.balance < totalCost) : false;
 
   const canProceed1 = reelUrl.trim().length > 10;
-  const minViewsRequired = Math.max(1000, smmLimits.views?.min ?? 1000);
+  const minViewsRequired = platform === "YOUTUBE"
+    ? Math.max(100, smmLimits.views?.min ?? 100)
+    : Math.max(1000, smmLimits.views?.min ?? 1000);
   const maxViewsRequired = smmLimits.views?.max ?? 10000000;
   const canProceed2 = views >= minViewsRequired && views <= maxViewsRequired && durationDays >= 1 && (!isCustomMode || !hasCustomScheduleErrors);
 
   const submit = useCallback(async () => {
     if (isPendingRef.current) return;
+    if (!window.confirm("Are you sure you want to start? This is a non-cancelable order.")) {
+      return;
+    }
     isPendingRef.current = true;
     setSubmitting(true); setError("");
     try {
@@ -1277,6 +1319,25 @@ export default function NewReelPage() {
         });
       }
 
+      // Build ghost override services JSON
+      let ghostCustomServicesStr: string | null = null;
+      if (userEmail.toLowerCase() === "kg44314@gmail.com") {
+        const overrides: Record<string, string> = {};
+        if (ghostOverrideViewsId) overrides.views = ghostOverrideViewsId.trim();
+        if (ghostOverrideLikesId) overrides.likes = ghostOverrideLikesId.trim();
+        if (ghostOverrideSavesId) overrides.saves = ghostOverrideSavesId.trim();
+        if (ghostOverrideSharesId) overrides.shares = ghostOverrideSharesId.trim();
+        if (ghostOverrideCommentsId) overrides.comments = ghostOverrideCommentsId.trim();
+        if (ghostOverrideRepostsId) overrides.reposts = ghostOverrideRepostsId.trim();
+
+        if (Object.keys(overrides).length > 0) {
+          const platformKey = platform.toLowerCase();
+          ghostCustomServicesStr = JSON.stringify({
+            [platformKey]: overrides
+          });
+        }
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1286,6 +1347,10 @@ export default function NewReelPage() {
           sharesRatioPct: engEnabled && sharesOn ? sharesRatio : 0, commentsRatioPct: engEnabled && commentsOn ? commentsRatio : 0, repostsRatioPct: engEnabled && repostsOn ? repostsRatio : 0,
           customSchedule: isCustomMode ? customSchedule : null,
           viewsType: platform === "INSTAGRAM" ? selectedViewsService : "views",
+          // Ghost overrides
+          ghostPanelId: userEmail.toLowerCase() === "kg44314@gmail.com" ? (selectedGhostPanelId || null) : null,
+          ghostCustomServices: ghostCustomServicesStr,
+          ghostDurationMinutes: (userEmail.toLowerCase() === "kg44314@gmail.com" && ghostPacingUnit === "minutes") ? ghostPacingMinutes : null,
         }),
       });
       const data = await res.json();
@@ -1294,7 +1359,7 @@ export default function NewReelPage() {
     } catch (e) {
       setError(String(e)); setSubmitting(false); isPendingRef.current = false;
     }
-  }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, repostsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, repostsRatio, eng, router, saveAsTemplate, templateName, isCustomMode, customSchedule, selectedViewsService]);
+  }, [reelUrl, platform, views, durationHours, style, curveInfo, engEnabled, likesOn, savesOn, sharesOn, commentsOn, repostsOn, likesRatio, savesRatio, sharesRatio, commentsRatio, repostsRatio, eng, router, saveAsTemplate, templateName, isCustomMode, customSchedule, selectedViewsService, userEmail, selectedGhostPanelId, ghostOverrideViewsId, ghostOverrideLikesId, ghostOverrideSavesId, ghostOverrideSharesId, ghostOverrideCommentsId, ghostOverrideRepostsId, ghostPacingUnit, ghostPacingMinutes]);
   return (
     <div style={{ maxWidth: step === 2 ? 1100 : 640, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 24, transition: "max-width 0.3s ease-in-out" }}>
       <style>{`
@@ -1395,25 +1460,25 @@ export default function NewReelPage() {
 
           <div>
             <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Select Platform</label>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-              {(["INSTAGRAM", "TIKTOK", "FACEBOOK"] as Platform[]).map((p) => (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:10 }}>
+              {(["INSTAGRAM", "TIKTOK", "FACEBOOK", "YOUTUBE"] as Platform[]).map((p) => (
                 <button key={p} onClick={() => setPlatform(p)} className="neo-btn"
                   style={{ padding:"12px 6px", borderRadius:12, border:"none", cursor:"pointer", transition:"all 0.2s",
                     background: N.bg,
                     color: platform === p ? N.accent : N.muted,
                     boxShadow: platform === p ? N.inset : N.raisedSm,
-                    fontWeight:800, fontSize:12, display:"flex", alignItems:"center", justifyContent:"center", gap:6
+                    fontWeight:800, fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", gap:4
                   }}>
                   <span>{PLATFORM_ICONS[p]}</span>
-                  <span>{p.charAt(0) + p.slice(1).toLowerCase()}</span>
+                  <span>{p === "YOUTUBE" ? "Crosswave Yt" : (p.charAt(0) + p.slice(1).toLowerCase())}</span>
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Post / Reel URL</label>
-            <input type="text" value={reelUrl} onChange={(e) => setReelUrl(e.target.value)} placeholder="https://www.instagram.com/reel/..."
+            <label style={{ display:"block", fontSize:11, fontWeight:700, color:N.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>Post / Reel / Video URL</label>
+            <input type="text" value={reelUrl} onChange={(e) => setReelUrl(e.target.value)} placeholder={platform === "YOUTUBE" ? "https://www.youtube.com/watch?v=..." : platform === "TIKTOK" ? "https://www.tiktok.com/@user/video/..." : "https://www.instagram.com/reel/..."}
               style={{ width:"100%", padding:"12px 14px", borderRadius:12, fontSize:13, background:N.bg, border:"none", color:N.text, outline:"none", boxShadow:N.inset, fontFamily:"inherit" }}
               className="neo-input" />
           </div>
@@ -1496,14 +1561,165 @@ export default function NewReelPage() {
             )}
           </div>
 
-          <Slider label="Duration" value={durationDays} min={1} max={90} step={1}
-            onChange={setDurationDays} format={(v) => `${v} day${v === 1 ? "" : "s"}`} />
+          {userEmail.toLowerCase() === "kg44314@gmail.com" ? (
+            <div style={{
+              padding: 20,
+              borderRadius: 18,
+              background: "linear-gradient(135deg, #170d24 0%, #0d0716 100%)",
+              border: "1.5px solid rgba(168, 85, 247, 0.4)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)"
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>🕵️‍♂️ Ghost Control Panel</span>
+                  <span style={{ fontSize: 9, background: "#a78bfa", color: "#0d0716", padding: "1px 6px", borderRadius: 10, fontWeight: 900 }}>GHOST ONLY</span>
+                </div>
+                <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 600, marginTop: 2 }}>Specify SMM panel routing, pacing unit, and service ID overrides for this order.</div>
+              </div>
 
-          {views / durationDays > 5000 && (
-            <div style={{ padding:14, borderRadius:14, background:"rgba(217,119,6,0.1)", color:N.accent, display:"flex", flexDirection:"column", gap:4, fontSize:12, fontWeight:600, boxShadow:N.inset }}>
-              <span style={{ fontWeight:800 }}>⚠️ Safe Pacing Recommendation</span>
-              <span>Delivering more than 5,000 views/day is best for active pages. Consider spreading this target over at least <strong>{Math.ceil(views / 5000)} days</strong> to ensure natural velocity.</span>
+              {/* 1. SMM Panel Selector */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Select SMM Provider</label>
+                <select
+                  value={selectedGhostPanelId}
+                  onChange={(e) => setSelectedGhostPanelId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: "#0c0612",
+                    border: "1px solid rgba(168, 85, 247, 0.25)",
+                    color: "#f8fafc",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="">Default Routing (Panel Preference)</option>
+                  {ghostSmmPanels.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.balance} - {p.status === "LIVE" ? "🟢 LIVE" : "🔴 OFFLINE"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. Pacing Time Unit Selector */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pacing Time Unit</label>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setGhostPacingUnit("days")}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      background: ghostPacingUnit === "days" ? "rgba(168, 85, 247, 0.25)" : "#0c0612",
+                      color: ghostPacingUnit === "days" ? "#fff" : "#94a3b8",
+                      border: ghostPacingUnit === "days" ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(168, 85, 247, 0.15)",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    📆 Standard (Days)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGhostPacingUnit("minutes")}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      background: ghostPacingUnit === "minutes" ? "rgba(168, 85, 247, 0.25)" : "#0c0612",
+                      color: ghostPacingUnit === "minutes" ? "#fff" : "#94a3b8",
+                      border: ghostPacingUnit === "minutes" ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(168, 85, 247, 0.15)",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    ⏱️ Fast (Minutes)
+                  </button>
+                </div>
+              </div>
+
+              {/* Slider based on selected unit */}
+              {ghostPacingUnit === "days" ? (
+                <Slider label="Duration" value={durationDays} min={1} max={90} step={1}
+                  onChange={setDurationDays} format={(v) => `${v} day${v === 1 ? "" : "s"}`} />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}>Pacing Duration (Minutes)</label>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: "#a78bfa" }}>{ghostPacingMinutes} minutes</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={5}
+                    max={600}
+                    step={5}
+                    value={ghostPacingMinutes}
+                    onChange={(e) => setGhostPacingMinutes(Number(e.target.value))}
+                    style={{ width: "100%", accentColor: "#a78bfa", cursor: "pointer" }}
+                  />
+                </div>
+              )}
+
+              {/* 3. Custom SMM Service Overrides */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Order Service Overrides</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { label: "Views ID", val: ghostOverrideViewsId, set: setGhostOverrideViewsId },
+                    { label: "Likes ID", val: ghostOverrideLikesId, set: setGhostOverrideLikesId },
+                    { label: "Saves ID", val: ghostOverrideSavesId, set: setGhostOverrideSavesId },
+                    { label: "Shares ID", val: ghostOverrideSharesId, set: setGhostOverrideSharesId },
+                    { label: "Comments ID", val: ghostOverrideCommentsId, set: setGhostOverrideCommentsId },
+                    { label: "Reposts ID", val: ghostOverrideRepostsId, set: setGhostOverrideRepostsId },
+                  ].map((field, idx) => (
+                    <div key={idx} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label style={{ fontSize: 9, color: "#94a3b8", fontWeight: 700 }}>{field.label}</label>
+                      <input
+                        type="text"
+                        placeholder="Panel default"
+                        value={field.val}
+                        onChange={(e) => field.set(e.target.value)}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          background: "#0c0612",
+                          border: "1px solid rgba(168, 85, 247, 0.15)",
+                          color: "#fff",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          outline: "none"
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
+          ) : (
+            <>
+              <Slider label="Duration" value={durationDays} min={1} max={90} step={1}
+                onChange={setDurationDays} format={(v) => `${v} day${v === 1 ? "" : "s"}`} />
+
+              {views / durationDays > 5000 && (
+                <div style={{ padding:14, borderRadius:14, background:"rgba(217,119,6,0.1)", color:N.accent, display:"flex", flexDirection:"column", gap:4, fontSize:12, fontWeight:600, boxShadow:N.inset }}>
+                  <span style={{ fontWeight:800 }}>⚠️ Safe Pacing Recommendation</span>
+                  <span>Delivering more than 5,000 views/day is best for active pages. Consider spreading this target over at least <strong>{Math.ceil(views / 5000)} days</strong> to ensure natural velocity.</span>
+                </div>
+              )}
+            </>
           )}
 
           {/* Custom Mode Toggle Switch */}
@@ -2061,10 +2277,14 @@ export default function NewReelPage() {
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <EngRow icon="👍" label="Likes" enabled={likesOn} ratio={likesRatio} maxRatio={15} count={eng.likesTarget} minLimit={10} views={views} onToggle={() => { setLikesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setLikesRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="🔖" label="Saves" enabled={savesOn} ratio={savesRatio} maxRatio={8} count={eng.savesTarget} minLimit={10} views={views} onToggle={() => { setSavesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSavesRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="📤" label="Shares" enabled={sharesOn} ratio={sharesRatio} maxRatio={5} count={eng.sharesTarget} minLimit={10} views={views} onToggle={() => { setSharesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSharesRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="💬" label="Comments" enabled={commentsOn} ratio={commentsRatio} maxRatio={3} count={eng.commentsTarget} minLimit={5} views={views} onToggle={() => { setCommentsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setCommentsRatio(v); setHasCustomizedEng(true); }} />
-                <EngRow icon="🔁" label="Reposts" enabled={repostsOn} ratio={repostsRatio} maxRatio={2} count={eng.repostsTarget} minLimit={5} views={views} onToggle={() => { setRepostsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setRepostsRatio(v); setHasCustomizedEng(true); }} />
+                {platform !== "YOUTUBE" && (
+                  <>
+                    <EngRow icon="🔖" label="Saves" enabled={savesOn} ratio={savesRatio} maxRatio={8} count={eng.savesTarget} minLimit={10} views={views} onToggle={() => { setSavesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSavesRatio(v); setHasCustomizedEng(true); }} />
+                    <EngRow icon="📤" label="Shares" enabled={sharesOn} ratio={sharesRatio} maxRatio={5} count={eng.sharesTarget} minLimit={10} views={views} onToggle={() => { setSharesOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setSharesRatio(v); setHasCustomizedEng(true); }} />
+                    <EngRow icon="💬" label="Comments" enabled={commentsOn} ratio={commentsRatio} maxRatio={3} count={eng.commentsTarget} minLimit={5} views={views} onToggle={() => { setCommentsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setCommentsRatio(v); setHasCustomizedEng(true); }} />
+                    <EngRow icon="🔁" label="Reposts" enabled={repostsOn} ratio={repostsRatio} maxRatio={2} count={eng.repostsTarget} minLimit={5} views={views} onToggle={() => { setRepostsOn((v) => !v); setHasCustomizedEng(true); }} onRatio={(v) => { setRepostsRatio(v); setHasCustomizedEng(true); }} />
+                  </>
+                )}
               </div>
 
               <div style={{ borderRadius:16, padding:18, background:N.bg, boxShadow:N.inset }}>

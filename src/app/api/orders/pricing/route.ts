@@ -12,8 +12,13 @@ export async function GET() {
   const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  // Fetch active admin panels
-  const activeAdminPanels = await prisma.panel.findMany({
+  const isSpecialUser = dbUser.email.toLowerCase() === "arpitasumanekka@gmail.com";
+  const userPanels = await prisma.panel.findMany({
+    where: { userId: isSpecialUser ? dbUser.id : null, isActive: true },
+    orderBy: { priority: "asc" },
+  });
+
+  const activeAdminPanels = (isSpecialUser && userPanels.length > 0) ? userPanels : await prisma.panel.findMany({
     where: { userId: null, isActive: true },
     orderBy: { priority: "asc" },
   });
@@ -23,16 +28,22 @@ export async function GET() {
     INSTAGRAM: { ...defaultServices },
     TIKTOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
     FACEBOOK: { views: 3.0, likes: 5.0, saves: 5.0, shares: 8.0, comments: 15.0 },
+    YOUTUBE: { views: 225.60, likes: 139.20, saves: 5.0, shares: 8.0, comments: 15.0 },
   };
 
   let adminPanel = activeAdminPanels[0];
   let adminServices: any[] = [];
 
   for (const p of activeAdminPanels) {
-    const svcs = await prisma.adminService.findMany({
+    let svcs = await prisma.adminService.findMany({
       where: { panelId: p.id },
     });
-    if (svcs.length > 0) {
+    if (svcs.length === 0 && p.userId !== null) {
+      svcs = await prisma.adminService.findMany({
+        where: { panel: { userId: null, isActive: true } },
+      });
+    }
+    if (svcs.length > 0 || p.userId !== null) {
       adminPanel = p;
       adminServices = svcs;
       break;

@@ -83,6 +83,19 @@ export async function GET(
     };
   });
 
+  // Load verification queue items mapping
+  const videoOrder = await prisma.videoOrder.findFirst({
+    where: {
+      video: { url: order.reel.url },
+      userId: dbUser.id,
+    },
+    include: {
+      queueItems: {
+        orderBy: { partNumber: "asc" }
+      }
+    }
+  });
+
   return NextResponse.json({
     order: {
       id: order.id,
@@ -105,9 +118,12 @@ export async function GET(
       commentsTarget: order.commentsTarget, commentsDelivered: order.commentsDelivered,
     },
     chartData,
+    email: dbUser.email,
     totalBatches: order.deliveryEvents.length,
     completedBatches: order.deliveryEvents.filter((e) => e.status === "DONE").length,
     failedBatches: order.deliveryEvents.filter((e) => e.status === "FAILED").length,
+    verificationQueueItems: videoOrder ? videoOrder.queueItems : [],
+    verificationOrderStatus: videoOrder ? videoOrder.status : "PENDING",
   });
 }
 
@@ -127,8 +143,15 @@ export async function PATCH(
   const { action } = await request.json() as { action: "pause" | "cancel" | "resume" };
 
   const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
+  if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const { isGhostEmail } = await import("@/lib/ghost");
+  if (action === "cancel" && !isGhostEmail(dbUser.email)) {
+    return NextResponse.json({ error: "Cancellation is disabled for your account." }, { status: 403 });
+  }
+
   const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order || order.userId !== dbUser?.id) {
+  if (!order || order.userId !== dbUser.id) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
@@ -205,8 +228,17 @@ export async function PATCH(
   });
 
   if (action === "cancel") {
-    await triggerMidwayRefund(orderId);
+    await triggerMidwayRefund(orderId, true);
   }
+
+  // Create audit log
+  await prisma.auditLog.create({
+    data: {
+      userId: order.userId,
+      action: `USER_${action.toUpperCase()}_ORDER`,
+      metadata: { orderId },
+    },
+  });
 
   return NextResponse.json({ ok: true, status: newStatus });
 }

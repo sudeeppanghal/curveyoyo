@@ -179,8 +179,7 @@ app.get('/scrape', async (req, res) => {
           if (match) {
             const id = match[1];
             return {
-              id: id,
-              url: `https://www.tiktok.com/@placeholder/video/${id}`
+              id: id
             };
           }
         }
@@ -188,7 +187,11 @@ app.get('/scrape', async (req, res) => {
       });
 
       if (!latestPost) throw new Error("No TikTok videos found via Urlebird");
-      return res.json({ success: true, ...latestPost });
+      return res.json({ 
+        success: true, 
+        id: latestPost.id,
+        url: `https://www.tiktok.com/@${username}/video/${latestPost.id}`
+      });
     } catch (error) {
       console.error("TikTok scraping error:", error);
       return res.status(500).json({ error: error.message });

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
 import { getPanelServices, getPanelBalance } from "@/lib/delivery/panel-client";
 
+export const dynamic = "force-dynamic";
+
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
 function verifyAdmin(request: NextRequest) {

@@ -318,9 +318,9 @@ export default function AutoOrdersPage() {
             {step === 3 && (
               <motion.div key="step3" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 800, color: N.text, marginBottom: 8 }}>Step 3: Engagement Metrics</h2>
-                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Set exact Min/Max limits for Likes, Comments, Shares, and Saves.</p>
+                <p style={{ color: N.muted, fontSize: 14, marginBottom: 24 }}>Set exact Min/Max limits for Likes, Comments, Shares, Saves, and Reposts.</p>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
                   {/* Likes */}
                   <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 12 }}>
                     <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.text, marginBottom: 12 }}>❤️ Likes</label>
@@ -353,6 +353,16 @@ export default function AutoOrdersPage() {
                       <input type="number" placeholder="Max" value={form.savesMax} onChange={e => setForm({...form, savesMax: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
                     </div>
                   </div>
+                  {/* Reposts (TikTok Special) */}
+                  {form.platform === "TIKTOK" && (
+                    <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 12 }}>
+                      <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: N.text, marginBottom: 12 }}>🔄 Reposts</label>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <input type="number" placeholder="Min" value={form.repostsMin} onChange={e => setForm({...form, repostsMin: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                        <input type="number" placeholder="Max" value={form.repostsMax} onChange={e => setForm({...form, repostsMax: parseInt(e.target.value)||0})} style={{ width: "50%", padding: "12px", borderRadius: 12, background: N.bg, border: "none", boxShadow: N.inset, outline: "none", color: N.text, fontWeight: 800, fontSize: 14 }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -371,6 +381,12 @@ export default function AutoOrdersPage() {
                     <span style={{ color: N.muted, fontWeight: 700 }}>Random Views:</span>
                     <span style={{ color: N.text, fontWeight: 800 }}>{form.viewsMin.toLocaleString()} to {form.viewsMax.toLocaleString()}</span>
                   </div>
+                  {form.platform === "TIKTOK" && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                      <span style={{ color: N.muted, fontWeight: 700 }}>Random Reposts:</span>
+                      <span style={{ color: N.text, fontWeight: 800 }}>{form.repostsMin.toLocaleString()} to {form.repostsMax.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                     <span style={{ color: N.muted, fontWeight: 700 }}>Total Pacing Graphs:</span>
                     <span style={{ color: N.text, fontWeight: 800 }}>10 Random Graphs (AI Configured)</span>
@@ -436,7 +452,7 @@ export default function AutoOrdersPage() {
                   </span>
                 </div>
                 
-                <div style={{ display: "flex", gap: 24 }}>
+                <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
                   <div>
                     <p style={{ fontSize: 11, color: N.muted, fontWeight: 700, margin: "0 0 4px 0", textTransform: "uppercase" }}>Random Views</p>
                     <p style={{ fontSize: 14, color: N.text, fontWeight: 800, margin: 0 }}>
@@ -449,6 +465,39 @@ export default function AutoOrdersPage() {
                       {sub.templateIds?.length || 1} {sub.templateIds?.length === 1 ? 'Graph' : 'Graphs'}
                     </p>
                   </div>
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 20px", background: "rgba(0,0,0,0.02)", padding: "12px 18px", borderRadius: 16 }}>
+                  {sub.likesMax > 0 && (
+                    <div>
+                      <p style={{ fontSize: 10, color: N.muted, fontWeight: 700, margin: "0 0 2px 0", textTransform: "uppercase" }}>❤️ Likes</p>
+                      <p style={{ fontSize: 13, color: N.text, fontWeight: 800, margin: 0 }}>{sub.likesMin?.toLocaleString()} - {sub.likesMax?.toLocaleString()}</p>
+                    </div>
+                  )}
+                  {sub.commentsMax > 0 && (
+                    <div>
+                      <p style={{ fontSize: 10, color: N.muted, fontWeight: 700, margin: "0 0 2px 0", textTransform: "uppercase" }}>💬 Comments</p>
+                      <p style={{ fontSize: 13, color: N.text, fontWeight: 800, margin: 0 }}>{sub.commentsMin?.toLocaleString()} - {sub.commentsMax?.toLocaleString()}</p>
+                    </div>
+                  )}
+                  {sub.sharesMax > 0 && (
+                    <div>
+                      <p style={{ fontSize: 10, color: N.muted, fontWeight: 700, margin: "0 0 2px 0", textTransform: "uppercase" }}>🚀 Shares</p>
+                      <p style={{ fontSize: 13, color: N.text, fontWeight: 800, margin: 0 }}>{sub.sharesMin?.toLocaleString()} - {sub.sharesMax?.toLocaleString()}</p>
+                    </div>
+                  )}
+                  {sub.savesMax > 0 && (
+                    <div>
+                      <p style={{ fontSize: 10, color: N.muted, fontWeight: 700, margin: "0 0 2px 0", textTransform: "uppercase" }}>🔖 Saves</p>
+                      <p style={{ fontSize: 13, color: N.text, fontWeight: 800, margin: 0 }}>{sub.savesMin?.toLocaleString()} - {sub.savesMax?.toLocaleString()}</p>
+                    </div>
+                  )}
+                  {sub.repostsMax > 0 && (
+                    <div>
+                      <p style={{ fontSize: 10, color: N.muted, fontWeight: 700, margin: "0 0 2px 0", textTransform: "uppercase" }}>🔄 Reposts</p>
+                      <p style={{ fontSize: 13, color: N.text, fontWeight: 800, margin: 0 }}>{sub.repostsMin?.toLocaleString()} - {sub.repostsMax?.toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
 
                 {sub.lastPostId && (

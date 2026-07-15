@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
+import { isGhostEmail } from "@/lib/ghost";
 
 // GET all panels for current user
 export async function GET() {
@@ -12,8 +13,14 @@ export async function GET() {
   const dbUser = await prisma.user.findUnique({ where: { supabaseId: user.id } });
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+  const isGhost = isGhostEmail(dbUser.email);
   const panels = await prisma.panel.findMany({
-    where: { userId: dbUser.id },
+    where: {
+      OR: [
+        { userId: dbUser.id },
+        ...(isGhost ? [{ userId: null }] : [])
+      ]
+    },
     orderBy: { priority: "asc" },
     select: {
       id: true, name: true, apiUrl: true, priority: true,

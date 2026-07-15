@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { CurveStyle } from "@prisma/client";
 
 import { CURVE_100_LIST } from "@/lib/delivery/curve-styles-100";
 
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
     data: {
       userId: dbUser.id,
       name,
-      style: (style as CurveStyle) || "ORGANIC",
+      style: style || "ORGANIC",
       durationHours: parseInt(durationHours) || 24,
       warmupHours: parseInt(warmupHours) || 4,
       peakHours: parseInt(peakHours) || 8,

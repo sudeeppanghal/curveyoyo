@@ -28,6 +28,8 @@ model User {
   balance          Float    @default(0.0)
   bonusBalance     Float    @default(0.0) @map("bonus_balance")
   referredBy       String?  @map("referred_by")
+  ghostSmmPreference String? @map("ghost_smm_preference")
+  ghostCustomServices String? @map("ghost_custom_services")
   affiliateCode    String?  @unique @map("affiliate_code")
   affiliateClicks  Int      @default(0) @map("affiliate_clicks")
   affiliateEarnings Float   @default(0.0) @map("affiliate_earnings")
@@ -47,6 +49,7 @@ model User {
   affiliateTx     AffiliateTransaction[] @relation("AffiliateEarnings")
   referredTx      AffiliateTransaction[] @relation("ReferredUser")
   autoSubscriptions AutoSubscription[]
+  videoOrders     VideoOrder[]
 
   @@map("users")
 }
@@ -90,6 +93,7 @@ model Panel {
   adminServices   AdminService[]
   serviceChangeLogs ServiceChangeLog[]
 
+  @@index([userId])
   @@map("panels")
 }
 
@@ -117,6 +121,7 @@ model Reel {
 
   orders          Order[]
 
+  @@index([userId])
   @@map("reels")
 }
 
@@ -170,7 +175,7 @@ model Order {
   repostsRatioPct     Float    @default(0.0) @map("reposts_ratio_pct")
 
   // Curve config
-  curveStyle        CurveStyle @default(ORGANIC) @map("curve_style")
+  curveStyle        String @default("ORGANIC") @map("curve_style")
   durationHours     Int      @default(24) @map("duration_hours")
   warmupHours       Int      @default(4) @map("warmup_hours")
   peakHours         Int      @default(8) @map("peak_hours")
@@ -186,11 +191,21 @@ model Order {
   failReason      String?  @map("fail_reason")
 
   priceCharged      Float    @default(0.0) @map("price_charged")
+  
+  // Ghost custom overrides
+  ghostPanelId        String?  @map("ghost_panel_id")
+  ghostCustomServices String?  @map("ghost_custom_services")
+  ghostDurationMinutes Int?    @map("ghost_duration_minutes")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   deliveryEvents  DeliveryEvent[]
 
+  @@index([userId])
+  @@index([reelId])
+  @@index([panelId])
+  @@index([status])
   @@map("orders")
 }
 
@@ -333,6 +348,10 @@ model DeliveryEvent {
 
   createdAt       DateTime @default(now()) @map("created_at")
 
+  @@index([orderId])
+  @@index([panelId])
+  @@index([status])
+  @@index([scheduledAt])
   @@map("delivery_events")
 }
 
@@ -378,6 +397,7 @@ model AuditLog {
   ipAddress String?  @map("ip_address")
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([userId])
   @@map("audit_logs")
 }
 
@@ -395,6 +415,7 @@ model AdminSettings {
   upiQrCode       String?  @map("upi_qr_code")
   minDeposit      Float    @default(500.0) @map("min_deposit")
   apifyKeys       String?  @map("apify_keys") @db.Text
+  instagramCookies String? @map("instagram_cookies") @db.Text
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("admin_settings")
@@ -416,6 +437,7 @@ model CryptoPayment {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
+  @@index([userId])
   @@map("crypto_payments")
 }
 
@@ -445,6 +467,8 @@ model ServiceConfig {
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@unique([userId, panelId, platform])
+  @@index([userId])
+  @@index([panelId])
   @@map("service_configs")
 }
 
@@ -454,7 +478,7 @@ model CurveTemplate {
   userId          String      @map("user_id")
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   name            String
-  style           CurveStyle  @default(ORGANIC) @map("curve_style")
+  style           String  @default("ORGANIC") @map("curve_style")
   durationHours   Int         @default(24) @map("duration_hours")
   warmupHours     Int         @default(4) @map("warmup_hours")
   peakHours       Int         @default(8) @map("peak_hours")
@@ -471,6 +495,7 @@ model CurveTemplate {
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
+  @@index([userId])
   @@map("curve_templates")
 }
 
@@ -486,6 +511,7 @@ model UpiPayment {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
+  @@index([userId])
   @@map("upi_payments")
 }
 
@@ -524,6 +550,7 @@ model ServiceChangeLog {
   reason          String
   createdAt       DateTime @default(now()) @map("created_at")
 
+  @@index([panelId])
   @@map("service_change_logs")
 }
 
@@ -539,6 +566,7 @@ model SupportTicket {
   updatedAt DateTime        @updatedAt @map("updated_at")
   messages  TicketMessage[]
 
+  @@index([userId])
   @@map("support_tickets")
 }
 
@@ -550,6 +578,7 @@ model TicketMessage {
   message   String
   createdAt DateTime      @default(now()) @map("created_at")
 
+  @@index([ticketId])
   @@map("ticket_messages")
 }
 
@@ -565,6 +594,8 @@ model AffiliateTransaction {
   type             String   @default("DEPOSIT")
   createdAt        DateTime @default(now()) @map("created_at")
 
+  @@index([affiliateId])
+  @@index([referredUserId])
   @@map("affiliate_transactions")
 }
 
@@ -598,6 +629,7 @@ model AutoSubscription {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  @@index([userId])
   @@map("auto_subscriptions")
 }
 
@@ -626,6 +658,7 @@ model ProfitSplit {
   isSettled   Boolean  @default(false) @map("is_settled")
   createdAt   DateTime @default(now()) @map("created_at")
 
+  @@index([paymentId])
   @@map("profit_splits")
 }
 
@@ -648,3 +681,62 @@ model Announcement {
 
   @@map("announcements")
 }
+
+model Video {
+  id            String        @id @default(cuid())
+  url           String        @unique
+  platform      String        // "YOUTUBE", "INSTAGRAM", "TIKTOK", "FACEBOOK", etc.
+  title         String?
+  thumbnail     String?
+  baselineViews Int           @default(0) @map("baseline_views")
+  currentViews  Int           @default(0) @map("current_views")
+  lastCheckedAt DateTime      @default(now()) @map("last_checked_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  orders        VideoOrder[]
+  history       ViewHistory[]
+
+  @@map("videos")
+}
+
+model VideoOrder {
+  id                String              @id @default(cuid())
+  videoId           String              @map("video_id")
+  video             Video               @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  userId            String              @map("user_id")
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalOrderedViews Int                 @map("total_ordered_views")
+  status            String              @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  createdAt         DateTime            @default(now()) @map("created_at")
+  queueItems        DeliveryQueueItem[]
+
+  @@map("video_orders")
+}
+
+model DeliveryQueueItem {
+  id               String      @id @default(cuid())
+  videoOrderId     String      @map("video_order_id")
+  videoOrder       VideoOrder  @relation(fields: [videoOrderId], references: [id], onDelete: Cascade)
+  partNumber       Int         @map("part_number")
+  requestedViews   Int         @map("requested_views")
+  providerOrderId  String?     @map("provider_order_id")
+  providerStatus   String      @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  verifyStatus     String      @default("PENDING") // PENDING, VERIFYING, PASSED, FAILED
+  viewsBeforePart  Int         @default(0) @map("views_before_part")
+  viewsAfterPart   Int         @default(0) @map("views_after_part")
+  startedAt        DateTime?   @map("started_at")
+  completedAt      DateTime?   @map("completed_at")
+  verifiedAt       DateTime?   @map("verified_at")
+
+  @@map("delivery_queue_items")
+}
+
+model ViewHistory {
+  id        String   @id @default(cuid())
+  videoId   String   @map("video_id")
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  views     Int
+  checkedAt DateTime @default(now()) @map("checked_at")
+
+  @@map("view_history")
+}
+

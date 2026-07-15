@@ -88,6 +88,43 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var chunkLoadErrorPattern = /failed to load chunk|loading chunk/i;
+                function checkAndReload(errorMsg, url) {
+                  if (chunkLoadErrorPattern.test(errorMsg) || (url && url.indexOf('/_next/static/chunks/') !== -1)) {
+                    console.warn("Chunk load error detected: " + errorMsg + ". Force reloading page...");
+                    var lastReload = sessionStorage.getItem('last_chunk_reload');
+                    var now = Date.now();
+                    if (!lastReload || (now - parseInt(lastReload)) > 10000) {
+                      sessionStorage.setItem('last_chunk_reload', now.toString());
+                      window.location.reload();
+                    }
+                  }
+                }
+                window.addEventListener('error', function(e) {
+                  var target = e.target;
+                  if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+                    var url = target.src || target.href || '';
+                    if (url && url.indexOf('/_next/static/') !== -1) {
+                      checkAndReload("Resource load failed: " + url, url);
+                    }
+                  }
+                  var message = e.message || '';
+                  var url = e.filename || '';
+                  checkAndReload(message, url);
+                }, true);
+                window.addEventListener('unhandledrejection', function(e) {
+                  var reason = e.reason || {};
+                  var message = reason.message || (typeof reason === 'string' ? reason : '') || '';
+                  checkAndReload(message, '');
+                });
+              })();
+            `
+          }}
+        />
       </head>
       <body style={{ margin:0, padding:0, minHeight:"100vh", fontFamily:"Inter,-apple-system,BlinkMacSystemFont,sans-serif", WebkitFontSmoothing:"antialiased" }}>
         <ThemeProvider />

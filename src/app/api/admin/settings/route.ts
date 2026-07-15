@@ -18,7 +18,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await request.json();
-  const { trc20Address, bep20Address, priceUsdt, siteName, freeTrialHours, maintenanceMode, supportEmail, upiId, upiQrCode, minDeposit, apifyKeys } = body;
+  const { trc20Address, bep20Address, priceUsdt, siteName, freeTrialHours, maintenanceMode, supportEmail, upiId, upiQrCode, minDeposit, apifyKeys, instagramCookies } = body;
 
   const settings = await prisma.adminSettings.upsert({
     where: { id: "global" },
@@ -28,6 +28,7 @@ export async function PATCH(request: NextRequest) {
       siteName, freeTrialHours, maintenanceMode, supportEmail,
       upiId, upiQrCode, minDeposit: minDeposit !== undefined ? parseFloat(minDeposit) : 500.0,
       apifyKeys,
+      instagramCookies,
     },
     update: {
       ...(trc20Address !== undefined && { trc20Address }),
@@ -41,6 +42,7 @@ export async function PATCH(request: NextRequest) {
       ...(upiQrCode !== undefined && { upiQrCode }),
       ...(minDeposit !== undefined && { minDeposit: parseFloat(minDeposit) }),
       ...(apifyKeys !== undefined && { apifyKeys }),
+      ...(instagramCookies !== undefined && { instagramCookies }),
     },
   });
 

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "7880552291:AAGad9XL6ZeilBxFheCbZKALEzy9elpY6H4";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || process.env.ADMIN_SECRET;
 
 export async function GET(request: NextRequest) {
+  if (!TELEGRAM_BOT_TOKEN) {
+    return NextResponse.json({ error: "TELEGRAM_BOT_TOKEN not configured in environment variables" }, { status: 500 });
+  }
   // Simple auth to prevent randoms from messing with the webhook
   const secretQuery = request.nextUrl.searchParams.get("secret");
   if (secretQuery !== process.env.ADMIN_SECRET) {

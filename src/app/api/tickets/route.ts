@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramAlert } from "@/lib/telegram";
 import { notGhostWhere, isGhostEmail } from "@/lib/ghost";
-import { processTicketAutoReply } from "@/lib/ai/ticket-responder";
+import { runSupportAgent } from "@/lib/ai/support-agent";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET!;
 
@@ -80,8 +80,8 @@ export async function POST(request: NextRequest) {
     ).catch(console.error);
   }
 
-  // Trigger AI Auto-Responder in the background
-  processTicketAutoReply(ticket.id, dbUser.id).catch(console.error);
+  // Trigger Autonomous AI Support Agent in the background
+  runSupportAgent(ticket.id, dbUser.id).catch(console.error);
 
   return NextResponse.json({ ticket }, { status: 201 });
 }
@@ -128,8 +128,8 @@ export async function PUT(request: NextRequest) {
     });
   }
 
-  // Trigger AI Auto-Responder in the background
-  processTicketAutoReply(ticketId, dbUser.id).catch(console.error);
+  // Trigger Autonomous AI Support Agent in the background
+  runSupportAgent(ticketId, dbUser.id).catch(console.error);
 
   return NextResponse.json({ ticketMessage });
 }

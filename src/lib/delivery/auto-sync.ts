@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getPanelServices, PanelServiceItem } from "./panel-client";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { isGhostEmail } from "@/lib/ghost";
 
 // ─── Keyword mappings for auto-finding replacement services ───────────────
 const SEARCH_CONFIG: Record<string, Record<string, string[]>> = {
@@ -87,15 +88,41 @@ export async function runAutoSync() {
         { user: NOT_GHOST_USER }
       ]
     },
-    include: { adminServices: true },
+    include: { adminServices: true, user: true },
   });
 
   const logs: any[] = [];
+  const servicesCache = new Map<string, { ok: boolean; services?: PanelServiceItem[]; error?: string; responseMs: number }>();
 
   for (const panel of activePanels) {
-    const startMs = Date.now();
-    const res = await getPanelServices(panel.apiUrl, panel.apiKeyEncrypted);
-    const responseMs = Date.now() - startMs;
+    const cleanUrl = panel.apiUrl.trim().toLowerCase();
+    
+    let res: { ok: boolean; services?: PanelServiceItem[]; error?: string; responseMs: number };
+    if (servicesCache.has(cleanUrl)) {
+      const cached = servicesCache.get(cleanUrl)!;
+      res = cached;
+      console.log(`[AutoSync] Reusing cached services response for sibling panel: ${panel.name || panel.id} (${panel.apiUrl})`);
+    } else {
+      const startMs = Date.now();
+      const fetchRes = await getPanelServices(panel.apiUrl, panel.apiKeyEncrypted);
+      const responseMs = Date.now() - startMs;
+      
+      res = {
+        ok: fetchRes.ok,
+        services: fetchRes.services,
+        error: fetchRes.error,
+        responseMs,
+      };
+      
+      if (fetchRes.ok) {
+        servicesCache.set(cleanUrl, res);
+      }
+      
+      // Delay 1.2 seconds to prevent rapid consecutive hits on SMM domain
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+
+    const responseMs = res.responseMs;
 
     if (!res.ok || !res.services) {
       const msg = `⚠️ *AutoSync Alert*\nFailed to fetch live services for Panel: ${panel.name || panel.id}\nError: ${res.error || "Unknown"}`;
@@ -134,68 +161,12 @@ export async function runAutoSync() {
         liveMatch.name.toLowerCase().includes("disabled") ||
         liveMatch.name.toLowerCase().includes("stop");
 
-      // ── AUTO-HEAL DEAD PRIMARY SERVICE ───────────────────────────────
+      // ── OFFLINE WARNING FOR DEAD PRIMARY SERVICE ───────────────────
       if (isDead) {
-        console.warn(`AutoSync: Primary service ID ${configuredService.serviceId} for ${configuredService.platform} ${configuredService.type} is offline. Attempting to heal...`);
-        
-        const keywords = getKeywords(configuredService.platform, configuredService.type);
-        const candidates = liveServices.filter(s => {
-          const nameLower = s.name.toLowerCase();
-          return keywords.every(kw => nameLower.includes(kw)) &&
-            !nameLower.includes("disabled") &&
-            !nameLower.includes("stop");
-        });
-
-        if (candidates.length > 0) {
-          candidates.sort((a, b) => scoreCandidateService(b) - scoreCandidateService(a));
-          const bestMatch = candidates[0];
-          const bestMatchId = String(bestMatch.service);
-
-          // Update active match references
-          liveMatch = bestMatch;
-          isDead = false;
-          mappingChanged = true;
-
-          // Save the healed ID to database
-          const liveRateUSD = parseFloat(bestMatch.rate) || 0;
-          const liveRateINR = parseFloat((liveRateUSD * USD_TO_INR).toFixed(6));
-          const newCustomRate = parseFloat((liveRateINR * PRICE_MULTIPLIER).toFixed(6));
-
-          await prisma.adminService.update({
-            where: { id: configuredService.id },
-            data: {
-              serviceId: bestMatchId,
-              name: bestMatch.name,
-              originalRate: liveRateINR,
-              customRate: newCustomRate,
-            }
-          });
-
-          // Update panels mapping object
-          if (!serviceIdsObj[configuredService.platform.toLowerCase()]) {
-            serviceIdsObj[configuredService.platform.toLowerCase()] = {};
-          }
-          serviceIdsObj[configuredService.platform.toLowerCase()][configuredService.type.toLowerCase()] = bestMatchId;
-
-          await sendTelegramAlert(
-            `🔄 *AutoSync Healed Service*\n` +
-            `Panel: *${panel.name || panel.id}*\n` +
-            `Platform: *${configuredService.platform}* | Type: *${configuredService.type}*\n` +
-            `• Old Service ID: *${configuredService.serviceId}*\n` +
-            `• New Service ID: *${bestMatchId}*\n` +
-            `• SMM Panel Cost: *$${liveRateUSD.toFixed(4)}* (₹${liveRateINR.toFixed(4)} / 1k)\n` +
-            `• Our Custom Charge: *₹${newCustomRate.toFixed(4)} / 1k* (5x Markup)\n` +
-            `• New Service Name: _${bestMatch.name}_`
-          );
-        } else {
-          // Send warning alert if matching failed
-          await sendTelegramAlert(
-            `⚠️ *AutoSync Warning: Primary Service Offline*\n` +
-            `Panel: ${panel.name || panel.id}\n` +
-            `Platform: *${configuredService.platform}* | Type: *${configuredService.type}*\n` +
-            `❌ Configured Primary ID *${configuredService.serviceId}* is dead, and no suitable replacement service could be found automatically on the panel.`
-          );
-        }
+        console.warn(`[AutoSync Warning] Primary service ID ${configuredService.serviceId} for ${configuredService.platform} ${configuredService.type} on panel ${panel.name || panel.id} is offline.`);
+        priceChanges.push(
+          `⚠️ *Offline Warning*: ${configuredService.platform} ${configuredService.type} (ID ${configuredService.serviceId}) is currently offline or disabled on SMM panel.`
+        );
       }
 
       // ── A. CHECK FOR PRICE CHANGES (auto-apply 5x) ───────────────────
@@ -259,9 +230,9 @@ export async function runAutoSync() {
     }
 
     // ── D. SEND PRICE CHANGE SUMMARY ─────────────────────────────────
-    if (priceChanges.length > 0) {
+    if (priceChanges.length > 0 && !(panel.user && isGhostEmail(panel.user.email))) {
       await sendTelegramAlert(
-        `💰 *Price Update*\nPanel: ${panel.name || panel.id}\n\nThe following services had rate changes (auto-applied 5x):\n${priceChanges.map(c => `• ${c}`).join("\n")}`
+        `📢 *AutoSync Alert*\nPanel: ${panel.name || panel.id}\n\nThe following updates occurred:\n${priceChanges.map(c => `• ${c}`).join("\n")}`
       );
     }
 

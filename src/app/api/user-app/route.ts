@@ -220,6 +220,9 @@ export async function POST(request: NextRequest) {
     if (!dbUser) {
       return NextResponse.json({ ok: false, error: "User not found" }, { status: 404, headers: corsHeaders });
     }
+    if (dbUser.plan === "SUSPENDED") {
+      return NextResponse.json({ ok: false, error: "Your account has been suspended. Please contact support." }, { status: 403, headers: corsHeaders });
+    }
 
     // ── 3. GET DATA ──
     if (action === "get_data") {
@@ -285,7 +288,12 @@ export async function POST(request: NextRequest) {
       });
 
       // Calculate rates per platform
-      const activeAdminPanels = await prisma.panel.findMany({
+      const isSpecialUser = dbUser.email.toLowerCase() === "arpitasumanekka@gmail.com";
+      const userPanels = await prisma.panel.findMany({
+        where: { userId: isSpecialUser ? dbUser.id : null, isActive: true },
+        orderBy: { priority: "asc" },
+      });
+      const activeAdminPanels = (isSpecialUser && userPanels.length > 0) ? userPanels : await prisma.panel.findMany({
         where: { userId: null, isActive: true },
         orderBy: { priority: "asc" },
       });
@@ -299,7 +307,12 @@ export async function POST(request: NextRequest) {
       };
 
       for (const p of activeAdminPanels) {
-        const svcs = await prisma.adminService.findMany({ where: { panelId: p.id } });
+        let svcs = await prisma.adminService.findMany({ where: { panelId: p.id } });
+        if (svcs.length === 0 && p.userId !== null) {
+          svcs = await prisma.adminService.findMany({
+            where: { panel: { userId: null, isActive: true } }
+          });
+        }
         if (svcs.length > 0) {
           for (const s of svcs) {
             const platform = s.platform;
@@ -371,7 +384,12 @@ export async function POST(request: NextRequest) {
         }, { status: 400, headers: corsHeaders });
       }
 
-      const activeAdminPanels = await prisma.panel.findMany({
+      const isSpecialUser = dbUser.email.toLowerCase() === "arpitasumanekka@gmail.com";
+      const userPanels = await prisma.panel.findMany({
+        where: { userId: isSpecialUser ? dbUser.id : null, isActive: true },
+        orderBy: { priority: "asc" },
+      });
+      const activeAdminPanels = (isSpecialUser && userPanels.length > 0) ? userPanels : await prisma.panel.findMany({
         where: { userId: null, isActive: true },
         orderBy: { priority: "asc" },
       });
@@ -381,10 +399,18 @@ export async function POST(request: NextRequest) {
 
       const validPanels: { panel: any; services: any[] }[] = [];
       for (const p of activeAdminPanels) {
-        const svcs = await prisma.adminService.findMany({
+        let svcs = await prisma.adminService.findMany({
           where: { panelId: p.id, platform: platform.toUpperCase() as any },
         });
-        if (svcs.length > 0) validPanels.push({ panel: p, services: svcs });
+        if (svcs.length === 0 && p.userId !== null) {
+          svcs = await prisma.adminService.findMany({
+            where: {
+              panel: { userId: null, isActive: true },
+              platform: platform.toUpperCase() as any
+            }
+          });
+        }
+        if (svcs.length > 0 || p.userId !== null) validPanels.push({ panel: p, services: svcs });
       }
       if (validPanels.length === 0) {
         return NextResponse.json({ ok: false, error: `No active services for ${platform}.` }, { status: 503, headers: corsHeaders });
@@ -406,9 +432,10 @@ export async function POST(request: NextRequest) {
       const totalPrice = parseFloat((viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost).toFixed(2));
 
       if (dbUser.balance + dbUser.bonusBalance < totalPrice) {
+        const visibleBalance = Math.max(0, dbUser.balance + dbUser.bonusBalance);
         return NextResponse.json({
           ok: false,
-          error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your wallet total combined balance is ₹${(dbUser.balance + dbUser.bonusBalance).toFixed(2)}. Please deposit funds first.`,
+          error: `Insufficient balance. Order costs ₹${totalPrice.toFixed(2)}, but your wallet total combined balance is ₹${visibleBalance.toFixed(2)}. Please deposit funds first.`,
         }, { status: 400, headers: corsHeaders });
       }
 
@@ -420,16 +447,43 @@ export async function POST(request: NextRequest) {
         update: { url: reelUrl, platform: platform.toUpperCase() as any },
       });
 
-      let bonusDeduct = 0;
-      let realDeduct = 0;
-      if (dbUser.bonusBalance >= totalPrice) {
-        bonusDeduct = totalPrice;
-      } else {
-        bonusDeduct = dbUser.bonusBalance;
-        realDeduct = totalPrice - dbUser.bonusBalance;
-      }
+      let initialBalance = 0;
+      let initialBonusBalance = 0;
+      let finalBalance = 0;
+      let finalBonusBalance = 0;
 
       const order = await prisma.$transaction(async (tx) => {
+        // 1. Fetch user record inside the transaction with a pessimistic lock (FOR UPDATE)
+        const users = await tx.$queryRaw<any[]>`
+          SELECT id, balance, "bonus_balance" as "bonusBalance" FROM users WHERE id = ${dbUser.id} FOR UPDATE
+        `;
+        const userForUpdate = users[0];
+        if (!userForUpdate) {
+          throw new Error("USER_NOT_FOUND");
+        }
+
+        const currentBalance = parseFloat(userForUpdate.balance || 0);
+        const currentBonusBalance = parseFloat(userForUpdate.bonusBalance || 0);
+        
+        initialBalance = currentBalance;
+        initialBonusBalance = currentBonusBalance;
+
+        if (currentBalance + currentBonusBalance < totalPrice) {
+          throw new Error("INSUFFICIENT_BALANCE");
+        }
+
+        let bonusDeduct = 0;
+        let realDeduct = 0;
+        if (currentBonusBalance >= totalPrice) {
+          bonusDeduct = totalPrice;
+        } else {
+          bonusDeduct = currentBonusBalance;
+          realDeduct = totalPrice - currentBonusBalance;
+        }
+
+        finalBalance = currentBalance - realDeduct;
+        finalBonusBalance = currentBonusBalance - bonusDeduct;
+
         await tx.user.update({
           where: { id: dbUser.id },
           data: { 
@@ -471,6 +525,8 @@ export async function POST(request: NextRequest) {
           `🌐 *Platform:* \`${platform}\`\n` +
           `🎯 *Views:* \`${views.toLocaleString()}\` (${curveStyle})\n` +
           `💵 *Cost:* \`₹${totalPrice.toFixed(2)}\`\n` +
+          `💰 *Initial Balance:* \`₹${initialBalance.toFixed(2)}\` (Bonus: \`₹${initialBonusBalance.toFixed(2)}\`)\n` +
+          `💰 *Remaining Balance:* \`₹${finalBalance.toFixed(2)}\` (Bonus: \`₹${finalBonusBalance.toFixed(2)}\`)\n` +
           `🔗 *URL:* \`${reelUrl}\``
         ).catch(console.error);
       }
@@ -690,6 +746,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: false, error: "Invalid action" }, { status: 400, headers: corsHeaders });
   } catch (err: any) {
+    if (err.message === "INSUFFICIENT_BALANCE") {
+      return NextResponse.json({ ok: false, error: "Insufficient balance. Please deposit more money before ordering." }, { status: 400, headers: corsHeaders });
+    }
+    if (err.message === "USER_NOT_FOUND") {
+      return NextResponse.json({ ok: false, error: "User not found" }, { status: 404, headers: corsHeaders });
+    }
     console.error("[api/user-app]", err);
     return NextResponse.json({ ok: false, error: err.message || "Server Error" }, { status: 500, headers: corsHeaders });
   }

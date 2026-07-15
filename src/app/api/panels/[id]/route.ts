@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
+import { isGhostEmail } from "@/lib/ghost";
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -20,7 +21,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { name, apiUrl, apiKey, priority, loadPercentage, serviceIds, isActive } = body;
 
   // Verify ownership
-  const panel = await prisma.panel.findFirst({ where: { id, userId: dbUser.id } });
+  const isGhost = isGhostEmail(dbUser.email);
+  const panel = await prisma.panel.findFirst({
+    where: {
+      id,
+      OR: [
+        { userId: dbUser.id },
+        ...(isGhost ? [{ userId: null }] : [])
+      ]
+    }
+  });
   if (!panel) return NextResponse.json({ error: "Panel not found" }, { status: 404 });
 
   const updateData: Record<string, unknown> = {};
@@ -51,7 +61,16 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const panel = await prisma.panel.findFirst({ where: { id, userId: dbUser.id } });
+  const isGhost = isGhostEmail(dbUser.email);
+  const panel = await prisma.panel.findFirst({
+    where: {
+      id,
+      OR: [
+        { userId: dbUser.id },
+        ...(isGhost ? [{ userId: null }] : [])
+      ]
+    }
+  });
   if (!panel) return NextResponse.json({ error: "Panel not found" }, { status: 404 });
 
   try {

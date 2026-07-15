@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const platform = request.nextUrl.searchParams.get("platform")?.toLowerCase();
-  if (!platform || !["instagram", "tiktok", "facebook"].includes(platform)) {
+  if (!platform || !["instagram", "tiktok", "facebook", "youtube"].includes(platform)) {
     return NextResponse.json({ error: "Valid platform query parameter is required" }, { status: 400 });
   }
 
@@ -27,8 +27,9 @@ export async function GET(request: NextRequest) {
 
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
   
+  const isSpecialUser = dbUser.email.toLowerCase() === "arpitasumanekka@gmail.com";
   let panels = dbUser.panels;
-  if (dbUser.walletMode || panels.length === 0) {
+  if ((dbUser.walletMode && !isSpecialUser) || panels.length === 0) {
     panels = await prisma.panel.findMany({
       where: { userId: null, isActive: true },
       orderBy: { priority: "asc" },
