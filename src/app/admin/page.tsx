@@ -175,6 +175,8 @@ export default function AdminPage() {
       comments: number;
       reposts: number;
       totalOrders: number;
+      totalUserCharged: number;
+      totalRealCost: number;
     };
     breakdown: Record<string, {
       views: number;
@@ -3758,6 +3760,8 @@ export default function AdminPage() {
                     ["Total Comments Sent", engagementStats.totals.comments.toLocaleString(), "#a855f7"],
                     ["Total Reposts Sent", engagementStats.totals.reposts.toLocaleString(), "#ec4899"],
                     ["Total Campaigns Completed", engagementStats.totals.totalOrders.toLocaleString(), N.text],
+                    ["Total Cost to Users", "₹" + engagementStats.totals.totalUserCharged.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), "#06b6d4"],
+                    ["Real Cost to SMM", "₹" + engagementStats.totals.totalRealCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), "#ef4444"],
                   ].map(([label, val, color]) => (
                     <div key={label as string} style={{ background: N.bg, border: `1px solid ${N.border}`, boxShadow: N.raisedSm, borderRadius: 16, padding: "20px 24px", position: "relative", overflow: "hidden" }}>
                       <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: color as string }} />

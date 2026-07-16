@@ -18,6 +18,21 @@ export async function GET(request: NextRequest) {
   const ghostEmails = ["kg44314@gmail.com", "thefutureplan@gmail.com"];
 
   try {
+    // Fetch admin services to map provider rates (originalRate)
+    const adminServices = await prisma.adminService.findMany({
+      select: {
+        panelId: true,
+        platform: true,
+        type: true,
+        originalRate: true,
+      }
+    });
+
+    const rateMap = new Map<string, number>();
+    adminServices.forEach(s => {
+      rateMap.set(`${s.panelId}:${s.platform}:${s.type}`, s.originalRate);
+    });
+
     // Fetch all orders updated in the last 24 hours (excluding ghost accounts)
     const orders = await prisma.order.findMany({
       where: {
@@ -32,6 +47,7 @@ export async function GET(request: NextRequest) {
       },
       select: {
         id: true,
+        panelId: true,
         viewsDelivered: true,
         likesDelivered: true,
         savesDelivered: true,
@@ -39,6 +55,7 @@ export async function GET(request: NextRequest) {
         commentsDelivered: true,
         repostsDelivered: true,
         status: true,
+        priceCharged: true,
         updatedAt: true,
         reel: {
           select: {
@@ -61,6 +78,8 @@ export async function GET(request: NextRequest) {
     let totalShares = 0;
     let totalComments = 0;
     let totalReposts = 0;
+    let totalUserCharged = 0;
+    let totalRealCost = 0;
 
     // Platform-specific breakdowns
     const platformBreakdown: Record<string, {
@@ -82,6 +101,25 @@ export async function GET(request: NextRequest) {
       totalShares += o.sharesDelivered;
       totalComments += o.commentsDelivered;
       totalReposts += o.repostsDelivered;
+
+      totalUserCharged += o.priceCharged;
+
+      const panelId = o.panelId;
+      const oPlatform = o.reel?.platform;
+
+      if (panelId && oPlatform) {
+        const getRate = (type: string) => rateMap.get(`${panelId}:${oPlatform}:${type}`) ?? 0;
+        
+        const viewsCost = (o.viewsDelivered / 1000) * getRate('views');
+        const likesCost = (o.likesDelivered / 1000) * getRate('likes');
+        const savesCost = (o.savesDelivered / 1000) * getRate('saves');
+        const sharesCost = (o.sharesDelivered / 1000) * getRate('shares');
+        const commentsCost = (o.commentsDelivered / 1000) * getRate('comments');
+        const repostsCost = (o.repostsDelivered / 1000) * getRate('reposts');
+
+        const orderRealCost = viewsCost + likesCost + savesCost + sharesCost + commentsCost + repostsCost;
+        totalRealCost += orderRealCost;
+      }
 
       if (!platformBreakdown[platform]) {
         platformBreakdown[platform] = {
@@ -113,7 +151,9 @@ export async function GET(request: NextRequest) {
         shares: totalShares,
         comments: totalComments,
         reposts: totalReposts,
-        totalOrders: orders.length
+        totalOrders: orders.length,
+        totalUserCharged: totalUserCharged,
+        totalRealCost: totalRealCost
       },
       breakdown: platformBreakdown,
       recentOrders: orders.slice(0, 10) // Show last 10 active orders in the tab
