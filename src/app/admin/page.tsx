@@ -3736,9 +3736,9 @@ export default function AdminPage() {
         {tab === "engagement" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>Engagement Statistics (Last 24 Hours)</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>Completed Campaigns (Last 24 Hours)</h2>
               <p style={{ fontSize: 13, color: N.muted, margin: "4px 0 0", fontWeight: 600 }}>
-                Total views and engagement sent in the last 24 hours
+                Total views and engagement delivered in completed campaigns in the last 24 hours
               </p>
             </div>
 
@@ -3757,7 +3757,7 @@ export default function AdminPage() {
                     ["Total Shares Sent", engagementStats.totals.shares.toLocaleString(), "#3b82f6"],
                     ["Total Comments Sent", engagementStats.totals.comments.toLocaleString(), "#a855f7"],
                     ["Total Reposts Sent", engagementStats.totals.reposts.toLocaleString(), "#ec4899"],
-                    ["Total Orders Processed", engagementStats.totals.totalOrders.toLocaleString(), N.text],
+                    ["Total Campaigns Completed", engagementStats.totals.totalOrders.toLocaleString(), N.text],
                   ].map(([label, val, color]) => (
                     <div key={label as string} style={{ background: N.bg, border: `1px solid ${N.border}`, boxShadow: N.raisedSm, borderRadius: 16, padding: "20px 24px", position: "relative", overflow: "hidden" }}>
                       <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: color as string }} />
