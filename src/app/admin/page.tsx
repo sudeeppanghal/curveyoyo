@@ -75,7 +75,7 @@ interface Payment {
 
 }
 
-type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "failed_orders" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync" | "announcements";
+type AdminTab = "settings" | "users" | "payments" | "upi_payments" | "admin_panels" | "campaigns" | "failed_orders" | "system" | "tickets" | "affiliates" | "blogs" | "auto_sync" | "announcements" | "engagement";
 
 
 
@@ -165,6 +165,56 @@ export default function AdminPage() {
   const [saved, setSaved] = useState("");
 
   const [error, setError] = useState("");
+
+  const [engagementStats, setEngagementStats] = useState<{
+    totals: {
+      views: number;
+      likes: number;
+      saves: number;
+      shares: number;
+      comments: number;
+      reposts: number;
+      totalOrders: number;
+    };
+    breakdown: Record<string, {
+      views: number;
+      likes: number;
+      saves: number;
+      shares: number;
+      comments: number;
+      reposts: number;
+      orderCount: number;
+    }>;
+    recentOrders: any[];
+  } | null>(null);
+  const [engagementLoading, setEngagementLoading] = useState(false);
+
+  const fetchEngagementStats = async (activeSecret?: string) => {
+    setEngagementLoading(true);
+    try {
+      const res = await fetch("/api/admin/engagement", {
+        headers: { "x-admin-secret": activeSecret || secret || localStorage.getItem("yoyo_admin_secret") || "" }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEngagementStats({
+          totals: data.totals,
+          breakdown: data.breakdown,
+          recentOrders: data.recentOrders
+        });
+      }
+    } catch {
+      setError("Error loading engagement stats");
+    } finally {
+      setEngagementLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === "engagement" && authed) {
+      fetchEngagementStats();
+    }
+  }, [tab, authed]);
 
   const [affiliateData, setAffiliateData] = useState<any>(null);
   const [affiliateLoading, setAffiliateLoading] = useState(false);
@@ -1480,7 +1530,7 @@ export default function AdminPage() {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, borderBottom: `1px solid ${N.border}`, paddingBottom: 16 }}>
 
-          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "failed_orders", "system", "tickets", "affiliates", "blogs", "auto_sync", "announcements"] as AdminTab[]).map((t) => {
+          {(["settings", "users", "payments", "upi_payments", "admin_panels", "campaigns", "failed_orders", "system", "tickets", "affiliates", "blogs", "auto_sync", "announcements", "engagement"] as AdminTab[]).map((t) => {
 
             const iconMap: Record<AdminTab, string> = {
 
@@ -1502,7 +1552,8 @@ export default function AdminPage() {
               affiliates: "🤝 ",
               blogs: "📝 ",
               auto_sync: "🔄 ",
-              announcements: "📢 "
+              announcements: "📢 ",
+              engagement: "📊 "
             };
 
             return (
@@ -3678,6 +3729,152 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Engagement Statistics Tab */}
+        {tab === "engagement" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: N.text, margin: 0 }}>Engagement Statistics (Last 24 Hours)</h2>
+              <p style={{ fontSize: 13, color: N.muted, margin: "4px 0 0", fontWeight: 600 }}>
+                Total views and engagement sent in the last 24 hours
+              </p>
+            </div>
+
+            {engagementLoading ? (
+              <div style={{ padding: 40, textAlign: "center", color: N.muted, fontWeight: 800 }}>
+                Loading engagement stats...
+              </div>
+            ) : engagementStats ? (
+              <>
+                {/* Metrics Summary Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20 }}>
+                  {[
+                    ["Total Views Sent", engagementStats.totals.views.toLocaleString(), N.accent],
+                    ["Total Likes Sent", engagementStats.totals.likes.toLocaleString(), "#16a34a"],
+                    ["Total Saves Sent", engagementStats.totals.saves.toLocaleString(), "#eab308"],
+                    ["Total Shares Sent", engagementStats.totals.shares.toLocaleString(), "#3b82f6"],
+                    ["Total Comments Sent", engagementStats.totals.comments.toLocaleString(), "#a855f7"],
+                    ["Total Reposts Sent", engagementStats.totals.reposts.toLocaleString(), "#ec4899"],
+                    ["Total Orders Processed", engagementStats.totals.totalOrders.toLocaleString(), N.text],
+                  ].map(([label, val, color]) => (
+                    <div key={label as string} style={{ background: N.bg, border: `1px solid ${N.border}`, boxShadow: N.raisedSm, borderRadius: 16, padding: "20px 24px", position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: color as string }} />
+                      <div style={{ fontSize: 12, fontWeight: 800, color: N.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>{label}</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: N.text }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Platform Breakdown Section */}
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, color: N.text, margin: "16px 0 12px" }}>Platform Breakdown</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+                    {Object.keys(engagementStats.breakdown).length === 0 ? (
+                      <div style={{ background: N.bg, border: `1px solid ${N.border}`, boxShadow: N.raisedSm, borderRadius: 16, padding: 24, gridColumn: "1/-1", textAlign: "center", color: N.muted, fontWeight: 700 }}>
+                        No platform activity in the last 24 hours.
+                      </div>
+                    ) : (
+                      Object.entries(engagementStats.breakdown).map(([platform, data]) => (
+                        <div key={platform} style={{ background: N.bg, border: `1px solid ${N.border}`, boxShadow: N.raisedSm, borderRadius: 16, padding: 20 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${N.border}`, paddingBottom: 12, marginBottom: 12 }}>
+                            <span style={{ fontSize: 15, fontWeight: 900, color: N.text }}>{platform}</span>
+                            <span style={{ fontSize: 12, fontWeight: 800, background: N.border, color: N.text, padding: "4px 8px", borderRadius: 8 }}>
+                              {data.orderCount} Orders
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {[
+                              ["Views", data.views],
+                              ["Likes", data.likes],
+                              ["Saves", data.saves],
+                              ["Shares", data.shares],
+                              ["Comments", data.comments],
+                              ["Reposts", data.reposts],
+                            ].map(([metric, val]) => (
+                              <div key={metric as string} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                                <span style={{ color: N.muted, fontWeight: 700 }}>{metric}</span>
+                                <span style={{ color: N.text, fontWeight: 800 }}>{(val as number).toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Recent Active Campaigns Table */}
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, color: N.text, margin: "16px 0 12px" }}>Recent Campaigns (Active in last 24h)</h3>
+                  <div style={{ overflowX: "auto", margin: "0 -32px", background: N.bg, borderTop: `1px solid ${N.border}`, borderBottom: `1px solid ${N.border}`, boxShadow: N.inset }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: `2px solid ${N.border}`, color: N.muted }}>
+                          {["Order ID & Reel", "User", "Timing", "Views Delivered", "Engagement Delivered", "Status"].map((h) => (
+                            <th key={h} style={{ padding: "12px 24px", fontSize: 12, fontWeight: 800, textAlign: "left" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {engagementStats.recentOrders.map((o) => (
+                          <tr key={o.id} style={{ borderBottom: `1px solid ${N.border}` }}>
+                            <td style={{ padding: "12px 24px" }}>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: N.text }}>{o.id}</div>
+                              <a href={o.reel?.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: N.accent, wordBreak: "break-all" }}>
+                                {o.reel?.url?.substring(0, 45)}...
+                              </a>
+                            </td>
+                            <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, color: N.text }}>
+                              {o.user?.email}
+                            </td>
+                            <td style={{ padding: "12px 24px", fontSize: 12, color: N.muted, fontWeight: 600 }}>
+                              Updated: {new Date(o.updatedAt).toLocaleTimeString()}
+                            </td>
+                            <td style={{ padding: "12px 24px", fontSize: 13, fontWeight: 800, color: N.text }}>
+                              {o.viewsDelivered.toLocaleString()}
+                            </td>
+                            <td style={{ padding: "12px 24px", fontSize: 12, color: N.text }}>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+                                <span>👍 {o.likesDelivered}</span>
+                                <span>💾 {o.savesDelivered}</span>
+                                <span>📢 {o.sharesDelivered}</span>
+                                <span>💬 {o.commentsDelivered}</span>
+                                {o.repostsDelivered > 0 && <span>🔁 {o.repostsDelivered}</span>}
+                              </div>
+                            </td>
+                            <td style={{ padding: "12px 24px" }}>
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 900,
+                                padding: "4px 8px",
+                                borderRadius: 8,
+                                background: o.status === "COMPLETED" ? "rgba(22, 163, 74, 0.1)" : "rgba(234, 179, 8, 0.1)",
+                                color: o.status === "COMPLETED" ? "#16a34a" : "#eab308"
+                              }}>
+                                {o.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {engagementStats.recentOrders.length === 0 && (
+                          <tr>
+                            <td colSpan={6} style={{ padding: 40, textAlign: "center", color: N.muted, fontSize: 14, fontWeight: 700 }}>
+                              No active campaigns in the last 24 hours.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: 40, textAlign: "center", color: N.muted, fontWeight: 800 }}>
+                No engagement stats available.
+              </div>
+            )}
           </div>
         )}
 
