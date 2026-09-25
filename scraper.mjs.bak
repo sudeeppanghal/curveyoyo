@@ -1,0 +1,128 @@
+
+import http from 'http';
+import { URL } from 'url';
+import { gotScraping } from 'got-scraping';
+
+const PORT = 4000;
+const API_SECRET = "yoyosmm_scraper_secret_xyz123";
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+    res.setHeader('Content-Type', 'application/json');
+
+    if (parsedUrl.pathname === '/') {
+      res.statusCode = 200;
+      return res.end(JSON.stringify({ status: "YoYoSMM Local Scraper is online!" }));
+    }
+
+    if (parsedUrl.pathname === '/scrape') {
+      const username = parsedUrl.searchParams.get('username');
+      const platform = parsedUrl.searchParams.get('platform');
+      const secret = parsedUrl.searchParams.get('secret');
+
+      if (secret !== API_SECRET) {
+        res.statusCode = 401;
+        return res.end(JSON.stringify({ error: "Unauthorized" }));
+      }
+      if (!username || !platform) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ error: "Username and platform required" }));
+      }
+
+      console.log(`[Local Scraper] Scraping ${platform} profile: ${username}`);
+
+      if (platform.toLowerCase() === 'instagram') {
+        try {
+          const targetUrl = `https://imginn.com/${username}/`;
+          const resScraped = await gotScraping({
+            url: targetUrl,
+            headers: {
+              "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          });
+          if (resScraped.statusCode === 200) {
+            const html = resScraped.body;
+            const regex = /href="\/p\/([^"]*)\/"/g;
+            let match = regex.exec(html);
+            if (!match) {
+              const regex2 = /href="\/p\/([^"]*)"/g;
+              match = regex2.exec(html);
+            }
+            if (match && match[1]) {
+              res.statusCode = 200;
+              return res.end(JSON.stringify({
+                success: true,
+                id: match[1],
+                url: `https://www.instagram.com/p/${match[1]}/`
+              }));
+            }
+          }
+          throw new Error(`Imginn returned status ${resScraped.statusCode}`);
+        } catch (error) {
+          res.statusCode = 500;
+          return res.end(JSON.stringify({ error: error.message }));
+        }
+      } 
+      
+      else if (platform.toLowerCase() === 'tiktok') {
+        try {
+          const targetUrl = `https://urlebird.com/user/${username}/`;
+          let resScraped = await gotScraping({
+            url: targetUrl,
+            headers: {
+              "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+          });
+
+          // If the profile is not indexed (404), trigger Urlebird's indexer via search
+          if (resScraped.statusCode === 404) {
+            console.log(`[Local Scraper] Profile not found on Urlebird. Triggering indexing search for: ${username}`);
+            await gotScraping({
+              url: `https://urlebird.com/search/?q=${username}`,
+              headers: {
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+              }
+            });
+            // Wait 1.5 seconds for indexing and retry
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            resScraped = await gotScraping({
+              url: targetUrl,
+              headers: {
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+              }
+            });
+          }
+
+          if (resScraped.statusCode === 200) {
+            const html = resScraped.body;
+            const match = html.match(/urlebird\.com\/video\/(?:[^\/]+-)?(\d+)/);
+            if (match && match[1]) {
+              res.statusCode = 200;
+              return res.end(JSON.stringify({
+                success: true,
+                id: match[1],
+                url: `https://www.tiktok.com/@${username}/video/${match[1]}`
+              }));
+            }
+          }
+          throw new Error(`Urlebird returned status ${resScraped.statusCode}`);
+        } catch (error) {
+          res.statusCode = 500;
+          return res.end(JSON.stringify({ error: error.message }));
+        }
+      }
+    }
+
+    res.statusCode = 404;
+    return res.end(JSON.stringify({ error: "Not found" }));
+
+  } catch (err) {
+    res.statusCode = 500;
+    return res.end(JSON.stringify({ error: err.message }));
+  }
+});
+
+server.listen(PORT, '127.0.0.1', () => {
+  console.log(`YoYoSMM Local Scraper running on http://127.0.0.1:${PORT}`);
+});

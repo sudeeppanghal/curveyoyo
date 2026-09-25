@@ -1,0 +1,131 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { processEvent } from "@/lib/delivery/process";
+
+export const dynamic = "force-dynamic";
+
+// Tune this based on your Vercel plan:
+const PARALLEL_LIMIT = 8; // High throughput parallel execution for SMM delivery batches
+
+// Process a batch in parallel chunks
+async function parallelBatch<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<unknown>,
+) {
+  const results = [];
+  for (let i = 0; i < items.length; i += limit) {
+    const chunk = items.slice(i, i + limit);
+    const chunkResults = await Promise.allSettled(chunk.map(fn));
+    results.push(...chunkResults);
+  }
+  return results;
+}
+
+export async function GET(req: NextRequest) {
+  const secret   = req.nextUrl.searchParams.get("secret");
+  const expected = process.env.CRON_SECRET || process.env.ADMIN_SECRET;
+
+  if (!expected) {
+    return NextResponse.json({ error: "CRON_SECRET or ADMIN_SECRET env var not set" }, { status: 500 });
+  }
+  if (secret !== expected) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const now = new Date();
+
+  // Run the sequential views verification queue processing in the background
+  try {
+    const { processVerificationQueue } = await import("@/lib/delivery/queue-worker");
+    processVerificationQueue().catch(err => console.error("[Cron Verification Worker] Queue error:", err));
+  } catch (err) {
+    console.error("[Cron Verification Worker] Failed to load queue-worker:", err);
+  }
+
+  // ── Auto-clear truly obsolete scheduled events (e.g. from completed/cancelled orders or orders > 14 days old) ──
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  await prisma.deliveryEvent.updateMany({
+    where: {
+      status: "SCHEDULED",
+      scheduledAt: { lt: fourteenDaysAgo },
+      order: {
+        status: { in: ["COMPLETED", "CANCELLED", "FAILED"] }
+      }
+    },
+    data: {
+      status: "FAILED",
+      errorMessage: "Expired: Scheduled execution window exceeded maximum 14d lifecycle"
+    }
+  }).catch(() => {});
+
+  // ── Reset stuck EXECUTING events ────────────────────────────────────────────
+  // If an event has been EXECUTING for >3 minutes, the worker crashed mid-flight.
+  // Reset it to SCHEDULED so the next tick picks it up cleanly.
+  const threeMinutesAgo = new Date(now.getTime() - 3 * 60 * 1000);
+  await prisma.deliveryEvent.updateMany({
+    where: {
+      status: "EXECUTING",
+      scheduledAt: { lt: threeMinutesAgo },
+    },
+    data: {
+      status: "SCHEDULED",
+      errorMessage: "Reset: Worker timed out while processing (auto-recovered)",
+    },
+  }).catch(() => {});
+
+  // Auto-cancel orphan scheduled events for orders that are COMPLETED, CANCELLED, or FAILED
+  await prisma.deliveryEvent.updateMany({
+    where: {
+      status: "SCHEDULED",
+      order: {
+        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        status: { in: ["COMPLETED", "CANCELLED", "FAILED"] }
+      }
+    },
+    data: {
+      status: "FAILED",
+      errorMessage: "Auto-cleared: Order is completed/cancelled"
+    }
+  }).catch(() => {});
+
+  // Find ALL due SCHEDULED events for active DELIVERING or QUEUED orders (FIFO: oldest scheduled first)
+  const dueEvents = await prisma.deliveryEvent.findMany({
+    where: {
+      status: "SCHEDULED",
+      scheduledAt: { lte: now },
+      order: {
+        status: { in: ["DELIVERING", "QUEUED"] },
+        user: {
+          plan: { not: "SUSPENDED" }
+        }
+      },
+    },
+    orderBy: { scheduledAt: "asc" },
+    take: PARALLEL_LIMIT * 4,
+    select: { id: true },
+  });
+
+  if (dueEvents.length === 0) {
+    return NextResponse.json({ ok: true, processed: 0, message: "No events due", timestamp: now.toISOString() });
+  }
+
+  // Process PARALLEL_LIMIT events simultaneously (not sequential!)
+  const allResults = await parallelBatch(
+    dueEvents.map(e => e.id),
+    PARALLEL_LIMIT,
+    processEvent
+  );
+
+  const succeeded = allResults.filter(r => r.status === "fulfilled" && (r.value as { ok: boolean }).ok).length;
+  const failed    = allResults.filter(r => r.status === "rejected" || !(r as PromiseFulfilledResult<{ ok: boolean }>).value?.ok).length;
+
+  return NextResponse.json({
+    ok:        true,
+    processed: dueEvents.length,
+    succeeded,
+    failed,
+    parallelLimit: PARALLEL_LIMIT,
+    timestamp: now.toISOString(),
+  });
+}

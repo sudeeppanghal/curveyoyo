@@ -1,0 +1,86 @@
+require('dotenv').config({ path: '/var/www/yoyosmm/.env.local' });
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const crypto = require('crypto');
+
+const SECRET = "yoyosmm_admin_sec_9e3a1f8b4d0c7e2d5a6c8e9b";
+const CRON_URL = `http://localhost:3000/api/cron?secret=${SECRET}`;
+const AUTO_ORDERS_URL = `http://localhost:3000/api/cron/auto-orders?secret=${SECRET}`;
+const AUTO_SYNC_URL = `http://localhost:3000/api/cron/auto-sync?secret=${SECRET}`;
+
+console.log("[Bulletproof Cron Daemon] Starting 30-second automated tick & self-healing daemon...");
+
+async function tick() {
+  try {
+    const res = await fetch(CRON_URL);
+    const json = await res.json();
+    console.log(`[Cron Daemon ${new Date().toISOString()}] Tick result:`, JSON.stringify(json));
+  } catch (err) {
+    console.error(`[Cron Daemon ${new Date().toISOString()}] Tick error:`, err.message);
+  }
+}
+
+async function autoOrdersTick() {
+  try { await fetch(AUTO_ORDERS_URL); } catch (err) {}
+}
+
+async function autoSyncTick() {
+  try { await fetch(AUTO_SYNC_URL); } catch (err) {}
+}
+
+const ALGORITHM = "aes-256-gcm";
+const KEY_LENGTH = 32;
+const IV_LENGTH = 16;
+const TAG_LENGTH = 16;
+
+function getKey() {
+  const secret = process.env.NEXTAUTH_SECRET || "fallback-dev-secret-change-in-prod";
+  return crypto.scryptSync(secret, "yoyosmm-salt", KEY_LENGTH);
+}
+
+function decrypt(ciphertext) {
+  try {
+    const key = getKey();
+    const data = Buffer.from(ciphertext, "base64");
+    const iv = data.subarray(0, IV_LENGTH);
+    const tag = data.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
+    const encrypted = data.subarray(IV_LENGTH + TAG_LENGTH);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  } catch (err) {
+    return ciphertext;
+  }
+}
+
+// Self-Healing Panel Worker: Restores panels to ONLINE automatically every 5 mins
+async function selfHealPanels() {
+  try {
+    const panels = await prisma.panel.findMany({ where: { isActive: true } });
+    for (const p of panels) {
+      const apiKey = decrypt(p.apiKeyEncrypted);
+      const body = new URLSearchParams({ key: apiKey, action: "balance" });
+      try {
+        const res = await fetch(p.apiUrl, { method: "POST", body, signal: AbortSignal.timeout(5000) });
+        const json = await res.json();
+        if (json.balance !== undefined) {
+          if (p.status !== "ONLINE") {
+            await prisma.panel.update({ where: { id: p.id }, data: { status: "ONLINE", lastCheckedAt: new Date() } });
+            console.log(`[Self-Healing Worker] Restored panel ${p.name} (${p.id}) back to ONLINE!`);
+          }
+        }
+      } catch (err) {}
+    }
+  } catch (err) {}
+}
+
+// Set Intervals
+setInterval(tick, 30000);              // Delivery tick every 30s
+setInterval(autoOrdersTick, 5 * 60000); // Auto-orders every 5m
+setInterval(autoSyncTick, 15 * 60000);  // Auto-sync every 15m
+setInterval(selfHealPanels, 5 * 60000); // Self-healing panel check every 5m
+
+// Initial run
+tick();
+selfHealPanels();
+

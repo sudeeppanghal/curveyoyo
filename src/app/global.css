@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* ─── Base Reset & Responsive Defaults ───────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; font-size: 16px; }
+
+body {
+  background: var(--neo-bg);
+  color: var(--neo-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  text-size-adjust: 100%;
+}
+
+/* ─── Remove ALL focus glows globally ───────────────────── */
+*:focus { outline: none !important; }
+input:focus,
+select:focus,
+textarea:focus,
+.neo-input:focus {
+  outline: none !important;
+  /* Subtle deeper inset only — no glow ring */
+  box-shadow: inset 5px 5px 12px #c0c8df, inset -5px -5px 12px #ffffff !important;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(160, 174, 192, 0.4); border-radius: 4px; }
+
+/* ─── Neomorphism CSS Variables ───────────────────────────── */
+:root {
+  --neo-bg:       #eef2f7;
+  --neo-raised:   9px 9px 16px #c8d0e7, -9px -9px 16px #ffffff;
+  --neo-raised-sm: 5px 5px 10px #c8d0e7, -5px -5px 10px #ffffff;
+  --neo-inset:    inset 6px 6px 10px #c8d0e7, inset -6px -6px 10px #ffffff;
+  --neo-accent:   #d97706;
+  --neo-text:     #2d3748;
+}
+
+.dark {
+  --neo-bg:       #111827;
+  --neo-raised:   9px 9px 16px #0b0f19, -9px -9px 16px #172135;
+  --neo-raised-sm: 5px 5px 10px #0b0f19, -5px -5px 10px #172135;
+  --neo-inset:    inset 6px 6px 10px #0b0f19, inset -6px -6px 10px #172135;
+  --neo-accent:   #f59e0b;
+  --neo-text:     #f3f4f6;
+}
+
+/* ─── Components & Utilities ──────────────────────────────── */
+.neo-card { background: var(--neo-bg); box-shadow: var(--neo-raised); border-radius: 20px; }
+
+.neo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* Mobile touch target */
+  padding: 0.75rem 1.5rem;
+  background: var(--neo-bg);
+  box-shadow: var(--neo-raised);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.neo-btn:active { transform: scale(0.98); box-shadow: var(--neo-inset); }
+
+.neo-input {
+  width: 100%;
+  min-height: 48px; /* Mobile touch target */
+  padding: 0.75rem 1rem;
+  background: var(--neo-bg);
+  border: 1px solid #d1d5db !important;
+  border-radius: 12px;
+  color: var(--neo-text);
+  outline: none;
+  box-shadow: inset 4px 4px 8px #c8d0e7, inset -4px -4px 8px #ffffff !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.neo-input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: inset 4px 4px 8px #c8d0e7, inset -4px -4px 8px #ffffff !important;
+  border-color: #ea580c !important;
+  outline: none !important;
+}
+.neo-link {
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.neo-link:hover { opacity: 0.85; }
+
+a { color: inherit; text-decoration: none; }
