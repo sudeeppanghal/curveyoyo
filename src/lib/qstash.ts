@@ -6,8 +6,7 @@ export function getQStashClient(): Client {
   if (!_client) {
     _client = new Client({
       token: process.env.QSTASH_TOKEN!,
-      // Explicitly use global endpoint — avoids wrong eu-central-1 region routing
-      baseUrl: process.env.QSTASH_URL || "https://qstash.upstash.io",
+      baseUrl: process.env.QSTASH_URL || "https://qstash-us-east-1.upstash.io",
     });
   }
   return _client;
@@ -25,16 +24,10 @@ export async function scheduleDeliveryTick(payload: {
   reelUrl: string;
 }, delaySeconds: number): Promise<{ messageId: string }> {
   const client = getQStashClient();
-  let appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  if (process.env.SPACE_ID && (!appUrl || appUrl.includes("localhost"))) {
-    const parts = process.env.SPACE_ID.split("/");
-    appUrl = `https://${parts[0]}-${parts[1].replace(/_/g, "-")}.hf.space`;
-  } else if (process.env.RENDER_EXTERNAL_URL && (!appUrl || appUrl.includes("localhost"))) {
-    appUrl = process.env.RENDER_EXTERNAL_URL;
-  }
+  const targetUrl = process.env.INTERNAL_WEBHOOK_URL || "https://yoyosmm.vercel.app/api/delivery/tick";
 
   const result = await client.publishJSON({
-    url: `${appUrl}/api/delivery/tick`,
+    url: targetUrl,
     body: payload,
     delay: delaySeconds,
     retries: 3,
